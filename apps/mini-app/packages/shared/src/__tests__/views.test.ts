@@ -79,7 +79,11 @@ test('ведущий видит state целиком и коды', () => {
   const v = viewFor(s, content, gm, 0) as GmView;
   expect(v.kind).toBe('gm');
   expect(v.state).toBe(s);
-  expect(v.content).toBe(content);
+  // Индексы roleByKey и recipeById дублируют roles и recipes: в проекцию не попадают.
+  const { roleByKey: _r, recipeById: _rc, ...plain } = content;
+  expect(v.content).toEqual(plain);
+  expect(v.content).not.toHaveProperty('roleByKey');
+  expect(v.content).not.toHaveProperty('recipeById');
   expect(v.invites.map(i => i.roleKey)).toEqual(s.roster);
   expect(v.invites[0]).toEqual({ roleKey: 'o1', code: 'code-o1', bound: true, present: true });
   expect(v.invites.find(i => i.roleKey === 'o13')?.present).toBe(false);

@@ -68,7 +68,7 @@ export function Console({ v }: { v: GmView }) {
 
 function Correction({ v }: { v: GmView }) {
   const { state, content } = v;
-  const name = (k: string) => content.roleByKey[k]?.name ?? k;
+  const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
   const [player, setPlayer] = useState(state.roster[0] ?? '');
   const [field, setField] = useState<Field>('gold');
   const [delta, setDelta] = useState(0);

@@ -198,6 +198,11 @@ test('ведущий по WS получает GmView', async () => {
   const c = connect(token);
   const v = await c.next(m => m.kind === 'view');
   expect((v.view as { kind: string }).kind).toBe('gm');
+  // Проекция ведущего крупная: сжатие договаривается при подключении.
+  expect(c.ws.extensions).toContain('permessage-deflate');
+  const sent = (v.view as { content: Record<string, unknown> }).content;
+  expect(sent).not.toHaveProperty('roleByKey');
+  expect(sent).not.toHaveProperty('recipeById');
 });
 
 test('невалидный token → закрытие 4401', async () => {

@@ -71,7 +71,8 @@ export function closeWs(wss: WebSocketServer): Promise<void> {
 /** WebSocket /ws?token=…: проекции состояния и приём команд от имени владельца токена. */
 export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
   const { game, content, config, now } = deps;
-  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+  // Проекция ведущего несёт состояние и содержимое целиком: сжатие заметно уменьшает каждое сообщение.
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024, perMessageDeflate: true });
   const conns = new Set<Conn>();
 
   const send = (ws: WebSocket, msg: unknown) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); };

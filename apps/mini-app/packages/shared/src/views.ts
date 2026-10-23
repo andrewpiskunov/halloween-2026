@@ -1,4 +1,4 @@
-import type { Clue, Content, Faction, Recipe, Resource, Role } from './content';
+import type { Clue, Content, ContentData, Faction, Recipe, Resource, Role } from './content';
 import type { Actor } from './commands';
 import { available } from './engine';
 import type { AltarSide, Announcement, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player } from './types';
@@ -17,7 +17,7 @@ export interface PlayerView {
 }
 
 export interface GmView {
-  kind: 'gm'; state: GameState; content: Content;
+  kind: 'gm'; state: GameState; content: ContentData;
   invites: { roleKey: string; code: string; bound: boolean; present: boolean }[];
 }
 
@@ -49,8 +49,9 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
 export function viewFor(state: GameState, content: Content, actor: Actor, now: number): PlayerView | GmView {
   if (actor.type === 'system') throw new Error('system actor has no view');
   if (actor.type === 'gm') {
+    const { roleByKey: _r, recipeById: _rc, ...data } = content;
     return {
-      kind: 'gm', state, content,
+      kind: 'gm', state, content: data,
       invites: state.roster.map(roleKey => ({
         roleKey,
         code: state.invites[roleKey],

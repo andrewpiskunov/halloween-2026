@@ -11,9 +11,9 @@ const missing = '/нет/такого/.env';
 
 test('значения по умолчанию как в .env.example; без секрета и без dev-входа — ошибка', () => {
   expect(() => loadConfig({}, missing)).toThrow(/SESSION_SECRET/);
-  const c = loadConfig({ SESSION_SECRET: 's' }, missing);
+  const c = loadConfig({ SESSION_SECRET: 's', BOT_TOKEN: 't' }, missing);
   expect(c).toEqual({
-    botToken: '', botName: '', sessionSecret: 's', clientUrl: '', dbPath: './data/session.sqlite',
+    botToken: 't', botName: '', sessionSecret: 's', clientUrl: '', dbPath: './data/session.sqlite',
     contentPath: defaultContentPath(), port: 8080, allowDevAuth: false, botPolling: false,
   });
 });
@@ -32,6 +32,11 @@ test('.env читается, переменные окружения важне�
   const file = join(dir, '.env');
   writeFileSync(file, '# комментарий\nSESSION_SECRET=из-файла\nPORT=9090\nBOT_NAME="fake_bot"\n\nBOT_POLLING=1\n');
   expect(parseEnvFile(file)).toMatchObject({ SESSION_SECRET: 'из-файла', PORT: '9090', BOT_NAME: 'fake_bot' });
-  const c = loadConfig({ PORT: '7070' }, file);
+  const c = loadConfig({ PORT: '7070', BOT_TOKEN: 't' }, file);
   expect(c).toMatchObject({ sessionSecret: 'из-файла', port: 7070, botName: 'fake_bot', botPolling: true });
+});
+
+test('пустой BOT_TOKEN без dev-входа — ошибка; с ALLOW_DEV_AUTH=1 допустим', () => {
+  expect(() => loadConfig({ SESSION_SECRET: 's' }, missing)).toThrow(/BOT_TOKEN/);
+  expect(loadConfig({ SESSION_SECRET: 's', ALLOW_DEV_AUTH: '1' }, missing).botToken).toBe('');
 });

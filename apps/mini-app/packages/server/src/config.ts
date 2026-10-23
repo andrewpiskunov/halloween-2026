@@ -43,6 +43,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, envFile = DEFAU
     console.warn('SESSION_SECRET не задан: используется фиксированный секрет для разработки');
     sessionSecret = DEV_SECRET;
   }
+  // Без токена бота подпись initData не проверить: войти смог бы только dev-вход.
+  if (!get('BOT_TOKEN') && !allowDevAuth) throw new Error('BOT_TOKEN не задан');
   const port = Number(get('PORT') || 8080);
   if (!Number.isInteger(port) || port <= 0) throw new Error(`Некорректный PORT: ${get('PORT')}`);
   return {

@@ -7,6 +7,7 @@
     "typecheck": "pnpm -r typecheck",
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
+    "start": "pnpm --filter @fair/server start",
     "e2e": "playwright test -c e2e"
   },
   "engines": {

@@ -36,6 +36,9 @@ export interface Content {
   recipeById: Record<string, Recipe>;
 }
 
+/** Содержимое без индексов: так оно уходит клиенту (индексы дублируют roles и recipes). */
+export type ContentData = Omit<Content, 'roleByKey' | 'recipeById'>;
+
 const ARRAYS = ['factions', 'roles', 'relics', 'shards', 'clues', 'recipes', 'events', 'resources', 'rooms'] as const;
 const ROLE_STRINGS = ['key', 'block', 'side', 'name', 'title', 'intro', 'skill', 'effect', 'extra', 'joke', 'style', 'secret', 'rumor', 'backstory', 'motivation', 'emoji'] as const;
 
