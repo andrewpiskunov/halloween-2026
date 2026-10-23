@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { loadContent, defaultContentPath } from '../content';
+import { loadContent } from '../content';
+import { defaultContentPath } from '../node';
 import type { Actor, Command } from '../commands';
 import type { GameState } from '../types';
 import { execute, initialState } from '../engine';

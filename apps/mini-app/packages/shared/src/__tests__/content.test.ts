@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { loadContent, defaultContentPath } from '../content';
+import { loadContent } from '../content';
+import { defaultContentPath } from '../node';
 
 const content = loadContent(JSON.parse(readFileSync(defaultContentPath(), 'utf8')));
 

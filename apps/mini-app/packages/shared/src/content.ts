@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import type { Counts, Side } from './types';
 
 export interface Faction { id: Side; name: string; color: string; desc: string; motto: string; altar: string | null }
@@ -85,9 +84,4 @@ export function loadContent(json: unknown): Content {
   const recipeById: Record<string, Recipe> = {};
   for (const r of content.recipes) recipeById[r.id] = r;
   return { ...content, roleByKey, recipeById };
-}
-
-/** Путь к game-data-v0.2.json в корне репозитория (от расположения пакета shared). */
-export function defaultContentPath(): string {
-  return fileURLToPath(new URL('../../../../../docs/design/game-data-v0.2.json', import.meta.url));
 }
