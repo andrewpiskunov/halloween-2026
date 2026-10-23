@@ -1,4 +1,5 @@
-import type { Altar, AltarSide, Counts, Item, Lot, Player } from './types';
+import type { Correction } from './commands';
+import type { Altar, AltarSide, Announcement, Counts, Item, Lot, Player } from './types';
 
 /** Общие поля события: время факта и номер в журнале (проставляется при записи). */
 export interface EventBase { at: number; seq?: number }
@@ -24,6 +25,25 @@ export interface FairOpened extends EventBase {
   altars: Partial<Record<AltarSide, Altar>>;
 }
 
+/** Начался новый акт: пополнение мастерской, новые лоты и вещи, снятое скрытие, объявление. */
+export interface ActStarted extends EventBase {
+  type: 'ActStarted';
+  act: 2 | 3;
+  refill: number;
+  newLots: Lot[];
+  newItems: Item[];
+  announcedLots: string[];
+  revealedItems: string[];
+  announcement: Announcement;
+}
+export interface ClockPaused extends EventBase { type: 'ClockPaused' }
+export interface ClockResumed extends EventBase { type: 'ClockResumed'; pausedMs: number }
+export interface ClockExtended extends EventBase { type: 'ClockExtended'; minutes: number }
+export interface Announced extends EventBase { type: 'Announced'; title: string; text: string }
+export interface Corrected extends EventBase { type: 'Corrected'; playerKey: string; change: Correction; reason: string }
+export interface InviteRebound extends EventBase { type: 'InviteRebound'; roleKey: string; code: string }
+
 // События следующих задач (ActStarted, OfferCreated, …) добавляются в объединение по мере реализации.
-export type Event = SessionCreated | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened;
+export type Event = SessionCreated | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
+  | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound;
 export type EventType = Event['type'];

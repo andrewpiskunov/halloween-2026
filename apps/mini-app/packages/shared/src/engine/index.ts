@@ -3,14 +3,15 @@ import type { Command, Ctx } from '../commands';
 import type { Event } from '../events';
 import type { GameState } from '../types';
 import { fail, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
+import { actCommands, actReducers } from './acts';
 import { sessionCommands, sessionReducers } from './session';
 
 export type { ErrorCode, Result, CommandHandlers, EventReducers } from './result';
 export { defaultRoster } from './roster';
 
 // Новые группы команд (offers, shop, altars) подключаются добавлением в эти списки.
-const commandHandlers: CommandHandlers = { ...sessionCommands };
-const eventReducers: EventReducers = { ...sessionReducers };
+const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands };
+const eventReducers: EventReducers = { ...sessionReducers, ...actReducers };
 
 type AnyHandler = (state: GameState, content: Content, cmd: Command, ctx: Ctx) => Result;
 type AnyReducer = (state: GameState, content: Content, event: Event) => GameState;
