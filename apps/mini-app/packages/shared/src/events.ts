@@ -30,6 +30,8 @@ export interface ActStarted extends EventBase {
   type: 'ActStarted';
   act: 2 | 3;
   refill: number;
+  /** Сколько длилась пауза, прерванная сменой акта (0, если паузы не было). */
+  pausedMs: number;
   newLots: Lot[];
   newItems: Item[];
   announcedLots: string[];

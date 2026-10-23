@@ -96,6 +96,24 @@ describe('часы', () => {
     expect(r.state.offers.y.expiresAt).toBe(300000);
   });
 
+  test('act.next во время паузы действует как неявный resume: пауза снята, pending сдвинуты, resume → invalid', () => {
+    const s0 = makeGame(15);
+    const zero = { ash: 0, moon: 0, dew: 0 };
+    const offer: Offer = {
+      id: 'x', from: 'o6', to: 'o1', give: { gold: 1, ingredients: zero, items: [] }, get: { gold: 0, ingredients: zero, items: [] },
+      service: false, status: 'pending', createdAt: 0, expiresAt: 300000,
+    };
+    const p = run({ ...s0, offers: { x: offer } }, { type: 'clock.pause' }, gm, 0);
+    if (!p.ok) throw new Error(p.error);
+    const n = run(p.state, { type: 'act.next' }, gm, 60000);
+    if (!n.ok) throw new Error(n.error);
+    expect(n.state.phase).toBe('act2');
+    expect(n.state.clock.pausedAt).toBeUndefined();
+    expect(n.state.clock).toEqual({ actStartedAt: 60000, pausedTotal: 0 });
+    expect(n.state.offers.x.expiresAt).toBe(360000);
+    expect(run(n.state, { type: 'clock.resume' }, gm, 70000)).toMatchObject({ ok: false, error: 'invalid' });
+  });
+
   test('extend добавляет минуты к pausedTotal; неверные минуты → invalid; от игрока → forbidden', () => {
     const s = makeGame(15);
     const r = run(s, { type: 'clock.extend', minutes: 5 }, gm);

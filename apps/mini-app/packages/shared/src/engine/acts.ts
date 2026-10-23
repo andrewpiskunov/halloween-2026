@@ -4,6 +4,15 @@ import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 
 const isGm = (a: Actor) => a.type === 'gm';
 const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
+/** Сдвигает срок каждого pending-предложения на время паузы. */
+function shiftPending(offers: GameState['offers'], pausedMs: number): GameState['offers'] {
+  const res = { ...offers };
+  for (const [id, o] of Object.entries(offers)) {
+    if (o.status === 'pending') res[id] = { ...o, expiresAt: o.expiresAt + pausedMs };
+  }
+  return res;
+}
+
 const EVENT_WHEN = { 2: 'Акт II', 3: 'Акт III' } as const;
 
 export const actCommands: CommandHandlers = {
@@ -38,6 +47,8 @@ export const actCommands: CommandHandlers = {
     return ok({
       type: 'ActStarted', at: ctx.now, act,
       refill: Math.ceil(state.nPresent / 6),
+      // Смена акта во время паузы — неявный resume.
+      pausedMs: state.clock.pausedAt === undefined ? 0 : ctx.now - state.clock.pausedAt,
       newLots, newItems, announcedLots, revealedItems,
       announcement: { at: ctx.now, title: ev?.title ?? EVENT_WHEN[act], text: ev?.text ?? '' },
     });
@@ -117,19 +128,15 @@ export const actReducers: EventReducers = {
       ash: state.workshop.ash + e.refill, moon: state.workshop.moon + e.refill, dew: state.workshop.dew + e.refill,
     };
     return {
-      ...state, phase: e.act === 2 ? 'act2' : 'act3', players, lots, items, workshop,
+      ...state, offers: shiftPending(state.offers, e.pausedMs), phase: e.act === 2 ? 'act2' : 'act3', players, lots, items, workshop,
       clock: { actStartedAt: e.at, pausedTotal: 0 },
       announcements: [...state.announcements, e.announcement],
     };
   },
   ClockPaused: (state, _c, e) => ({ ...state, clock: { ...state.clock, pausedAt: e.at } }),
   ClockResumed: (state, _c, e) => {
-    const offers = { ...state.offers };
-    for (const [id, o] of Object.entries(state.offers)) {
-      if (o.status === 'pending') offers[id] = { ...o, expiresAt: o.expiresAt + e.pausedMs };
-    }
     const { pausedAt: _p, ...clock } = state.clock;
-    return { ...state, offers, clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs } };
+    return { ...state, offers: shiftPending(state.offers, e.pausedMs), clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs } };
   },
   ClockExtended: (state, _c, e) => ({
     ...state, clock: { ...state.clock, pausedTotal: state.clock.pausedTotal + e.minutes * 60000 },
