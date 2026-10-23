@@ -1,0 +1,72 @@
+import { computed, signal } from '@preact/signals';
+import type { Command } from '@fair/shared';
+import { auth, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
+
+/** Последняя проекция от сервера. */
+export const view = signal<View | null>(null);
+/** Когда пришла проекция (часы клиента): от него идут часы акта. */
+export const viewAt = signal(0);
+export const status = signal<Status>('connecting');
+export const connected = computed(() => status.value === 'open');
+/** Текст последней ошибки для всплывающего сообщения. */
+export const toast = signal<string | null>(null);
+/** Синоним toast под именем из плана. */
+export const error = toast;
+/** Текущее время, обновляется раз в секунду: часы акта и обратные отсчёты. */
+export const now = signal(Date.now());
+
+export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events';
+export const tab = signal<Tab>('role');
+/** Вещь, с которой надо открыть форму сделки (кнопка «Предложить» в сумке). */
+export const tradeDraft = signal<{ itemId: string } | null>(null);
+
+/** Запрос подтверждения для модального окна Confirm. */
+export interface ConfirmRequest { title: string; text?: string; okLabel?: string; danger?: boolean; onOk: () => void }
+export const confirmRequest = signal<ConfirmRequest | null>(null);
+export function ask(req: ConfirmRequest): void { confirmRequest.value = req; }
+
+export const ERROR_TEXT: Record<ErrorCode, string> = {
+  insufficient: 'Не хватает',
+  phase: 'Сейчас нельзя',
+  reserved: 'Уже обещано в другой сделке',
+  not_owner: 'Это не ваше',
+  forbidden: 'Нельзя',
+  not_found: 'Не найдено',
+  invalid: 'Так нельзя',
+  limit: 'Лимит исчерпан',
+  internal: 'Ошибка на сервере',
+};
+
+let connection: Connection | null = null;
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+export function showToast(text: string): void {
+  toast.value = text;
+  if (toastTimer !== undefined) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.value = null; }, 4000);
+}
+
+/** Отправляет команду; при отказе показывает ошибку словами. */
+export async function run(cmd: Command): Promise<CmdResult> {
+  if (!connection) {
+    showToast('Нет соединения');
+    return { ok: false, error: 'internal' };
+  }
+  const result = await connection.send(cmd);
+  if (!result.ok) showToast(ERROR_TEXT[result.error] ?? ERROR_TEXT.internal);
+  return result;
+}
+
+/** Вход и соединение. Вызывается один раз из main.tsx. */
+export async function start(): Promise<void> {
+  setInterval(() => { now.value = Date.now(); }, 1000);
+  try {
+    const { token } = await auth();
+    connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg === 'no_auth') status.value = 'no_auth';
+    else if (msg === 'unauthorized') status.value = 'unauthorized';
+    else { status.value = 'closed'; showToast('Сервер недоступен, обновите страницу'); }
+  }
+}
