@@ -1,5 +1,5 @@
 import type { Correction } from './commands';
-import type { Altar, AltarSide, Announcement, Bundle, Counts, Item, Lot, Offer, OfferStatus, Player } from './types';
+import type { Altar, AltarSide, Announcement, Bundle, Contribution, Counts, Ingredient, Item, Lot, Offer, OfferStatus, Player } from './types';
 
 /** Общие поля события: время факта и номер в журнале (проставляется при записи). */
 export interface EventBase { at: number; seq?: number }
@@ -56,8 +56,24 @@ export interface OfferClosed extends EventBase {
   type: 'OfferClosed'; id: string; status: Exclude<OfferStatus, 'pending' | 'accepted'>; reason?: string;
 }
 
-// События следующих задач (IngredientBought, …) добавляются в объединение по мере реализации.
+/** Игрок купил ингредиенты в мастерской по 2 золота за штуку. */
+export interface IngredientBought extends EventBase {
+  type: 'IngredientBought'; player: string; ingredient: Ingredient; count: number; paidGold: number;
+}
+/** Игрок изготовил вещь; вещь целиком в событии. Шипы и скидка потрачены в любом случае. */
+export interface ItemCrafted extends EventBase {
+  type: 'ItemCrafted'; player: string; item: Item; paidGold: number; paidIngredients: Partial<Counts>;
+  clearedThorns: boolean; clearedDiscount: boolean;
+}
+/** Вклад на алтарь: осколок, Фокус или золото. */
+export interface Contributed extends EventBase { type: 'Contributed'; side: AltarSide; contribution: Contribution }
+/** Игрок забрал свой вклад с алтаря обратно. */
+export interface ContributionWithdrawn extends EventBase {
+  type: 'ContributionWithdrawn'; side: AltarSide; contributionId: string; player: string; item?: string; gold?: number;
+}
+
+// События следующих задач добавляются в объединение по мере реализации.
 export type Event = SessionCreated | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
-  | OfferCreated | OfferAccepted | OfferClosed;
+  | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn;
 export type EventType = Event['type'];

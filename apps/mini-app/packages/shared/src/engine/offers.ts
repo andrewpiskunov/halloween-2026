@@ -1,17 +1,9 @@
-import type { Actor } from '../commands';
 import type { Bundle, GameState, Offer } from '../types';
 import { INGREDIENTS, available, isTradable, transfer } from './bundles';
+import { isActPhase, participant } from './guards';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
 
 const OFFER_TTL_MS = 300000;
-
-const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
-const playerKey = (a: Actor) => (a.type === 'player' ? a.roleKey : undefined);
-/** Ключ игрока-участника ярмарки: роль в составе, запись есть и игрок пришёл. */
-function participant(state: GameState, a: Actor): string | undefined {
-  const key = playerKey(a);
-  return key !== undefined && state.roster.includes(key) && state.players[key]?.present ? key : undefined;
-}
 
 const isNonNegInt = (n: number) => Number.isInteger(n) && n >= 0;
 const validShape = (b: Bundle) =>
