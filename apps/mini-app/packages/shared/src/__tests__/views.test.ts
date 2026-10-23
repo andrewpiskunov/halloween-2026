@@ -18,6 +18,8 @@ test('игрок не видит чужих целей, тайн, сторон, 
 
   for (const viewer of ['o1', 'o5']) {
     const json = JSON.stringify(viewFor(s, content, player(viewer), 0));
+    const otherItems = Object.values(s.items).filter(i => i.owner.type === 'player' && i.owner.key !== viewer);
+    expect(otherItems.length).toBeGreaterThan(0);
     for (const key of s.roster.filter(k => k !== viewer)) {
       const other = content.roleByKey[key];
       expect(json).not.toContain(other.secret);
