@@ -17,6 +17,10 @@ export const now = signal(Date.now());
 
 export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events';
 export const tab = signal<Tab>('role');
+export type GmTab = 'roster' | 'console';
+export const gmTab = signal<GmTab>('roster');
+/** Имя бота для ссылок-приглашений; приходит из /api/auth. */
+export const botName = signal('');
 /** Вещь, с которой надо открыть форму сделки (кнопка «Предложить» в сумке). */
 export const tradeDraft = signal<{ itemId: string } | null>(null);
 
@@ -61,7 +65,8 @@ export async function run(cmd: Command): Promise<CmdResult> {
 export async function start(): Promise<void> {
   setInterval(() => { now.value = Date.now(); }, 1000);
   try {
-    const { token } = await auth();
+    const { token, botName: bot } = await auth();
+    botName.value = bot;
     connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';

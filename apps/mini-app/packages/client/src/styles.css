@@ -160,3 +160,13 @@ code { font-family: ui-monospace, Consolas, monospace; color: var(--gold); }
 .notice { justify-content: center; padding: 16px; }
 .notice .m-card { text-align: center; font-size: 17px; }
 .notice-icon { font-size: 48px; }
+
+/* Экраны ведущего */
+.gm-role { padding: 8px 0; border-bottom: 1px solid #3a2e1e; }
+.gm-role:last-child { border: 0; }
+.gm-role.off .item { opacity: .6; }
+.gm-role .item { border: 0; padding-bottom: 4px; }
+.gm-toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+.gm-toggles .check { flex: 1 1 0; min-width: 130px; }
+.gm-clock { font-family: Georgia, serif; font-size: 26px; color: var(--rpg-white); margin: 4px 0 8px; }
+.field textarea { width: 100%; background: #15100c; border: 1px solid #6a5230; border-radius: 10px; padding: 8px 10px; color: var(--rpg-text); font: inherit; }

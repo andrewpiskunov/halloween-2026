@@ -1,14 +1,17 @@
 import type { GmView, PlayerView } from '@fair/shared';
 import { Confirm } from './components/Confirm';
+import { GmTabs } from './components/GmTabs';
 import { Tabs } from './components/Tabs';
 import { mmss, GOLD } from './labels';
 import { Altars } from './screens/Altars';
 import { Bag } from './screens/Bag';
 import { Events } from './screens/Events';
+import { Console } from './screens/gm/Console';
+import { Roster } from './screens/gm/Roster';
 import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
 import { Workshop } from './screens/Workshop';
-import { now, status, tab, toast, view, viewAt } from './store';
+import { gmTab, now, status, tab, toast, view, viewAt } from './store';
 
 /** Корень: экран статуса до первой проекции, дальше маршрут по view.kind. */
 export function App() {
@@ -20,7 +23,7 @@ export function App() {
   if (!v) return <Notice icon="🔮" text="Подключение к ярмарке…" />;
   return (
     <div class="app rpg">
-      {v.kind === 'gm' ? <GmPlaceholder v={v} /> : <PlayerApp v={v} />}
+      {v.kind === 'gm' ? <GmApp v={v} /> : <PlayerApp v={v} />}
       <Confirm />
       {toast.value && <div class="toast" role="alert" onClick={() => { toast.value = null; }}>{toast.value}</div>}
     </div>
@@ -77,24 +80,12 @@ function PlayerApp({ v }: { v: PlayerView }) {
   );
 }
 
-/** Заглушка для ведущего: настоящий пульт строит следующая задача. */
-function GmPlaceholder({ v }: { v: GmView }) {
+function GmApp({ v }: { v: GmView }) {
   return (
     <>
       <TopBar v={v} />
-      <main class="cnt">
-        <div class="m-card"><p>Пульт ведущего появится в следующей задаче</p></div>
-        <div class="m-card">
-          <h5>Приглашения</h5>
-          {v.invites.length === 0 && <p class="m-note">Состав ещё не задан.</p>}
-          {v.invites.map(i => (
-            <div class="m-row" key={i.roleKey}>
-              <span>{i.roleKey} · <code>{i.code}</code></span>
-              <b>{i.bound ? 'привязан' : '—'} · {i.present ? 'пришёл' : 'нет'}</b>
-            </div>
-          ))}
-        </div>
-      </main>
+      <main class="cnt">{gmTab.value === 'console' ? <Console v={v} /> : <Roster v={v} />}</main>
+      <GmTabs />
     </>
   );
 }
