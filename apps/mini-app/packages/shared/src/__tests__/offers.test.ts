@@ -57,10 +57,7 @@ describe('сделки с резервом', () => {
     expect(errorOf(s0, offer(bundle({ gold: 7 })), player('o1'))).toBe('reserved');
 
     // Вещь на алтаре.
-    const onAltar = must(s0, {
-      type: 'gm.correct', playerKey: 'o1', reason: 'тест',
-      change: { field: 'itemOwner', itemId: shard.id, owner: { type: 'altar', side: 'wake' } },
-    }, gm).state;
+    const onAltar = must(s0, { type: 'altar.contribute', side: 'wake', itemId: shard.id }, player('o1')).state;
     expect(errorOf(onAltar, offer(bundle({ items: [shard.id] })), player('o1'))).toBe('invalid');
 
     // Скрытый осколок V у Лиры в act1.
@@ -254,5 +251,25 @@ describe('сделки с резервом', () => {
     expect(r.events).toEqual([expect.objectContaining({ type: 'OfferClosed', id, status: 'expired', reason: 'counterparty' })]);
     expect(r.state.players.o1).toMatchObject({ gold: 6, reservedGold: 0, ingredients: s0.players.o1.ingredients });
     expect(r.state.players.o6).toMatchObject({ gold: 6, ingredients: { ...s0.players.o6.ingredients, dew: dew - 1 } });
+  });
+
+  test('expire во время паузы → phase; после resume срок сдвинут на длину паузы', () => {
+    const s0 = makeGame(12);
+    const { state: s1, id } = create(s0, 'o1', 'o6', bundle({ gold: 2 }), bundle({ gold: 1 }), 1000);
+    const paused = must(s1, { type: 'clock.pause' }, gm, 2000).state;
+    expect(errorOf(paused, { type: 'offer.expire', id }, system, 400000)).toBe('phase');
+    const resumed = must(paused, { type: 'clock.resume' }, gm, 400000).state;
+    expect(resumed.offers[id].expiresAt).toBe(301000 + 398000);
+    expect(errorOf(resumed, { type: 'offer.expire', id }, system, 400000)).toBe('invalid');
+  });
+
+  test('accept после срока, пока tick ещё не закрыл предложение → phase', () => {
+    const s0 = makeGame(12);
+    const { state: s1, id } = create(s0, 'o1', 'o6', bundle({ gold: 2 }), bundle({ gold: 1 }), 1000);
+    expect(errorOf(s1, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('phase');
+    expect(errorOf(s1, { type: 'offer.accept', id }, player('o6'), 300999)).toBe('ok');
+    // Во время паузы срок не идёт: 299 000 мс паузы не съедают время на ответ.
+    const paused = must(s1, { type: 'clock.pause' }, gm, 2000).state;
+    expect(errorOf(paused, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('ok');
   });
 });

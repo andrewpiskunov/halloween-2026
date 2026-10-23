@@ -29,11 +29,19 @@ function sortRoster(content: Content, keys: string[]): string[] {
   return [...content.roles].sort((a, b) => a.pos - b.pos).filter(r => set.has(r.key)).map(r => r.key);
 }
 
-/** Игроки для нового состава: существующие записи сохраняются, новые с нулями. */
+/** Игроки для нового состава: существующие записи сохраняются, новые с нулями и прежней привязкой. */
 function playersFor(state: GameState, roster: string[]): Record<string, Player> {
   const players: Record<string, Player> = {};
-  for (const key of roster) players[key] = state.players[key] ?? emptyPlayer(key);
+  for (const key of roster) {
+    const tid = state.bindings[key];
+    players[key] = state.players[key] ?? (tid === undefined ? emptyPlayer(key) : { ...emptyPlayer(key), telegramId: tid });
+  }
   return players;
+}
+
+/** Привязки без этого аккаунта: у одного аккаунта не больше одной роли. */
+function bindingsWithout(bindings: Record<string, number>, telegramId: number): Record<string, number> {
+  return Object.fromEntries(Object.entries(bindings).filter(([, tid]) => tid !== telegramId));
 }
 
 /** Начальная раздача по правилам 6.6 и 16.5: вещи владельцам или в пул лотов. */
@@ -87,7 +95,11 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
   const hasShip = state.roster.some(k => content.roleByKey[k]?.side === 'ship');
   for (const side of hasShip ? [...BASE_ALTARS, 'ship' as const] : BASE_ALTARS) altars[side] = { side, contributions: [] };
 
-  return { type: 'FairOpened', at, nPresent, players, items, lots, workshop: { ash: each, moon: each, dew: each }, altars };
+  const ev = content.events.find(e => e.when === 'Открытие');
+  return {
+    type: 'FairOpened', at, nPresent, players, items, lots, workshop: { ash: each, moon: each, dew: each }, altars,
+    announcement: { at, title: ev?.title ?? 'Ярмарка открыта', text: ev?.text ?? '' },
+  };
 }
 
 export const sessionCommands: CommandHandlers = {
@@ -107,9 +119,14 @@ export const sessionCommands: CommandHandlers = {
 
   'player.bind': (state, _content, cmd, ctx) => {
     if (ctx.actor.type === 'player') return fail('forbidden');
+    // Аккаунт уже занимает роль состава (кроме roleKey) или место ведущего.
+    const takenElsewhere = (roleKey: string | 'gm') =>
+      (roleKey !== 'gm' && state.gmTelegramId === cmd.telegramId)
+      || state.roster.some(k => k !== roleKey && state.players[k]?.telegramId === cmd.telegramId);
     if (cmd.code === state.gmCode) {
       if (state.gmTelegramId === cmd.telegramId) return ok();
       if (state.gmTelegramId !== undefined) return fail('forbidden', 'код ведущего уже привязан');
+      if (takenElsewhere('gm')) return fail('forbidden', 'аккаунт уже привязан');
       return ok({ type: 'PlayerBound', at: ctx.now, roleKey: 'gm', telegramId: cmd.telegramId });
     }
     const roleKey = Object.keys(state.invites).find(k => state.invites[k] === cmd.code);
@@ -118,6 +135,7 @@ export const sessionCommands: CommandHandlers = {
     if (!state.roster.includes(roleKey) || !p) return fail('forbidden', 'роль вне состава');
     if (p.telegramId === cmd.telegramId) return ok();
     if (p.telegramId !== undefined) return fail('forbidden', 'код уже привязан к другому аккаунту');
+    if (takenElsewhere(roleKey)) return fail('forbidden', 'аккаунт уже привязан');
     return ok({ type: 'PlayerBound', at: ctx.now, roleKey, telegramId: cmd.telegramId });
   },
 
@@ -132,6 +150,7 @@ export const sessionCommands: CommandHandlers = {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase !== 'setup') return fail('phase');
     if (state.roster.length === 0) return fail('invalid', 'состав пуст');
+    if (!state.roster.some(k => state.players[k]?.present)) return fail('invalid', 'никто не отмечен как пришедший');
     return ok(buildOpening(state, content, ctx.newId, ctx.now));
   },
 };
@@ -148,9 +167,16 @@ export const sessionReducers: EventReducers = {
       : state.roster.filter(k => k !== e.roleKey);
     return { ...state, roster, players: playersFor(state, roster) };
   },
-  PlayerBound: (state, _content, e) => e.roleKey === 'gm'
-    ? { ...state, gmTelegramId: e.telegramId }
-    : { ...state, players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], telegramId: e.telegramId } } },
+  // Прежние привязки аккаунта к ролям вне состава снимаются: иначе роль вернётся уже занятой им.
+  PlayerBound: (state, _content, e) => {
+    const bindings = bindingsWithout(state.bindings, e.telegramId);
+    if (e.roleKey === 'gm') return { ...state, bindings, gmTelegramId: e.telegramId };
+    return {
+      ...state,
+      bindings: { ...bindings, [e.roleKey]: e.telegramId },
+      players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], telegramId: e.telegramId } },
+    };
+  },
   PresenceSet: (state, _content, e) => ({
     ...state, players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], present: e.present } },
   }),
@@ -164,5 +190,6 @@ export const sessionReducers: EventReducers = {
     workshop: e.workshop,
     altars: e.altars,
     clock: { actStartedAt: e.at, pausedTotal: 0 },
+    announcements: [...state.announcements, e.announcement],
   }),
 };

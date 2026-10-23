@@ -26,7 +26,7 @@ export function initialState(content: Content, codes: Record<string, string>): G
     phase: 'setup', roster: [], nPresent: 0,
     clock: { actStartedAt: 0, pausedTotal: 0 },
     players: {}, items: {}, workshop: { ash: 0, moon: 0, dew: 0 }, offers: {}, lots: {},
-    altars: {}, invites: {}, gmCode: '', announcements: [], seq: 0,
+    altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0,
   };
   return reduce(empty, content, { type: 'SessionCreated', at: 0, codes });
 }

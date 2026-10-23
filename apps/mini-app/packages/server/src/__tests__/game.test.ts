@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
-import type { Command } from '@fair/shared';
+import { defaultRoster, type Command } from '@fair/shared';
 import { EventStore } from '../store';
 import { Game } from '../game';
 import { content, empty, gm, memoryGame, openFair, testOpts } from './fixtures';
@@ -169,4 +169,68 @@ test('subscribe: подписчик получает новое состояни
   await game.submit('b', { type: 'session.setN', n: 13 }, gm);
   expect(seen).toHaveLength(1);
   expect(seen[0]).toBeGreaterThan(1);
+});
+
+test('привязка переживает смену состава: bind → setN вниз → setN вверх → bind снова даёт игрока', async () => {
+  const { game } = memoryGame();
+  await game.submit('n20', { type: 'session.setN', n: 20 }, gm);
+  const in12 = new Set(defaultRoster(content, 12));
+  const roleKey = game.state().roster.find(k => !in12.has(k))!;
+  const code = game.state().invites[roleKey];
+  expect(await game.bindByCode(code, 77)).toEqual({ type: 'player', roleKey });
+
+  await game.submit('n12', { type: 'session.setN', n: 12 }, gm);
+  expect(game.actorFor(77)).toBeUndefined();
+  await game.submit('n20-again', { type: 'session.setN', n: 20 }, gm);
+  expect(game.actorFor(77)).toEqual({ type: 'player', roleKey });
+  expect(await game.bindByCode(code, 77)).toEqual({ type: 'player', roleKey });
+});
+
+test('повторное открытие той же ссылки после смены роли не упирается в сохранённый результат прошлой привязки', async () => {
+  const { game } = memoryGame();
+  await game.submit('n', { type: 'session.setN', n: 12 }, gm);
+  const [a, b] = game.state().roster;
+  const codeA = game.state().invites[a];
+  const codeB = game.state().invites[b];
+  expect(await game.bindByCode(codeA, 5)).toEqual({ type: 'player', roleKey: a });
+  // Роль A убрали, гость занял B; потом вернули A и убрали B — гость снова открывает ссылку A.
+  await game.submit('offA', { type: 'session.toggleRole', roleKey: a }, gm);
+  expect(await game.bindByCode(codeB, 5)).toEqual({ type: 'player', roleKey: b });
+  await game.submit('onA', { type: 'session.toggleRole', roleKey: a }, gm);
+  await game.submit('offB', { type: 'session.toggleRole', roleKey: b }, gm);
+  expect(game.actorFor(5)).toBeUndefined();
+  expect(await game.bindByCode(codeA, 5)).toEqual({ type: 'player', roleKey: a });
+});
+
+test('ведущий открывает ссылку роли: роль остаётся свободной, гость привязывается', async () => {
+  const { game } = memoryGame();
+  await game.submit('n', { type: 'session.setN', n: 12 }, gm);
+  const roleKey = game.state().roster[0];
+  const code = game.state().invites[roleKey];
+  expect(await game.bindByCode(game.gmCode(), 1)).toEqual({ type: 'gm' });
+  expect(await game.bindByCode(code, 1)).toEqual({ type: 'gm' });
+  expect(game.state().players[roleKey].telegramId).toBeUndefined();
+  expect(await game.bindByCode(code, 2)).toEqual({ type: 'player', roleKey });
+});
+
+test('пауза останавливает истечение: +6 минут на паузе, tick → pending; resume → срок сдвинут', async () => {
+  const { game, opts } = memoryGame();
+  await openFair(game);
+  const s = game.state();
+  await game.submit('o1', { type: 'offer.create', to: s.roster[1], give: { ...empty(), gold: 1 }, get: empty() },
+    { type: 'player', roleKey: s.roster[0] });
+  const [offer] = Object.values(game.state().offers);
+
+  opts.clock.now += 1000;
+  expect((await game.submit('pause', { type: 'clock.pause' }, gm)).ok).toBe(true);
+  opts.clock.now += 6 * 60_000;
+  game.tick();
+  await game.submit('flush-p', { type: 'session.setN', n: 12 }, gm);
+  expect(game.state().offers[offer.id].status).toBe('pending');
+
+  expect((await game.submit('resume', { type: 'clock.resume' }, gm)).ok).toBe(true);
+  expect(game.state().offers[offer.id].expiresAt).toBe(offer.expiresAt + 6 * 60_000);
+  game.tick();
+  await game.submit('flush-r', { type: 'session.setN', n: 12 }, gm);
+  expect(game.state().offers[offer.id].status).toBe('pending');
 });

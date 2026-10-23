@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { allBut, content, gm, makeGame, player, run } from './helpers';
-import type { GameState, Offer } from '../types';
+import type { GameState, Item, Offer } from '../types';
 
 const next = (s: GameState, now = 0) => {
   const r = run(s, { type: 'act.next' }, gm, now);
@@ -154,6 +154,37 @@ describe('ведущий', () => {
     expect(mv.state.items[item.id].owner).toEqual({ type: 'player', key });
     expect(run(s, { type: 'gm.correct', playerKey: key, change: { field: 'itemOwner', itemId: 'нет', owner: { type: 'player', key } }, reason: 'x' }, gm)).toMatchObject({ ok: false, error: 'not_found' });
     expect(run(s, { type: 'gm.correct', playerKey: 'zzz', change: { field: 'gold', delta: 1 }, reason: 'x' }, gm)).toMatchObject({ ok: false, error: 'not_found' });
+  });
+
+  test('correct itemOwner: цель вне состава → not_found, цель не игрок → invalid; вещь в лоте или на алтаре → invalid; резерв снимается', () => {
+    const s0 = makeGame(12);
+    const shard = Object.values(s0.items).find(i => i.kind === 'shard' && i.owner.type === 'player')!;
+    const holder = (shard.owner as { key: string }).key;
+    const to = s0.roster.find(k => k !== holder)!;
+    const correct = (s: GameState, itemId: string, owner: Item['owner']) =>
+      run(s, { type: 'gm.correct', playerKey: holder, change: { field: 'itemOwner', itemId, owner }, reason: 'x' }, gm);
+
+    expect(correct(s0, shard.id, { type: 'player', key: 'o17' })).toMatchObject({ ok: false, error: 'not_found' });
+    expect(correct(s0, shard.id, { type: 'altar', side: 'wake' })).toMatchObject({ ok: false, error: 'invalid' });
+    const lot = Object.values(s0.lots)[0];
+    expect(correct(s0, shard.id, { type: 'lot', id: lot.id })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(correct(s0, lot.items[0], { type: 'player', key: to })).toMatchObject({ ok: false, error: 'invalid' });
+
+    const onAltar = run(s0, { type: 'altar.contribute', side: 'wake', itemId: shard.id }, player(holder));
+    if (!onAltar.ok) throw new Error(onAltar.error);
+    expect(correct(onAltar.state, shard.id, { type: 'player', key: to })).toMatchObject({ ok: false, error: 'invalid' });
+
+    const zero = { ash: 0, moon: 0, dew: 0 };
+    const offered = run(s0, {
+      type: 'offer.create', to,
+      give: { gold: 0, ingredients: zero, items: [shard.id] }, get: { gold: 1, ingredients: zero, items: [] },
+    }, player(holder));
+    if (!offered.ok) throw new Error(offered.error);
+    expect(offered.state.items[shard.id].reservedFor).toBeDefined();
+    const moved = correct(offered.state, shard.id, { type: 'player', key: to });
+    if (!moved.ok) throw new Error(moved.error);
+    expect(moved.state.items[shard.id].owner).toEqual({ type: 'player', key: to });
+    expect(moved.state.items[shard.id].reservedFor).toBeUndefined();
   });
 
   test('rebind выдаёт код из ctx.newId и снимает telegramId', () => {

@@ -48,6 +48,8 @@ function pendingOffer(state: GameState, id: string): Offer | Result {
   return o;
 }
 const isResult = (x: Offer | Result): x is Result => 'ok' in x;
+/** Срок истёк по часам ярмарки: текущая пауза в счёт не идёт (её сдвиг применится при resume). */
+const isOverdue = (state: GameState, o: Offer, now: number) => (state.clock.pausedAt ?? now) >= o.expiresAt;
 
 export const offerCommands: CommandHandlers = {
   'offer.create': (state, _content, cmd, ctx) => {
@@ -72,6 +74,7 @@ export const offerCommands: CommandHandlers = {
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
     if (participant(state, ctx.actor) !== o.to) return fail('forbidden');
+    if (isOverdue(state, o, ctx.now)) return fail('phase', 'срок ответа истёк');
     if (!authorStillHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'author' });
     if (!counterpartyHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'counterparty' });
     return ok({
@@ -98,6 +101,8 @@ export const offerCommands: CommandHandlers = {
 
   'offer.expire': (state, _content, cmd, ctx) => {
     if (ctx.actor.type !== 'system') return fail('forbidden');
+    // На паузе сроки стоят (спек §10).
+    if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
     if (ctx.now < o.expiresAt) return fail('invalid', 'срок ещё не истёк');

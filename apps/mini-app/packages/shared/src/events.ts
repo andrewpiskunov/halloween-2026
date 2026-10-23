@@ -23,6 +23,7 @@ export interface FairOpened extends EventBase {
   lots: Record<string, Lot>;
   workshop: Counts;
   altars: Partial<Record<AltarSide, Altar>>;
+  announcement: Announcement;
 }
 
 /** Начался новый акт: пополнение мастерской, новые лоты и вещи, снятое скрытие, объявление. */

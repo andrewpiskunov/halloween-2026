@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import {
   execute, initialState, reduce,
   type Actor, type Command, type Content, type ErrorCode, type Event, type GameState,
@@ -112,8 +112,9 @@ export class Game {
     return () => { this.subscribers.delete(fn); };
   }
 
-  /** Закрывает просроченные предложения; вызывать раз в секунду. */
+  /** Закрывает просроченные предложения; вызывать раз в секунду. На паузе сроки стоят (спек §10). */
   tick(): void {
+    if (this.current.clock.pausedAt !== undefined) return;
     const now = this.opts.now();
     for (const o of Object.values(this.current.offers)) {
       if (o.status === 'pending' && o.expiresAt <= now) {
@@ -132,7 +133,9 @@ export class Game {
 
   /** Привязывает аккаунт по коду приглашения и возвращает его роль (или undefined). */
   async bindByCode(code: string, telegramId: number): Promise<Actor | undefined> {
-    await this.submit(`bind:${code}:${telegramId}`, { type: 'player.bind', code, telegramId }, { type: 'system' });
+    // Каждое открытие ссылки — новая команда: движок сам идемпотентен для того же аккаунта,
+    // а сохранённый результат прошлой привязки не должен скрывать изменения состава.
+    await this.submit(`bind:${code}:${telegramId}:${randomUUID()}`, { type: 'player.bind', code, telegramId }, { type: 'system' });
     return this.actorFor(telegramId);
   }
 }

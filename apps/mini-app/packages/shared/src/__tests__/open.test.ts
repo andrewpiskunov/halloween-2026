@@ -109,4 +109,17 @@ describe('сценарии Б–Г: N=12', () => {
     expect(run(s, { type: 'session.toggleRole', roleKey: 'o1' }, gm)).toMatchObject({ ok: false, error: 'phase' });
     expect(run(s, { type: 'session.setN', n: 13 }, gm)).toMatchObject({ ok: false, error: 'phase' });
   });
+
+  test('open, когда никто не отмечен как пришедший → invalid, фаза setup', () => {
+    const r0 = run(newGame(), { type: 'session.setN', n: 12 }, gm);
+    if (!r0.ok) throw new Error(r0.error);
+    expect(run(r0.state, { type: 'session.open' }, gm))
+      .toMatchObject({ ok: false, error: 'invalid', detail: 'никто не отмечен как пришедший' });
+  });
+
+  test('open публикует объявление «Ярмарка открыта» из content.events', () => {
+    const s = makeGame(12);
+    const ev = content.events.find(e => e.when === 'Открытие')!;
+    expect(s.announcements).toEqual([{ at: 0, title: 'Ярмарка открыта', text: ev.text }]);
+  });
 });

@@ -89,4 +89,56 @@ describe('состав', () => {
     expect(run(r.state, { type: 'player.bind', code: 'code-gm', telegramId: 43 }, system))
       .toMatchObject({ ok: false, error: 'forbidden' });
   });
+
+  test('привязка сохраняется, когда роль уходит из состава и возвращается (toggleRole и setN)', () => {
+    const bound = run(setN(12), { type: 'player.bind', code: 'code-o6', telegramId: 606 }, system);
+    if (!bound.ok) throw new Error(bound.error);
+    const off = run(bound.state, { type: 'session.toggleRole', roleKey: 'o6' }, gm);
+    if (!off.ok) throw new Error(off.error);
+    const on = run(off.state, { type: 'session.toggleRole', roleKey: 'o6' }, gm);
+    if (!on.ok) throw new Error(on.error);
+    expect(on.state.players.o6.telegramId).toBe(606);
+
+    const extra = defaultRoster(content, 20).find(k => !defaultRoster(content, 12).includes(k))!;
+    const b20 = run(setN(20), { type: 'player.bind', code: `code-${extra}`, telegramId: 2020 }, system);
+    if (!b20.ok) throw new Error(b20.error);
+    const down = run(b20.state, { type: 'session.setN', n: 12 }, gm);
+    if (!down.ok) throw new Error(down.error);
+    expect(down.state.players[extra]).toBeUndefined();
+    const up = run(down.state, { type: 'session.setN', n: 20 }, gm);
+    if (!up.ok) throw new Error(up.error);
+    expect(up.state.players[extra].telegramId).toBe(2020);
+  });
+
+  test('один аккаунт — одна роль: ведущий и уже привязанный гость не могут занять другую роль', () => {
+    const g = run(setN(12), { type: 'player.bind', code: 'code-gm', telegramId: 42 }, system);
+    if (!g.ok) throw new Error(g.error);
+    expect(run(g.state, { type: 'player.bind', code: 'code-o1', telegramId: 42 }, system))
+      .toMatchObject({ ok: false, error: 'forbidden', detail: 'аккаунт уже привязан' });
+
+    const p = run(g.state, { type: 'player.bind', code: 'code-o1', telegramId: 1001 }, system);
+    if (!p.ok) throw new Error(p.error);
+    expect(run(p.state, { type: 'player.bind', code: 'code-o2', telegramId: 1001 }, system))
+      .toMatchObject({ ok: false, error: 'forbidden', detail: 'аккаунт уже привязан' });
+    expect(run(p.state, { type: 'player.bind', code: 'code-o1', telegramId: 1001 }, system)).toMatchObject({ ok: true, events: [] });
+
+    // Гость, привязанный к роли, не становится ведущим.
+    const s = run(setN(12), { type: 'player.bind', code: 'code-o1', telegramId: 7 }, system);
+    if (!s.ok) throw new Error(s.error);
+    expect(run(s.state, { type: 'player.bind', code: 'code-gm', telegramId: 7 }, system))
+      .toMatchObject({ ok: false, error: 'forbidden', detail: 'аккаунт уже привязан' });
+  });
+
+  test('аккаунт роли, убранной из состава, может занять другую роль; старая привязка при этом снимается', () => {
+    const b = run(setN(12), { type: 'player.bind', code: 'code-o6', telegramId: 606 }, system);
+    if (!b.ok) throw new Error(b.error);
+    const off = run(b.state, { type: 'session.toggleRole', roleKey: 'o6' }, gm);
+    if (!off.ok) throw new Error(off.error);
+    const moved = run(off.state, { type: 'player.bind', code: 'code-o1', telegramId: 606 }, system);
+    if (!moved.ok) throw new Error(moved.error);
+    expect(moved.state.players.o1.telegramId).toBe(606);
+    const back = run(moved.state, { type: 'session.toggleRole', roleKey: 'o6' }, gm);
+    if (!back.ok) throw new Error(back.error);
+    expect(back.state.players.o6.telegramId).toBeUndefined();
+  });
 });

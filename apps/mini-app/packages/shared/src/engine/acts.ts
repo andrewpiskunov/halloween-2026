@@ -95,7 +95,14 @@ export const actCommands: CommandHandlers = {
     } else if (c.field === 'ingredient') {
       if (!Number.isInteger(c.delta)) return fail('invalid');
       if (p.ingredients[c.ingredient] + c.delta < 0) return fail('insufficient');
-    } else if (!state.items[c.itemId]) return fail('not_found', c.itemId);
+    } else {
+      const it = state.items[c.itemId];
+      if (!it) return fail('not_found', c.itemId);
+      // Вещь из лота или с алтаря остаётся в их списках: перенос оставил бы состояние несогласованным.
+      if (it.owner.type !== 'player') return fail('invalid', 'переносить можно только вещь у игрока');
+      if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
+      if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
+    }
     return ok({ type: 'Corrected', at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() });
   },
 
@@ -150,11 +157,17 @@ export const actReducers: EventReducers = {
       const ingredients = { ...p.ingredients, [c.ingredient]: p.ingredients[c.ingredient] + c.delta };
       return { ...state, players: { ...state.players, [e.playerKey]: { ...p, ingredients } } };
     }
-    return { ...state, items: { ...state.items, [c.itemId]: { ...state.items[c.itemId], owner: c.owner } } };
+    // Резерв снимается: вещь ушла от автора, его предложение закроется при попытке принять.
+    const { reservedFor: _r, ...item } = state.items[c.itemId];
+    return { ...state, items: { ...state.items, [c.itemId]: { ...item, owner: c.owner } } };
   },
-  InviteRebound: (state, _c, e) => ({
-    ...state,
-    invites: { ...state.invites, [e.roleKey]: e.code },
-    players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], telegramId: undefined } },
-  }),
+  InviteRebound: (state, _c, e) => {
+    const { [e.roleKey]: _old, ...bindings } = state.bindings;
+    return {
+      ...state,
+      bindings,
+      invites: { ...state.invites, [e.roleKey]: e.code },
+      players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], telegramId: undefined } },
+    };
+  },
 };
