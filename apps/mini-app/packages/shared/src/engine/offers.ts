@@ -7,6 +7,11 @@ const OFFER_TTL_MS = 300000;
 
 const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
 const playerKey = (a: Actor) => (a.type === 'player' ? a.roleKey : undefined);
+/** Ключ игрока-участника ярмарки: роль в составе, запись есть и игрок пришёл. */
+function participant(state: GameState, a: Actor): string | undefined {
+  const key = playerKey(a);
+  return key !== undefined && state.roster.includes(key) && state.players[key]?.present ? key : undefined;
+}
 
 const isNonNegInt = (n: number) => Number.isInteger(n) && n >= 0;
 const validShape = (b: Bundle) =>
@@ -54,7 +59,7 @@ const isResult = (x: Offer | Result): x is Result => 'ok' in x;
 
 export const offerCommands: CommandHandlers = {
   'offer.create': (state, _content, cmd, ctx) => {
-    const from = playerKey(ctx.actor);
+    const from = participant(state, ctx.actor);
     if (!from) return fail('forbidden');
     if (!isActPhase(state)) return fail('phase');
     if (!state.roster.includes(cmd.to) || !state.players[cmd.to]?.present) return fail('not_found', cmd.to);
@@ -71,9 +76,10 @@ export const offerCommands: CommandHandlers = {
   },
 
   'offer.accept': (state, _content, cmd, ctx) => {
+    if (!isActPhase(state)) return fail('phase');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
-    if (playerKey(ctx.actor) !== o.to) return fail('forbidden');
+    if (participant(state, ctx.actor) !== o.to) return fail('forbidden');
     if (!authorStillHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'author' });
     if (!counterpartyHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'counterparty' });
     return ok({
@@ -83,16 +89,18 @@ export const offerCommands: CommandHandlers = {
   },
 
   'offer.decline': (state, _content, cmd, ctx) => {
+    if (!isActPhase(state)) return fail('phase');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
-    if (playerKey(ctx.actor) !== o.to) return fail('forbidden');
+    if (participant(state, ctx.actor) !== o.to) return fail('forbidden');
     return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'declined' });
   },
 
   'offer.cancel': (state, _content, cmd, ctx) => {
+    if (!isActPhase(state)) return fail('phase');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
-    if (playerKey(ctx.actor) !== o.from) return fail('forbidden');
+    if (participant(state, ctx.actor) !== o.from) return fail('forbidden');
     return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'cancelled' });
   },
 

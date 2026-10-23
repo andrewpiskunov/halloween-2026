@@ -222,4 +222,37 @@ describe('сделки с резервом', () => {
     const v = itemOf(s3, 'o14', 'V');
     expect(errorOf(s3, { type: 'offer.create', to: 'o1', give: bundle({ items: [v.id] }), get: bundle({ gold: 1 }) }, player('o14'))).toBe('ok');
   });
+  test('create от роли вне ярмарки или не пришедшего игрока → forbidden, состояние не меняется', () => {
+    const s0 = makeGame(12, { present: allBut(12, ['o14']) });
+    const rumor: Command = { type: 'offer.create', to: 'o6', give: bundle({ rumor: 'слух' }), get: bundle({ gold: 1 }) };
+    const before = JSON.stringify(s0);
+    expect(errorOf(s0, rumor, player('r6'))).toBe('forbidden');
+    expect(errorOf(s0, rumor, player('o14'))).toBe('forbidden');
+    expect(JSON.stringify(s0)).toBe(before);
+    expect(s0.players.r6).toBeUndefined();
+  });
+
+  test('accept после закрытия ярмарки → phase; decline и cancel тоже', () => {
+    const s0 = makeGame(12);
+    const { state: s1, id } = create(s0, 'o1', 'o6', bundle({ gold: 1 }), bundle({ gold: 1 }));
+    const closed: GameState = { ...s1, phase: 'closed' };
+    expect(errorOf(closed, { type: 'offer.accept', id }, player('o6'))).toBe('phase');
+    expect(errorOf(closed, { type: 'offer.decline', id }, player('o6'))).toBe('phase');
+    expect(errorOf(closed, { type: 'offer.cancel', id }, player('o1'))).toBe('phase');
+  });
+
+  test('accept, когда ингредиенты адресата сняты через gm.correct: expired, reason "counterparty", ничего не передано', () => {
+    const s0 = makeGame(12);
+    const dew = s0.players.o6.ingredients.dew;
+    expect(dew).toBeGreaterThan(0);
+    const { state: s1, id } = create(s0, 'o1', 'o6', bundle({ gold: 2 }), bundle({ ingredients: { ash: 0, moon: 0, dew } }));
+    const s2 = must(s1, {
+      type: 'gm.correct', playerKey: 'o6', reason: 'потерял',
+      change: { field: 'ingredient', ingredient: 'dew', delta: -1 },
+    }, gm).state;
+    const r = must(s2, { type: 'offer.accept', id }, player('o6'));
+    expect(r.events).toEqual([expect.objectContaining({ type: 'OfferClosed', id, status: 'expired', reason: 'counterparty' })]);
+    expect(r.state.players.o1).toMatchObject({ gold: 6, reservedGold: 0, ingredients: s0.players.o1.ingredients });
+    expect(r.state.players.o6).toMatchObject({ gold: 6, ingredients: { ...s0.players.o6.ingredients, dew: dew - 1 } });
+  });
 });
