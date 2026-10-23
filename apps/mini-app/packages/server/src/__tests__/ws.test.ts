@@ -7,7 +7,7 @@ import type { Config } from '../config';
 import { EventStore } from '../store';
 import { Game } from '../game';
 import { buildApp } from '../http';
-import { attachWs } from '../ws';
+import { attachWs, closeWs } from '../ws';
 import { content, empty, nextCmd, gm } from './fixtures';
 
 const config: Config = {
@@ -62,7 +62,10 @@ let wsBase: string;
 const clients: Client[] = [];
 
 let counter = 0;
-const opts = { now: Date.now, newId: () => `id${++counter}`, random: () => 0.5 };
+// Управляемые часы: тест истечения предложений сдвигает время вперёд.
+const clock = { now: Date.now() };
+const now = () => clock.now;
+const opts = { now, newId: () => `id${++counter}`, random: () => 0.5 };
 
 async function devAuth(userId: number, startParam?: string): Promise<{ token: string; actor: unknown; botName: string }> {
   const res = await fetch(`${base}/api/auth`, {
@@ -85,8 +88,8 @@ let o1: Client;
 beforeAll(async () => {
   store = new EventStore(':memory:');
   game = Game.open(store, content, opts);
-  app = buildApp({ game, content, config, now: Date.now });
-  wss = attachWs(app.server, { game, content, config, now: Date.now });
+  app = buildApp({ game, content, config, now });
+  wss = attachWs(app.server, { game, content, config, now });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const { port } = app.server.address() as AddressInfo;
   base = `http://127.0.0.1:${port}`;
@@ -114,7 +117,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   for (const c of clients) c.ws.terminate();
-  wss.close();
+  await closeWs(wss);
   await app.close();
   store.close();
 });
@@ -155,6 +158,27 @@ test('actor берётся из токена: игрок o6 не может вы
   expect(game.state().seq).toBe(seq);
 });
 
+test('id клиента не совпадает с системными: команда с id expire:<offerId> не мешает tick закрыть предложение', async () => {
+  const pending = Object.values(game.state().offers).find(o => o.status === 'pending')!;
+  expect(pending).toBeDefined();
+  const r = await o6.cmd(`expire:${pending.id}`, { type: 'offer.create', to: 'o1', give: { ...empty(), gold: 1 }, get: empty() });
+  expect(r).toMatchObject({ id: `expire:${pending.id}`, ok: true });
+  clock.now = pending.expiresAt + 1;
+  game.tick();
+  await o6.next(m => m.kind === 'view' && game.state().offers[pending.id].status !== 'pending');
+  expect(game.state().offers[pending.id].status).toBe('expired');
+});
+
+test('одинаковый id от разных аккаунтов: выполняются обе команды', async () => {
+  const count = store.all().length;
+  const offer = (to: string) => ({ type: 'offer.create', to, give: { ...empty(), gold: 1 }, get: empty() });
+  const [r6, r1] = await Promise.all([o6.cmd('same', offer('o1')), o1.cmd('same', offer('o6'))]);
+  expect(r6).toMatchObject({ id: 'same', ok: true });
+  expect(r1).toMatchObject({ id: 'same', ok: true });
+  expect(r1.seq).not.toBe(r6.seq);
+  expect(store.all().length).toBe(count + 2);
+});
+
 test('некорректное сообщение → invalid без событий в игре', async () => {
   const count = store.all().length;
   const r = await o6.cmd('x', { type: 'shop.buy', ingredient: { toString: 1 } });
@@ -185,4 +209,28 @@ test('гость без роли → закрытие 4403', async () => {
   const { token } = await devAuth(7777);
   const c = connect(token);
   expect(await c.closed).toBe(4403);
+});
+
+test('closeWs закрывает подключённых клиентов и завершается; после него app.close не зависает', async () => {
+  const st = new EventStore(':memory:');
+  const g = Game.open(st, content, opts);
+  const deps = { game: g, content, config, now };
+  const a = buildApp(deps);
+  const w = attachWs(a.server, deps);
+  await a.listen({ port: 0, host: '127.0.0.1' });
+  const { port } = a.server.address() as AddressInfo;
+  const res = await fetch(`http://127.0.0.1:${port}/api/auth`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ dev: { userId: 42, startParam: g.gmCode() } }),
+  });
+  const { token } = await res.json() as { token: string };
+  const c = new Client(`ws://127.0.0.1:${port}/ws?token=${token}`);
+  clients.push(c);
+  await c.next(m => m.kind === 'view');
+
+  const within = <T>(p: Promise<T>) => Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('таймаут')), 1000))]);
+  await within(closeWs(w));
+  await within(c.closed);
+  await within(a.close());
+  st.close();
 });

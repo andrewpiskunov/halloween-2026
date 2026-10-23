@@ -117,7 +117,8 @@ export class Game {
     const now = this.opts.now();
     for (const o of Object.values(this.current.offers)) {
       if (o.status === 'pending' && o.expiresAt <= now) {
-        void this.submit('expire:' + o.id, { type: 'offer.expire', id: o.id }, { type: 'system' });
+        this.submit('expire:' + o.id, { type: 'offer.expire', id: o.id }, { type: 'system' })
+          .catch(err => console.error('Ошибка истечения предложения', err));
       }
     }
   }

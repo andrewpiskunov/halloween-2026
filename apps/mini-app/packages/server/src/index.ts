@@ -6,7 +6,7 @@ import { loadConfig } from './config';
 import { EventStore } from './store';
 import { Game } from './game';
 import { buildApp } from './http';
-import { attachWs } from './ws';
+import { attachWs, closeWs } from './ws';
 import { startBot } from './bot';
 
 const config = loadConfig();
@@ -33,7 +33,7 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(ticker);
   try {
     await bot?.stop();
-    wss.close();
+    await closeWs(wss);
     await app.close();
   } finally {
     store.close();

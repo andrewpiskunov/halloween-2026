@@ -57,6 +57,17 @@ export function parseCommandMessage(raw: string): { id: string; cmd: Command } |
 
 interface Conn { ws: WebSocket; telegramId: number; alive: boolean }
 
+/** Остановка WS-сервера, созданного attachWs; заполняется в attachWs. */
+const closers = new WeakMap<WebSocketServer, () => Promise<void>>();
+
+/**
+ * Закрывает WS: завершает все соединения, отписывается от игры, останавливает пинг.
+ * Нужно перед app.close(): с опцией server сам wss.close() клиентов не закрывает и не завершается, пока они есть.
+ */
+export function closeWs(wss: WebSocketServer): Promise<void> {
+  return closers.get(wss)?.() ?? new Promise(resolve => wss.close(() => resolve()));
+}
+
 /** WebSocket /ws?token=…: проекции состояния и приём команд от имени владельца токена. */
 export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
   const { game, content, config, now } = deps;
@@ -103,7 +114,9 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
       const actor: Actor | undefined = game.actorFor(conn.telegramId);
       if (!actor) { send(ws, { kind: 'result', id: parsed.id, ok: false, error: 'forbidden' }); ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
       try {
-        const result = await game.submit(parsed.id, parsed.cmd, actor);
+        // id клиента живёт в пространстве своего аккаунта: не пересекается с системными
+        // (expire:…, bind:…) и с id других игроков.
+        const result = await game.submit(`ws:${conn.telegramId}:${parsed.id}`, parsed.cmd, actor);
         // Новую проекцию присылает подписка игры; здесь только результат.
         send(ws, { kind: 'result', id: parsed.id, ...result });
       } catch (err) {
@@ -122,6 +135,17 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
   }, PING_INTERVAL_MS);
   ping.unref();
 
-  wss.on('close', () => { clearInterval(ping); unsubscribe(); for (const c of conns) c.ws.terminate(); conns.clear(); });
+  let closing: Promise<void> | undefined;
+  closers.set(wss, () => {
+    closing ??= new Promise<void>(resolve => {
+      clearInterval(ping);
+      unsubscribe();
+      conns.clear();
+      // Все сокеты, включая ещё не прошедшие проверку токена.
+      for (const ws of wss.clients) ws.terminate();
+      wss.close(() => resolve());
+    });
+    return closing;
+  });
   return wss;
 }
