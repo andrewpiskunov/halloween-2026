@@ -1,5 +1,5 @@
 import type { Correction } from './commands';
-import type { Altar, AltarSide, Announcement, Counts, Item, Lot, Player } from './types';
+import type { Altar, AltarSide, Announcement, Bundle, Counts, Item, Lot, Offer, OfferStatus, Player } from './types';
 
 /** Общие поля события: время факта и номер в журнале (проставляется при записи). */
 export interface EventBase { at: number; seq?: number }
@@ -45,7 +45,19 @@ export interface Announced extends EventBase { type: 'Announced'; title: string;
 export interface Corrected extends EventBase { type: 'Corrected'; playerKey: string; change: Correction; reason: string }
 export interface InviteRebound extends EventBase { type: 'InviteRebound'; roleKey: string; code: string }
 
-// События следующих задач (ActStarted, OfferCreated, …) добавляются в объединение по мере реализации.
+/** Игрок предложил сделку; его сторона give зарезервирована. */
+export interface OfferCreated extends EventBase { type: 'OfferCreated'; offer: Offer }
+/** Адресат принял: обе стороны переданы разом. exchanged — передано ли хоть что-то кроме слухов. */
+export interface OfferAccepted extends EventBase {
+  type: 'OfferAccepted'; id: string; from: string; to: string; give: Bundle; get: Bundle; service: boolean; exchanged: boolean;
+}
+/** Предложение закрыто без обмена: отказ, отмена или истечение (reason: timeout, author, counterparty). */
+export interface OfferClosed extends EventBase {
+  type: 'OfferClosed'; id: string; status: Exclude<OfferStatus, 'pending' | 'accepted'>; reason?: string;
+}
+
+// События следующих задач (IngredientBought, …) добавляются в объединение по мере реализации.
 export type Event = SessionCreated | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
-  | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound;
+  | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
+  | OfferCreated | OfferAccepted | OfferClosed;
 export type EventType = Event['type'];
