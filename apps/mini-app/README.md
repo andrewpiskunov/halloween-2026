@@ -6,7 +6,7 @@
 
 Три пакета в одном pnpm-воркспейсе:
 
-- `packages/shared` (`@fair/shared`) — правила игры без ввода-вывода: типы, команды, чистая функция `apply`, проекции состояния для игрока и ведущего.
+- `packages/shared` (`@fair/shared`) — правила игры без ввода-вывода: типы, команды и события, чистые функции `decide` (проверяет команду и возвращает события), `reduce` (применяет событие к состоянию) и `execute` (обе сразу), проекции состояния для игрока и ведущего.
 - `packages/server` (`@fair/server`) — Fastify, WebSocket, SQLite, вход через Telegram, бот.
 - `packages/client` (`@fair/client`) — Vite и Preact, экраны игрока и ведущего.
 
@@ -29,11 +29,13 @@ cd packages/server
 DB_PATH=./data/dev.sqlite ALLOW_DEV_AUTH=1 SESSION_SECRET=dev pnpm exec tsx src/index.ts
 ```
 
-Во втором терминале запустите клиент (прокси на сервер по умолчанию идёт на порт 8080, другой порт задаётся переменной `API_PORT`):
+Во втором терминале запустите клиент:
 
 ```sh
 pnpm --filter @fair/client dev
 ```
+
+Vite проксирует `/api` и `/ws` на `localhost:8080`. Если сервер слушает другой порт, задайте его переменной `API_PORT` при запуске клиента, например `API_PORT=8091 pnpm --filter @fair/client dev`. Это переменная Vite, а не сервера, поэтому в `.env.example` её нет.
 
 Код ведущего сервер печатает в лог при старте строкой «Код ведущего». Коды ведущего и всех ролей также отдаёт `GET http://localhost:8080/api/dev/codes` (только при `ALLOW_DEV_AUTH=1`).
 
@@ -51,7 +53,7 @@ http://localhost:5173/?dev=<число>&code=<код>
 
 | Переменная | Назначение |
 | --- | --- |
-| `BOT_TOKEN` | токен бота от BotFather |
+| `BOT_TOKEN` | токен бота от BotFather; без него сервер не стартует, если не включён `ALLOW_DEV_AUTH=1` |
 | `BOT_NAME` | имя бота без `@`, из него строятся ссылки-приглашения |
 | `SESSION_SECRET` | секрет подписи сессий, случайная длинная строка |
 | `CLIENT_URL` | адрес клиента, который открывает бот |
@@ -79,10 +81,45 @@ pnpm e2e         # сквозной тест в браузере
 
 ## Развёртывание
 
+Клиент и сервер должны быть на одном origin: клиент обращается к `/api/...` и `/ws` относительно своего адреса. Сборка и запуск:
+
+```sh
+pnpm install
+pnpm --filter @fair/client build   # статика в packages/client/dist
+cp .env.example .env               # заполнить BOT_TOKEN, BOT_NAME, SESSION_SECRET, CLIENT_URL
+pnpm start                         # сервер на PORT (по умолчанию 8080)
+```
+
+`pnpm start` запускает `packages/server` через `tsx`, поэтому относительный `DB_PATH` (по умолчанию `./data/session.sqlite`) считается от `packages/server`. Лучше задать абсолютный путь.
+
+Пример `Caddyfile` (домен и путь к репозиторию замените своими):
+
+```
+fair.example.org {
+	handle /api/* {
+		reverse_proxy localhost:8080
+	}
+	handle /ws {
+		reverse_proxy localhost:8080
+	}
+	handle {
+		root * /srv/halloween-2026/apps/mini-app/packages/client/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
+```
+
+Caddy сам получит сертификат и проксирует WebSocket без отдельных настроек. `try_files` отдаёт `index.html` на любой путь клиента.
+
 - Нужен HTTPS: Telegram открывает Mini App только по `https`. Проще всего поставить перед сервером Caddy, он сам получит сертификат.
 - В BotFather создайте бота и задайте Main Mini App URL (адрес клиента, то есть `CLIENT_URL`). Ссылки-приглашения имеют вид `https://t.me/<бот>?startapp=<код>`.
 - `BOT_POLLING=1` включает опрос Telegram без вебхука; для одного процесса этого достаточно.
 - `ALLOW_DEV_AUTH` на проде держите равным `0`.
+
+## Чего пока нет
+
+- Ведущий получает в каждой проекции всё состояние и всё содержимое игры. Сообщения сжимаются (`permessage-deflate`), а индексы `roleByKey` и `recipeById` в проекцию не попадают, но содержимое всё равно уходит заново при каждом изменении. Переход на «содержимое один раз при подключении» отложен.
 
 ## Опорные материалы
 
