@@ -3,6 +3,7 @@ import type { Item, PlayerView } from '@fair/shared';
 import { Button } from '../components/Button';
 import { ItemCard } from '../components/ItemCard';
 import { GOLD, INGREDIENTS, itemLabel, kindLabel, roleName } from '../labels';
+import { canOffer, canPutOnAltar } from '../rules';
 import { ask, run, tab, tradeDraft } from '../store';
 
 /** Сумка: золото, ингредиенты и вещи с действиями. */
@@ -45,7 +46,6 @@ export function Bag({ v }: { v: PlayerView }) {
         {items.length === 0 && <p class="m-note">Пока пусто.</p>}
         {items.map(item => {
           const label = itemLabel(item, v);
-          const free = available.items.includes(item.id);
           const sub = [
             kindLabel(item.kind),
             item.createdBy ? `сделал ${roleName(item.createdBy, v)}` : '',
@@ -55,8 +55,8 @@ export function Bag({ v }: { v: PlayerView }) {
             <div key={item.id} class="item-block">
               <ItemCard emoji={label.emoji} title={label.name} sub={sub} />
               <div class="m-btns">
-                <Button small kind="sec" icon="🤝" disabled={!free} onClick={() => offer(item)}>Предложить</Button>
-                <Button small kind="sec" icon="🕯️" disabled={!free || v.altars.length === 0}
+                <Button small kind="sec" icon="🤝" disabled={!canOffer(item, v)} onClick={() => offer(item)}>Предложить</Button>
+                <Button small kind="sec" icon="🕯️" disabled={!canPutOnAltar(item, v) || v.altars.length === 0}
                   onClick={() => setAltarFor(altarFor === item.id ? null : item.id)}>На алтарь</Button>
                 <Button small kind="sec" icon="✨" disabled>Использовать</Button>
               </div>

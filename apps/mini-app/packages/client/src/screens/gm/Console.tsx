@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Stepper } from '../../components/Stepper';
 import { actNextPreview } from '../../gm/lots';
 import { INGREDIENTS, mmss } from '../../labels';
+import { correctableItems } from '../../rules';
 import { ask, now, run, showToast } from '../../store';
 
 type Field = 'gold' | 'ingredient' | 'itemOwner';
@@ -73,7 +74,7 @@ function Correction({ v }: { v: GmView }) {
   const [field, setField] = useState<Field>('gold');
   const [delta, setDelta] = useState(0);
   const [ingredient, setIngredient] = useState<Ingredient>('ash');
-  const items = Object.values(state.items);
+  const items = correctableItems(state);
   const [itemId, setItemId] = useState('');
   const [newOwner, setNewOwner] = useState('');
   const [reason, setReason] = useState('');
@@ -82,7 +83,7 @@ function Correction({ v }: { v: GmView }) {
     o.type === 'player' ? name(o.key) : o.type === 'altar' ? `алтарь ${o.side}` : 'лот';
   const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${it.ref}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
 
-  const curItem = itemId || items[0]?.id || '';
+  const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';
   const curOwner = newOwner || state.roster[0] || '';
   const p = player || state.roster[0] || '';
   const ready = reason.trim() !== '' && p !== '' && (field === 'itemOwner' ? curItem !== '' && curOwner !== '' : delta !== 0);

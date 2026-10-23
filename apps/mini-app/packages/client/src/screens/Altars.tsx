@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { ItemCard } from '../components/ItemCard';
 import { Stepper } from '../components/Stepper';
 import { GOLD, itemLabel, refLabel } from '../labels';
+import { canPutOnAltar } from '../rules';
 import { ask, run } from '../store';
 
 type Altar = PlayerView['altars'][number];
@@ -29,6 +30,7 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
   const color = v.public.factions.find(f => f.id === a.side)?.color ?? 'var(--amber)';
   const [gold, setGold] = useState(1);
   const avail = v.me.available;
+  const altarItems = v.me.items.filter(i => canPutOnAltar(i, v));
   const totalGold = a.contributions.reduce((s, c) => s + (c.gold ?? 0), 0);
 
   const contribute = (what: { itemId: string; name: string } | { gold: number }) => ask({
@@ -62,8 +64,8 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
       <div class="m-btns"><Button kind="sec" icon="🕯️" onClick={toggle}>{open ? 'Скрыть' : 'Вложить'}</Button></div>
       {open && (
         <div class="choice">
-          {avail.items.length === 0 && <p class="m-note">Свободных вещей нет.</p>}
-          {v.me.items.filter(i => avail.items.includes(i.id)).map(i => {
+          {altarItems.length === 0 && <p class="m-note">Свободных осколков и Фокусов нет.</p>}
+          {altarItems.map(i => {
             const l = itemLabel(i, v);
             return (
               <ItemCard key={i.id} emoji={l.emoji} title={l.name}>

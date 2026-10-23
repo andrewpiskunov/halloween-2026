@@ -3,6 +3,7 @@ import { Confirm } from './components/Confirm';
 import { GmTabs } from './components/GmTabs';
 import { Tabs } from './components/Tabs';
 import { mmss, GOLD } from './labels';
+import { phaseLabel } from './rules';
 import { Altars } from './screens/Altars';
 import { Bag } from './screens/Bag';
 import { Events } from './screens/Events';
@@ -39,20 +40,19 @@ function Notice({ icon, text }: { icon: string; text: string }) {
   );
 }
 
-const PHASE_TEXT: Record<string, string> = { setup: 'Подготовка', closed: 'Ярмарка закрыта', revealed: 'Ярмарка закрыта' };
-
 function TopBar({ v, gold }: { v: PlayerView | GmView; gold?: number }) {
   const phase = v.kind === 'player' ? v.phase : v.state.phase;
-  let label = PHASE_TEXT[phase];
-  if (!label && v.kind === 'player') {
+  let label = phaseLabel(phase);
+  const inAct = phase === 'act1' || phase === 'act2' || phase === 'act3';
+  if (inAct && v.kind === 'player') {
     const elapsed = v.clock.elapsedMs + (v.clock.paused ? 0 : Math.max(0, now.value - viewAt.value));
-    label = `Акт ${v.act} · ${mmss(elapsed)}${v.clock.paused ? ' ⏸' : ''}`;
-  }
+    label = `${label} · ${mmss(elapsed)}${v.clock.paused ? ' ⏸' : ''}`;
+  } else if (inAct && v.kind === 'gm' && v.state.clock.pausedAt !== undefined) label += ' ⏸';
   const s = status.value;
   return (
     <header class="topbar">
       <span class={`dot ${s === 'open' ? 'on' : 'off'}`} title={s === 'open' ? 'На связи' : 'Нет связи'} />
-      <b>{label ?? phase}</b>
+      <b>{label}</b>
       {gold !== undefined && <b class="gold">{GOLD.emoji} {gold}</b>}
     </header>
   );

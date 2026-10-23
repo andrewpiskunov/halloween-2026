@@ -4,7 +4,7 @@ import { available } from './engine';
 import type { AltarSide, Announcement, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player } from './types';
 
 export interface PlayerView {
-  kind: 'player'; phase: Phase; act: 0 | 1 | 2 | 3; clock: { elapsedMs: number; paused: boolean };
+  kind: 'player'; phase: Phase; act: 0 | 1 | 2 | 3; clock: { elapsedMs: number; paused: boolean; pausedAt?: number };
   me: { role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] } };
   contacts: { role: string | null; name?: string; text: string; absent: boolean }[];
   others: { roleKey: string; name: string; title: string; emoji: string }[];
@@ -92,7 +92,10 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     kind: 'player',
     phase: state.phase,
     act: actOf(state.phase),
-    clock: { elapsedMs, paused: state.clock.pausedAt !== undefined },
+    clock: {
+      elapsedMs, paused: state.clock.pausedAt !== undefined,
+      ...(state.clock.pausedAt !== undefined ? { pausedAt: state.clock.pausedAt } : {}),
+    },
     me: {
       role, player: me,
       items: items.filter(i => i.owner.type === 'player' && i.owner.key === key),

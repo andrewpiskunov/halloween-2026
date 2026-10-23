@@ -5,6 +5,7 @@ import { ItemCard } from '../components/ItemCard';
 import { Portrait } from '../components/Portrait';
 import { Stepper } from '../components/Stepper';
 import { GOLD, INGREDIENTS, bundleText, emptyBundle, itemLabel, mmss, roleEmoji, roleName } from '../labels';
+import { canOffer, offerRemainingMs } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
 
 const STATUS_TEXT: Record<Offer['status'], string> = {
@@ -37,7 +38,7 @@ export function Trades({ v }: { v: PlayerView }) {
     <>
       {incoming.map(o => (
         <div class="m-card hot" key={o.id}>
-          <h5>📩 Входящее · ждёт {mmss(o.expiresAt - now.value)}</h5>
+          <h5>📩 Входящее · ждёт {mmss(offerRemainingMs(o, v.clock, now.value))}{v.clock.paused ? ' ⏸' : ''}</h5>
           <Who v={v} roleKey={o.from} />
           <ItemCard emoji="📤" title="Вы отдаёте" sub={bundleText(o.get, v)} />
           <ItemCard emoji="📥" title="Вы получаете" sub={bundleText(o.give, v)} />
@@ -52,7 +53,7 @@ export function Trades({ v }: { v: PlayerView }) {
       {outgoing.map(o => (
         <div class="m-card" key={o.id}>
           {/* Часы сервера и телефона могут расходиться: отсчёт приблизительный. */}
-          <h5>📨 Исходящее · осталось {mmss(o.expiresAt - now.value)}</h5>
+          <h5>📨 Исходящее · осталось {mmss(offerRemainingMs(o, v.clock, now.value))}{v.clock.paused ? ' ⏸' : ''}</h5>
           <Who v={v} roleKey={o.to} />
           <ItemCard emoji="📤" title="Вы отдаёте" sub={bundleText(o.give, v)} />
           <ItemCard emoji="📥" title="Вы просите" sub={bundleText(o.get, v)} />
@@ -107,7 +108,7 @@ function OfferForm({ v }: { v: PlayerView }) {
   }, [draft]);
 
   const a = v.me.available;
-  const freeItems = v.me.items.filter(i => a.items.includes(i.id));
+  const freeItems = v.me.items.filter(i => canOffer(i, v));
   const empty = (b: Bundle) => !b.gold && !b.items.length && !b.rumor?.trim() && INGREDIENTS.every(i => !b.ingredients[i.key]);
   const canSend = !!to && v.others.some(o => o.roleKey === to) && !(empty(give) && empty(get)) && !sending;
 

@@ -98,7 +98,7 @@ test('clock.elapsedMs учитывает pausedTotal и текущую пауз�
   const act = { ...s, phase: 'act1' as const, clock: { actStartedAt: 1000, pausedTotal: 200 } };
   expect(pv(viewFor(act, content, player('o1'), 5000)).clock).toEqual({ elapsedMs: 3800, paused: false });
   const paused = { ...act, clock: { actStartedAt: 1000, pausedTotal: 200, pausedAt: 3000 } };
-  expect(pv(viewFor(paused, content, player('o1'), 9000)).clock).toEqual({ elapsedMs: 1800, paused: true });
+  expect(pv(viewFor(paused, content, player('o1'), 9000)).clock).toEqual({ elapsedMs: 1800, paused: true, pausedAt: 3000 });
   expect(pv(viewFor(act, content, player('o1'), 5000)).act).toBe(1);
 });
 
