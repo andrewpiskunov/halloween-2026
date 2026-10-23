@@ -3,6 +3,7 @@ import type { Bundle, Ingredient, Offer, PlayerView } from '@fair/shared';
 import { Button } from '../components/Button';
 import { ItemCard } from '../components/ItemCard';
 import { Portrait } from '../components/Portrait';
+import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
 import { GOLD, INGREDIENTS, bundleText, emptyBundle, itemLabel, mmss, roleEmoji, roleName } from '../labels';
 import { canOffer, offerRemainingMs } from '../rules';
@@ -126,13 +127,11 @@ function OfferForm({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>✍️ Новое предложение</h5>
-      <label class="field">
+      <div class="field">
         <span>Кому</span>
-        <select value={to} onChange={e => setTo((e.currentTarget as HTMLSelectElement).value)}>
-          <option value="">Выберите участника</option>
-          {v.others.map(o => <option key={o.roleKey} value={o.roleKey}>{o.emoji} {o.name} · {o.title}</option>)}
-        </select>
-      </label>
+        <Select label="Кому" value={to} onChange={setTo} placeholder="Выберите участника"
+          options={v.others.map(o => ({ value: o.roleKey, label: o.name, hint: o.title, icon: o.emoji }))} />
+      </div>
 
       <h6>📤 Отдаю</h6>
       <BundleEditor value={give} onChange={setGive} maxGold={a.gold} maxIng={a.ingredients} />

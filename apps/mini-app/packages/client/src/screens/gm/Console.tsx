@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
+import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
 import { actNextPreview } from '../../gm/lots';
 import { INGREDIENTS, mmss } from '../../labels';
@@ -81,6 +82,7 @@ function Correction({ v }: { v: GmView }) {
 
   const ownerLabel = (o: (typeof items)[number]['owner']) =>
     o.type === 'player' ? name(o.key) : o.type === 'altar' ? `алтарь ${o.side}` : 'лот';
+  const itemIcon = (kind: string) => kind === 'shard' ? '💠' : kind === 'clue' ? '🔍' : kind === 'relic' ? '🏺' : '⚗️';
   const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${it.ref}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
 
   const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';
@@ -101,38 +103,35 @@ function Correction({ v }: { v: GmView }) {
     });
   };
 
-  const sel = (value: string, set: (s: string) => void, children: any) => (
-    <select value={value} onChange={e => set((e.currentTarget as HTMLSelectElement).value)}>{children}</select>
-  );
 
   return (
     <div class="m-card">
       <h5>🛠️ Исправление</h5>
-      <label class="field"><span>Игрок</span>
-        {sel(p, setPlayer, state.roster.map(k => <option value={k} key={k}>{name(k)}</option>))}
-      </label>
-      <label class="field"><span>Что исправить</span>
-        {sel(field, s => setField(s as Field), <>
-          <option value="gold">золото</option>
-          <option value="ingredient">ингредиент</option>
-          <option value="itemOwner">владелец вещи</option>
-        </>)}
-      </label>
+      <div class="field"><span>Игрок</span>
+        <Select label="Игрок" value={p} onChange={setPlayer} options={state.roster.map(k => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji }))} />
+      </div>
+      <div class="field"><span>Что исправить</span>
+        <Select label="Что исправить" value={field} onChange={s => setField(s as Field)} options={[
+          { value: 'gold', label: 'Золото', icon: '🪙' },
+          { value: 'ingredient', label: 'Ингредиент', icon: '🔥' },
+          { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
+        ]} />
+      </div>
       {field === 'ingredient' && (
-        <label class="field"><span>Ингредиент</span>
-          {sel(ingredient, s => setIngredient(s as Ingredient), INGREDIENTS.map(i => <option value={i.key} key={i.key}>{i.emoji} {i.name}</option>))}
-        </label>
+        <div class="field"><span>Ингредиент</span>
+          <Select label="Ингредиент" value={ingredient} onChange={s => setIngredient(s as Ingredient)} options={INGREDIENTS.map(i => ({ value: i.key, label: i.name, icon: i.emoji }))} />
+        </div>
       )}
       {field !== 'itemOwner' ? (
         <div class="m-row"><span>Изменить на</span><Stepper value={delta} onChange={setDelta} min={-10} max={10} label="Изменение" /></div>
       ) : (
         <>
-          <label class="field"><span>Вещь</span>
-            {sel(curItem, setItemId, items.map(it => <option value={it.id} key={it.id}>{itemName(it)} · {ownerLabel(it.owner)}</option>))}
-          </label>
-          <label class="field"><span>Новый владелец</span>
-            {sel(curOwner, setNewOwner, state.roster.map(k => <option value={k} key={k}>{name(k)}</option>))}
-          </label>
+          <div class="field"><span>Вещь</span>
+            <Select label="Вещь" value={curItem} onChange={setItemId} placeholder="Нет вещей у игроков" options={items.map(it => ({ value: it.id, label: itemName(it), hint: ownerLabel(it.owner), icon: itemIcon(it.kind) }))} />
+          </div>
+          <div class="field"><span>Новый владелец</span>
+            <Select label="Новый владелец" value={curOwner} onChange={setNewOwner} options={state.roster.map(k => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji }))} />
+          </div>
         </>
       )}
       <label class="field"><span>Причина</span>

@@ -120,6 +120,38 @@ code { font-family: ui-monospace, Consolas, monospace; color: var(--gold); }
 .field select, .field input {
   min-height: 44px; width: 100%; background: #15100c; border: 1px solid #6a5230; border-radius: 10px; padding: 8px 10px; color: var(--rpg-text);
 }
+
+/* Свой выпадающий список: кнопка-поле и лист с вариантами снизу */
+.select {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; width: 100%; text-align: left; cursor: pointer;
+  background: #15100c; border: 1px solid #6a5230; border-radius: 10px; padding: 8px 10px; color: var(--rpg-text);
+}
+.select:disabled { opacity: .5; cursor: default; }
+.select.empty span { color: var(--rpg-sub); }
+.select i { font-style: normal; font-size: 18px; flex: none; }
+.select span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select em { font-style: normal; color: var(--rpg-head); flex: none; }
+.sheet-back { position: fixed; inset: 0; z-index: 25; background: #000a; display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  width: 100%; max-width: 480px; max-height: 70vh; display: flex; flex-direction: column; margin: 0;
+  border-radius: 18px 18px 0 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); animation: sheet-up .18s ease-out;
+}
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-list { overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #6a5230 transparent; }
+.sheet-list::-webkit-scrollbar { width: 6px; }
+.sheet-list::-webkit-scrollbar-thumb { background: #6a5230; border-radius: 3px; }
+.sheet-item {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 8px; border-radius: 10px; cursor: pointer;
+  border-bottom: 1px solid #3a2e1e;
+}
+.sheet-item:last-child { border-bottom: 0; }
+.sheet-item.on { background: #3a2e1e; }
+.sheet-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.sheet-item i { font-style: normal; font-size: 22px; width: 30px; text-align: center; flex: none; }
+.sheet-item span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sheet-item b { font-weight: 600; color: var(--rpg-white); }
+.sheet-item small { color: var(--rpg-sub); font-size: 12px; }
+.sheet-item em { font-style: normal; color: var(--gold); width: 20px; text-align: center; flex: none; }
 .stepper { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .stepper button {
   width: 44px; height: 44px; border-radius: 10px; border: 1px solid #6a5230; background: linear-gradient(#3a2e1e, #2a2016);

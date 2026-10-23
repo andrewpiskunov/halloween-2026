@@ -42,7 +42,9 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(focusRow).toBeVisible();
     await focusRow.getByRole('button', { name: 'Предложить' }).click();
     await expect(greta.getByRole('heading', { name: /Новое предложение/ })).toBeVisible();
-    await greta.getByRole('combobox').selectOption('o1');
+    await greta.getByRole('combobox', { name: 'Кому' }).click();
+    await greta.getByRole('option', { name: /Серафина/ }).click();
+    await expect(greta.getByRole('combobox', { name: 'Кому' })).toHaveText(/Серафина/);
     await greta.locator('.bundle').nth(1).locator('.m-row', { hasText: 'Золото' }).getByRole('button', { name: '+' }).click({ clickCount: 2 });
     await expect(greta.locator('.bundle').nth(1).locator('.m-row', { hasText: 'Золото' }).locator('b')).toHaveText('2');
     await greta.getByRole('button', { name: /Отправить/ }).click();
