@@ -21,15 +21,29 @@ export class EventStore {
 
   /** Дописывает события по порядку в одной транзакции и возвращает их с проставленным seq. */
   append(events: Event[]): Event[] {
+    return this.db.transaction((list: Event[]) => this.insert(list))(events);
+  }
+
+  /**
+   * Атомарно дописывает события и сохраняет результат команды cmdId:
+   * результат строится по записанным событиям (с seq). Исключение откатывает всё.
+   */
+  commit(events: Event[], cmdId: string, result: (stored: Event[]) => unknown): Event[] {
     return this.db.transaction((list: Event[]) => {
-      let seq = (this.lastSeq.get() as { seq: number }).seq;
-      return list.map(e => {
-        const { seq: _ignored, ...rest } = e;
-        const stored = { ...rest, seq: ++seq } as Event;
-        this.insertEvent.run(seq, e.type, e.at, JSON.stringify(rest));
-        return stored;
-      });
+      const stored = this.insert(list);
+      this.saveResult(cmdId, result(stored));
+      return stored;
     })(events);
+  }
+
+  /** Вставка без собственной транзакции: вызывать только внутри db.transaction. */
+  private insert(list: Event[]): Event[] {
+    let seq = (this.lastSeq.get() as { seq: number }).seq;
+    return list.map(e => {
+      const { seq: _ignored, ...rest } = e;
+      this.insertEvent.run(++seq, e.type, e.at, JSON.stringify(rest));
+      return { ...rest, seq } as Event;
+    });
   }
 
   /** Все события в порядке seq. */

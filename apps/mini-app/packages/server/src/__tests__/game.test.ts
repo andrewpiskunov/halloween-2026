@@ -29,6 +29,8 @@ test('submit с тем же cmdId второй раз: тот же резуль�
   const cmd: Command = { type: 'session.setN', n: 12 };
   const r1 = await game.submit('c1', cmd, gm);
   expect(r1).toEqual({ ok: true, seq: store.all().length });
+  // Результат и события сохранены вместе.
+  expect(store.getResult('c1')).toEqual(r1);
   const count = store.all().length;
   const stateBefore = game.state();
 
@@ -36,12 +38,33 @@ test('submit с тем же cmdId второй раз: тот же резуль�
   expect(r2).toEqual(r1);
   expect(store.all()).toHaveLength(count);
   expect(game.state()).toBe(stateBefore);
+});
 
-  // Неудачный результат тоже запоминается и повторяется.
-  const bad1 = await game.submit('c2', { type: 'session.setN', n: 12 }, { type: 'player', roleKey: 'x' });
-  expect(bad1.ok).toBe(false);
-  expect(await game.submit('c2', cmd, gm)).toEqual(bad1);
-  expect(store.all()).toHaveLength(count);
+test('неудачный результат не сохраняется: повтор того же cmdId выполняется заново и может пройти', async () => {
+  const { store, game } = memoryGame();
+  const cmd: Command = { type: 'session.setN', n: 12 };
+  const bad = await game.submit('c2', cmd, { type: 'player', roleKey: 'x' });
+  expect(bad).toEqual({ ok: false, error: 'forbidden' });
+  expect(store.getResult('c2')).toBeUndefined();
+  const count = store.all().length;
+
+  const good = await game.submit('c2', cmd, gm);
+  expect(good.ok).toBe(true);
+  expect(store.all().length).toBeGreaterThan(count);
+  expect(store.getResult('c2')).toEqual(good);
+});
+
+test('bindByCode роли вне состава → undefined; после включения роли тот же код и аккаунт → игрок', async () => {
+  const { game } = memoryGame();
+  await game.submit('n', { type: 'session.setN', n: 12 }, gm);
+  const outside = content.roles.map(r => r.key).find(k => !game.state().roster.includes(k))!;
+  expect(outside).toBeDefined();
+  const code = game.state().invites[outside];
+
+  expect(await game.bindByCode(code, 55)).toBeUndefined();
+  const t = await game.submit('toggle', { type: 'session.toggleRole', roleKey: outside }, gm);
+  expect(t.ok).toBe(true);
+  expect(await game.bindByCode(code, 55)).toEqual({ type: 'player', roleKey: outside });
 });
 
 test('два submit одновременно на одну вещь: ровно один ok', async () => {

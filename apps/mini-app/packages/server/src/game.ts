@@ -72,7 +72,11 @@ export class Game {
     return this.current.gmCode;
   }
 
-  /** Выполняет команду строго по одной; повтор того же cmdId возвращает сохранённый результат. */
+  /**
+   * Выполняет команду строго по одной; повтор cmdId успешной команды возвращает сохранённый результат.
+   * Неудачи не сохраняются: ничего не применено, поэтому повтор выполняется заново
+   * (например, привязка после того, как ведущий включил роль в состав).
+   */
   submit(cmdId: string, cmd: Command, actor: Actor): Promise<SubmitResult> {
     const run = this.queue.then(() => this.apply(cmdId, cmd, actor));
     this.queue = run.catch(() => undefined);
@@ -87,20 +91,14 @@ export class Game {
     const r = execute(before, this.content, cmd, {
       now: this.opts.now(), actor, newId: this.opts.newId, random: this.opts.random,
     });
-    if (!r.ok) {
-      const result: SubmitResult = r.detail === undefined
-        ? { ok: false, error: r.error }
-        : { ok: false, error: r.error, detail: r.detail };
-      this.store.saveResult(cmdId, result);
-      return result;
-    }
+    if (!r.ok) return r.detail === undefined ? { ok: false, error: r.error } : { ok: false, error: r.error, detail: r.detail };
 
-    const stored: Event[] = r.events.length ? this.store.append(r.events) : [];
+    // События и результат пишутся одной транзакцией: после сбоя повтор cmdId не применит команду дважды.
+    const okResult = (stored: Event[]): SubmitResult => ({ ok: true, seq: stored.length ? stored[stored.length - 1].seq! : before.seq });
+    const stored = this.store.commit(r.events, cmdId, okResult);
     this.current = stored.reduce((s, e) => reduce(s, this.content, e), before);
-    const result: SubmitResult = { ok: true, seq: this.current.seq };
-    this.store.saveResult(cmdId, result);
     if (stored.length) this.notify();
-    return result;
+    return okResult(stored);
   }
 
   private notify(): void {
