@@ -26,5 +26,5 @@ export interface GameState {
   players: Record<string, Player>; items: Record<string, Item>;
   workshop: Counts; offers: Record<string, Offer>; lots: Record<string, Lot>;
   altars: Partial<Record<AltarSide, Altar>>; invites: Record<string, string>;   // roleKey → код
-  gmTelegramId?: number; announcements: Announcement[]; seq: number;
+  gmCode: string; gmTelegramId?: number; announcements: Announcement[]; seq: number;
 }
