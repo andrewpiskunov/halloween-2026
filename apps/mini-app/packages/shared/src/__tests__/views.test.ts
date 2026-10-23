@@ -16,16 +16,16 @@ test('игрок не видит чужих целей, тайн, сторон, 
   expect(v.offers).toEqual([]);
   expect(pv(viewFor(s, content, player('o4'), 0)).offers).toHaveLength(1);
 
-  const json = JSON.stringify(v);
-  for (const key of s.roster.filter(k => k !== 'o1')) {
-    const other = content.roleByKey[key];
-    expect(json).not.toContain(other.secret);
-    for (const g of other.goals) expect(json).not.toContain(g);
-    expect(json).not.toContain(other.intro);
-  }
-  for (const key of s.roster.filter(k => k !== 'o1')) {
-    for (const it of Object.values(s.items).filter(i => i.owner.type === 'player' && i.owner.key === key)) {
-      expect(json).not.toContain(`"id":"${it.id}"`);
+  for (const viewer of ['o1', 'o5']) {
+    const json = JSON.stringify(viewFor(s, content, player(viewer), 0));
+    for (const key of s.roster.filter(k => k !== viewer)) {
+      const other = content.roleByKey[key];
+      expect(json).not.toContain(other.secret);
+      for (const g of other.goals) expect(json).not.toContain(g);
+      expect(json).not.toContain(other.intro);
+      for (const it of Object.values(s.items).filter(i => i.owner.type === 'player' && i.owner.key === key)) {
+        expect(json).not.toContain(`"${it.id}"`);
+      }
     }
   }
   expect(v.others.map(o => o.roleKey)).toEqual(s.roster.filter(k => k !== 'o1'));
@@ -50,7 +50,7 @@ test('скрытый V у Лиры: в me.items с hiddenUntilAct; в public.sha
     s = r.state;
   }
   expect(s.phase).toBe('act3');
-  expect(pv(viewFor(s, content, player('o1'), 0)).public.shards.find(x => x.id === 'V')?.status).not.toBe('unknown');
+  expect(pv(viewFor(s, content, player('o1'), 0)).public.shards.find(x => x.id === 'V')?.status).toBe('player');
 });
 
 test('контакт на отсутствующую роль: absent=true, name подставлено; контакт без роли: absent=false', () => {
@@ -64,16 +64,12 @@ test('контакт на отсутствующую роль: absent=true, name
   expect(greta.name).toBe(content.roleByKey.o6.name);
   expect(v.others.some(o => o.roleKey === 'o13')).toBe(false);
 
-  const withNull = content.roles.find(r => r.contacts.some(c => c.role === null));
-  if (withNull) {
-    const st = makeGame(12);
-    const key = st.roster.includes(withNull.key) ? withNull.key : 'o1';
-    if (key === withNull.key) {
-      const c = pv(viewFor(st, content, player(key), 0)).contacts.find(x => x.role === null)!;
-      expect(c.absent).toBe(false);
-      expect(c.name).toBeUndefined();
-    }
-  }
+  const full = makeGame(20);
+  const withNull = content.roles.find(r => full.roster.includes(r.key) && r.contacts.some(c => c.role === null));
+  expect(withNull).toBeDefined();
+  const c = pv(viewFor(full, content, player(withNull!.key), 0)).contacts.find(x => x.role === null)!;
+  expect(c.absent).toBe(false);
+  expect(c.name).toBeUndefined();
 });
 
 test('ведущий видит state целиком и коды', () => {
@@ -98,4 +94,18 @@ test('clock.elapsedMs учитывает pausedTotal и текущую пауз�
   const paused = { ...act, clock: { actStartedAt: 1000, pausedTotal: 200, pausedAt: 3000 } };
   expect(pv(viewFor(paused, content, player('o1'), 9000)).clock).toEqual({ elapsedMs: 1800, paused: true });
   expect(pv(viewFor(act, content, player('o1'), 5000)).act).toBe(1);
+});
+
+test('чужие ставки не видны: в закрытых торгах игрок видит только свои', () => {
+  const s0 = makeGame(12);
+  const lotId = Object.keys(s0.lots)[0];
+  const s = {
+    ...s0,
+    lots: { ...s0.lots, [lotId]: { ...s0.lots[lotId], status: 'sealedBidding' as const, bids: [
+      { player: 'o1', amount: 5, at: 1 }, { player: 'o2', amount: 9, at: 2 },
+    ] } },
+  };
+  expect(pv(viewFor(s, content, player('o1'), 0)).lots.find(l => l.id === lotId)?.bids).toEqual([{ player: 'o1', amount: 5, at: 1 }]);
+  expect(pv(viewFor(s, content, player('o2'), 0)).lots.find(l => l.id === lotId)?.bids).toEqual([{ player: 'o2', amount: 9, at: 2 }]);
+  expect(pv(viewFor(s, content, player('o4'), 0)).lots.find(l => l.id === lotId)?.bids).toEqual([]);
 });

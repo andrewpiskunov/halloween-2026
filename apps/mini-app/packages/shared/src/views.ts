@@ -113,6 +113,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     altars,
     lots: Object.values(state.lots).filter(l => l.status !== 'queued').map(l => ({
       ...l,
+      // чужие ставки не раскрываем ни в одном статусе торгов
+      bids: l.bids.filter(b => b.player === key),
       items: l.items.map(itemById).filter((i): i is Item => !!i && !i.hiddenUntilAct),
     })),
     announcements: state.announcements,
