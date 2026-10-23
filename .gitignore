@@ -1,0 +1,41 @@
+# Зависимости и сборки
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+.nuxt/
+.output/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+
+# Локальные настройки и секреты
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+*.log
+
+# Локальные данные приложения
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Служебные файлы
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Временные файлы Office
+~$*
