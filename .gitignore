@@ -26,6 +26,8 @@ test-results/
 *.db-journal
 *.db-wal
 *.db-shm
+*.sqlite-wal
+*.sqlite-shm
 
 # Служебные файлы
 .DS_Store
