@@ -80,7 +80,7 @@ code { font-family: ui-monospace, Consolas, monospace; color: var(--gold); }
   border: 3px solid var(--gold-dark); box-shadow: 0 0 0 2px #2a1d08, 0 0 14px #c9922f66;
   display: grid; place-items: center; font-size: 32px; position: relative; overflow: hidden; flex: none;
 }
-.portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 28%; }
 .portrait.big { width: 96px; height: 96px; font-size: 48px; }
 .portrait.sm { width: 40px; height: 40px; font-size: 20px; border-width: 2px; }
 .hero-head { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; }

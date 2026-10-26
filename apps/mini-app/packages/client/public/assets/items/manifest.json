@@ -1,0 +1,43 @@
+{
+  "relics": {
+    "Корона пепла": "crown-of-ash.jpg",
+    "Семя леса": "forest-seed.jpg",
+    "Костяная флейта": "bone-flute.jpg",
+    "Серебряная чешуя": "silver-scale.jpg",
+    "Медный жезл": "copper-wand.jpg",
+    "Изумрудный глаз": "emerald-eye.jpg",
+    "Клятвенный перстень": "oath-ring.jpg",
+    "Лунный рог": "moon-horn.jpg",
+    "Звёздная уздечка": "star-bridle.jpg",
+    "Колокольчик тишины": "silence-bell.jpg",
+    "Молот-гаситель": "quench-hammer.jpg",
+    "Печать торгового дома": "house-seal.jpg",
+    "Весы оценщика": "appraiser-scales.jpg",
+    "Фонарь перевозчика": "carrier-lantern.jpg",
+    "Ключ от ворот": "gate-key.jpg",
+    "Маска смеха": "laughing-mask.jpg",
+    "Чётки молчания": "silence-beads.jpg",
+    "Карта подземных троп": "tunnel-map.jpg",
+    "Книга долгов": "debt-book.jpg",
+    "Зеркало лжи": "lying-mirror.jpg",
+    "Лопата могильщика": "gravedigger-shovel.jpg"
+  },
+  "clues": {
+    "A": "clue-A.jpg",
+    "B": "clue-B.jpg",
+    "C": "clue-C.jpg"
+  },
+  "resources": {
+    "gold": "gold.jpg",
+    "ash": "ash.jpg",
+    "moon": "moon.jpg",
+    "dew": "dew.jpg"
+  },
+  "recipes": {
+    "cleanse": "cleanse.jpg",
+    "ward": "ward.jpg",
+    "focus": "focus.jpg",
+    "shape": "shape.jpg"
+  },
+  "shard": "shard.jpg"
+}
