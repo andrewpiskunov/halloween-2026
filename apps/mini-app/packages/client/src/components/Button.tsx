@@ -9,7 +9,7 @@ interface Props {
   children?: ComponentChildren;
 }
 
-/** Золотая кнопка с нижней кромкой; sec — тёмная, red — опасная. */
+/** Кнопка гравюры: main — светлая на поле и чернильная на бумаге, sec — контурная, red — киноварь (печать или необратимое). */
 export function Button({ icon, kind = 'main', small, disabled, onClick, children }: Props) {
   const cls = ['m-btn', kind !== 'main' ? kind : '', small ? 'small' : ''].filter(Boolean).join(' ');
   return (

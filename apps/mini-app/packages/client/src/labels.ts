@@ -27,12 +27,17 @@ export function itemLabel(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): { na
   }
 }
 
+/** Вид вещи, если известен только ref (вклады на алтарях). Для изделий — любой вид рецепта. */
+export function refKind(ref: string, v: PlayerView): Item['kind'] {
+  if (v.public.shards.some(s => s.id === ref)) return 'shard';
+  if (v.public.clues.some(c => c.id === ref)) return 'clue';
+  if (v.recipes.some(r => r.id === ref)) return 'potion';
+  return 'relic';
+}
+
 /** Название вещи, если известен только ref (вклады на алтарях). */
 export function refLabel(ref: string, v: PlayerView): { name: string; emoji: string } {
-  if (v.public.shards.some(s => s.id === ref)) return itemLabel({ kind: 'shard', ref }, v);
-  if (v.public.clues.some(c => c.id === ref)) return itemLabel({ kind: 'clue', ref }, v);
-  if (v.recipes.some(r => r.id === ref)) return itemLabel({ kind: 'potion', ref }, v);
-  return itemLabel({ kind: 'relic', ref }, v);
+  return itemLabel({ kind: refKind(ref, v), ref }, v);
 }
 
 /** Имя роли по ключу: я, другие участники, контакты; иначе сам ключ. */
@@ -63,4 +68,36 @@ export const emptyBundle = (): Bundle => ({ gold: 0, ingredients: { ash: 0, moon
 export function mmss(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Форма слова по числу: plural(2, 'золотой', 'золотых', 'золотых'). */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}
+export const goldText = (n: number) => `${n} ${plural(n, 'золотой', 'золотых', 'золотых')}`;
+
+/** Римские цифры для номеров карт и актов (1–39 хватает с запасом). */
+export function roman(n: number): string {
+  const parts: [number, string][] = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let out = '';
+  let rest = Math.max(0, Math.floor(n));
+  for (const [v, s] of parts) while (rest >= v) { out += s; rest -= v; }
+  return out;
+}
+
+/** Набор словами без эмодзи — для рукописной строки формы: «2 золотых, пепел ×1, Фокус силы». */
+export function bundleWords(b: Bundle, v: PlayerView): string {
+  const parts: string[] = [];
+  if (b.gold) parts.push(goldText(b.gold));
+  for (const ing of INGREDIENTS) if (b.ingredients[ing.key]) parts.push(`${ing.short} ×${b.ingredients[ing.key]}`);
+  for (const id of b.items) {
+    const it = v.me.items.find(i => i.id === id);
+    parts.push(it ? itemLabel(it, v).name : 'вещь');
+  }
+  if (b.rumor?.trim()) parts.push('слух');
+  return parts.join(', ');
 }

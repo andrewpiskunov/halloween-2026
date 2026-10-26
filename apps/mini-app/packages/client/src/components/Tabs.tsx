@@ -1,24 +1,30 @@
 import { tab, type Tab } from '../store';
 
+/** U+FE0E просит текстовое начертание символа, а не цветной эмодзи. */
+const T = '︎';
+
 export const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'role', label: 'Роль', icon: '🎭' },
-  { key: 'bag', label: 'Сумка', icon: '🎒' },
-  { key: 'trades', label: 'Сделки', icon: '🤝' },
-  { key: 'workshop', label: 'Мастерская', icon: '⚗️' },
-  { key: 'altars', label: 'Алтари', icon: '🕯️' },
-  { key: 'events', label: 'События', icon: '📜' },
+  { key: 'role', label: 'Роль', icon: `☉${T}` },
+  { key: 'bag', label: 'Сумка', icon: `⚱${T}` },
+  { key: 'trades', label: 'Сделки', icon: `⚖${T}` },
+  { key: 'workshop', label: 'Мастерская', icon: `⚗${T}` },
+  { key: 'altars', label: 'Алтари', icon: `✠${T}` },
+  { key: 'events', label: 'События', icon: `☽${T}` },
 ];
 
 /** Нижняя панель вкладок; badges — число на значке вкладки (например, входящие сделки). */
 export function Tabs({ badges = {} }: { badges?: Partial<Record<Tab, number>> }) {
   return (
     <nav class="tabs">
-      {TABS.map(t => (
-        <button type="button" key={t.key} class={tab.value === t.key ? 'on' : ''} onClick={() => { tab.value = t.key; }}>
-          <i>{t.icon}{badges[t.key] ? <em class="badge">{badges[t.key]}</em> : null}</i>
-          {t.label}
-        </button>
-      ))}
+      <div class="tabs-in">
+        {TABS.map(t => (
+          <button type="button" key={t.key} class={tab.value === t.key ? 'on' : ''} aria-current={tab.value === t.key ? 'page' : undefined}
+            onClick={() => { tab.value = t.key; }}>
+            <i aria-hidden="true">{t.icon}{badges[t.key] ? <em class="badge">{badges[t.key]}</em> : null}</i>
+            {t.label}
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }

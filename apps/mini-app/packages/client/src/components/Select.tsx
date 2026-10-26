@@ -1,6 +1,21 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { Portrait } from './Portrait';
+import { Thumb } from './Thumb';
 
-export interface SelectOption { value: string; label: string; icon?: string; hint?: string }
+export interface SelectOption {
+  value: string; label: string; icon?: string; hint?: string;
+  /** Ключ роли: в листе показывается цветной аватар. */
+  avatar?: string;
+  /** Картинка предмета или ресурса: в листе показывается цветная иконка. */
+  image?: string;
+}
+
+/** Значок варианта: аватар роли, иконка предмета или эмодзи. */
+function OptionIcon({ o }: { o: SelectOption }) {
+  if (o.avatar) return <Portrait roleKey={o.avatar} emoji={o.icon ?? ''} size="sm" />;
+  if (o.image) return <Thumb src={o.image} emoji={o.icon ?? ''} size="sm" />;
+  return <i>{o.icon ?? ''}</i>;
+}
 
 interface Props {
   value: string;
@@ -13,7 +28,7 @@ interface Props {
   disabled?: boolean;
 }
 
-/** Выпадающий список в стиле приложения вместо системного select: кнопка-поле и лист с вариантами снизу. */
+/** Выпадающий список вместо системного select: строка с рукописным значением и бумажный лист с вариантами снизу. */
 export function Select({ value, onChange, options, placeholder = 'Выберите', label, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -46,13 +61,12 @@ export function Select({ value, onChange, options, placeholder = 'Выберит
         role="combobox" aria-haspopup="listbox" aria-expanded={open} aria-label={label}
         onClick={() => setOpen(true)}
       >
-        {current?.icon && <i>{current.icon}</i>}
         <span>{current ? current.label : placeholder}</span>
         <em aria-hidden="true">▾</em>
       </button>
       {open && (
         <div class="sheet-back" onClick={() => setOpen(false)}>
-          <div class="sheet m-card" onClick={e => e.stopPropagation()}>
+          <div class="sheet" onClick={e => e.stopPropagation()}>
             {label && <h5>{label}</h5>}
             <div class="sheet-list" role="listbox" aria-label={label} ref={listRef} onKeyDown={onListKey}>
               {options.map(o => (
@@ -62,7 +76,7 @@ export function Select({ value, onChange, options, placeholder = 'Выберит
                   onClick={() => pick(o.value)}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(o.value); } }}
                 >
-                  <i>{o.icon ?? ''}</i>
+                  <OptionIcon o={o} />
                   <span><b>{o.label}</b>{o.hint && <small>{o.hint}</small>}</span>
                   <em aria-hidden="true">{o.value === value ? '✓' : ''}</em>
                 </div>

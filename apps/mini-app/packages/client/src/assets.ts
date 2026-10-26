@@ -1,4 +1,4 @@
-import type { Item } from '@fair/shared';
+import type { Ingredient, Item } from '@fair/shared';
 
 /** Слаги картинок реликвий: имя реликвии из данных игры → файл в /assets/items. */
 export const RELIC_SLUGS: Record<string, string> = {
@@ -40,4 +40,9 @@ export function itemImageUrl(item: Pick<Item, 'kind' | 'ref'>): string | undefin
   else if (item.kind === 'clue') file = `clue-${item.ref}.jpg`;
   else if (RECIPE_KINDS.has(item.kind)) file = `${item.ref}.jpg`;
   return file && `/assets/items/${file}`;
+}
+
+/** Монета и ингредиенты: /assets/items/<gold|ash|moon|dew>.jpg. */
+export function resourceImageUrl(key: 'gold' | Ingredient): string {
+  return `/assets/items/${key}.jpg`;
 }

@@ -1,20 +1,23 @@
 import { gmTab, type GmTab } from '../store';
 
 const TABS: { key: GmTab; label: string; icon: string }[] = [
-  { key: 'roster', label: 'Состав', icon: '👥' },
-  { key: 'console', label: 'Пульт', icon: '🎛️' },
+  { key: 'roster', label: 'Состав', icon: '☿︎' },
+  { key: 'console', label: 'Пульт', icon: '⧗' },
 ];
 
 /** Нижняя панель вкладок ведущего. */
 export function GmTabs() {
   return (
     <nav class="tabs">
-      {TABS.map(t => (
-        <button type="button" key={t.key} class={gmTab.value === t.key ? 'on' : ''} onClick={() => { gmTab.value = t.key; }}>
-          <i>{t.icon}</i>
-          {t.label}
-        </button>
-      ))}
+      <div class="tabs-in">
+        {TABS.map(t => (
+          <button type="button" key={t.key} class={gmTab.value === t.key ? 'on' : ''} aria-current={gmTab.value === t.key ? 'page' : undefined}
+            onClick={() => { gmTab.value = t.key; }}>
+            <i aria-hidden="true">{t.icon}</i>
+            {t.label}
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }
