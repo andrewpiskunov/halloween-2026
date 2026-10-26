@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#141210">
+<meta name="description" content="Четыре стиля концепт-арта для «Ярмарки украденной магии»: портреты персонажей и иконки реликвий.">
+<title>Стили арта · Ярмарка украденной магии</title>
+<style>
+:root{--bg:#141210;--panel:#1e1a16;--line:#3a322a;--paper:#f1e8d6;--muted:#b3a893;--gold:#e0b45a;--red:#c8463a;--moon:#9fb6d6;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--paper);font:16px/1.55 Georgia,'Times New Roman',serif}
+a{color:var(--gold)}
+.wrap{width:min(1280px,calc(100% - 32px));margin:auto;padding:32px 0 64px}
+.eyebrow{font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
+h1{font-size:clamp(30px,4.5vw,52px);line-height:1.08;font-weight:400;margin:0 0 16px}
+h1 em{color:var(--gold)}
+h2{font-size:clamp(22px,3vw,32px);font-weight:400;margin:48px 0 16px}
+.lead{max-width:760px;color:var(--muted);margin:0 0 28px}
+.styles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.style{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.style h3{margin:0 0 4px;font-size:19px;font-weight:400;color:var(--gold)}
+.style .ref{font:12px/1.4 ui-monospace,monospace;color:var(--moon);margin:0 0 8px}
+.style p{margin:0;font-size:14px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:140px repeat(4,1fr);gap:12px;align-items:start}
+.head{font:11px/1.3 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);padding:8px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+.rowlabel{padding-top:6px}
+.rowlabel b{display:block;font-weight:400;font-size:17px}
+.rowlabel span{font-size:13px;color:var(--muted)}
+figure{margin:0}
+figure button{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0c0a09;cursor:zoom-in}
+figure button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+figure img{display:block;width:100%;height:auto;aspect-ratio:var(--ar,2/3);object-fit:cover}
+figure.item img{--ar:1/1}
+figcaption{font-size:12px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:10px}
+.avatar{flex:none;width:64px;height:64px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px var(--gold),0 0 0 4px #0008}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:50% 0;aspect-ratio:auto;transform:scale(1.9);transform-origin:50% 16%}
+.missing{display:grid;place-items:center;aspect-ratio:var(--ar,2/3);border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:13px}
+figure.item .missing{--ar:1/1}
+.mobile-style{display:none}
+.choose{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px}
+.choose li{margin:0 0 10px}
+.choose li b{color:var(--gold);font-weight:400}
+.lb{position:fixed;inset:0;background:#000d;display:none;place-items:center;z-index:10;padding:16px;cursor:zoom-out}
+.lb.open{display:grid}
+.lb img{max-width:100%;max-height:calc(100vh - 80px);border-radius:8px;box-shadow:0 10px 60px #000}
+.lb p{margin:10px 0 0;text-align:center;color:var(--muted)}
+@media (max-width:900px){
+ .styles{grid-template-columns:1fr 1fr}
+ .grid{grid-template-columns:1fr 1fr}
+ .head,.corner{display:none}
+ .rowlabel{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px;margin-top:8px}
+ .mobile-style{display:inline;color:var(--gold)}
+}
+@media (max-width:520px){.styles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<p class="eyebrow">Ярмарка украденной магии · концепт-арт</p>
+<h1>Четыре стиля <em>для одного набора</em></h1>
+<p class="lead">Задача: выбрать визуальный стиль для портретов 30 ролей и иконок 21 реликвии в Telegram Mini App. Для каждого стиля сгенерированы одни и те же четыре персонажа (Серафина, Грета, Эльмар, Лира) и четыре предмета (осколок сердца, Корона пепла, Фокус силы, костяная флейта) с одинаковыми указаниями по свету и палитре: тёмный фон, тёплое золото и алый, холодный лунный свет вторым планом. Картинки сделаны встроенным генератором изображений Codex и уменьшены для репозитория. Нажмите на картинку, чтобы открыть её крупно.</p>
+
+<div class="styles">
+ <div class="style"><h3>1. Живопись</h3><p class="ref">Gwent · Magic: The Gathering · Legends of Runeterra</p><p>Цифровая масляная живопись, свечи, драматичный свет, много деталей.</p></div>
+ <div class="style"><h3>2. Стилизация</h3><p class="ref">Hearthstone · Overwatch · Darkest Dungeon</p><p>Тёплый мультяшный реализм: выразительные формы, чуть гротескные пропорции, яркие акценты.</p></div>
+ <div class="style"><h3>3. Гравюра</h3><p class="ref">Inscryption · Cultist Simulator · старое таро</p><p>Тушь и штриховка на пергаменте, тёмный фон, один акцент: золото и тлеющий алый.</p></div>
+ <div class="style"><h3>4. Плоская графика</h3><p class="ref">Slay the Spire · Reigns · Cult of the Lamb</p><p>Чистые формы, толстый контур, 5–6 цветов. Рассчитано на маленький экран.</p></div>
+</div>
+
+<h2>Сравнение</h2>
+<div class="grid" id="grid"></div>
+
+<h2>Как выбрать</h2>
+<div class="choose">
+<ul>
+ <li><b>Аватар 64 px.</b> В приложении портрет чаще всего виден в кружке 64 px с золотым кольцом (список игроков, адресат сделки). Под каждым портретом выше он показан именно так. Смотрите, узнаётся ли персонаж по силуэту и одной детали: короне, очкам, колокольчикам, футляру.</li>
+ <li><b>Единство набора.</b> 30 ролей и 21 реликвия должны выглядеть как одна колода. Чем строже стиль (гравюра, плоская графика), тем легче держать его на 50 картинках. Живопись даёт самые эффектные отдельные портреты, но лица, свет и фон у неё сильнее «гуляют» от картинки к картинке.</li>
+ <li><b>Иконки предметов.</b> Реликвии показываются ещё мельче, чем портреты. Предмет должен читаться силуэтом и цветом без подписи.</li>
+ <li><b>Время генерации.</b> Одна картинка занимает около минуты, полный набор (30 портретов + 21 реликвия) примерно 50–60 минут без учёта перегенераций. Брака больше всего там, где больше деталей: в живописи чаще ошибки с руками и лишние предметы. Закладывайте 20–30 % на повторы. Стилизацию пришлось генерировать дважды: по первому промпту она получилась почти неотличимой от живописи, и только явное «не фотореализм, крупные утрированные формы» дало стиль Hearthstone.</li>
+ <li><b>Читаемость текста поверх.</b> Тёмный однородный фон проще совмещать с интерфейсом: карточки, плашки, подписи.</li>
+</ul>
+</div>
+</main>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Картинка крупно"><div><img id="lbimg" alt=""><p id="lbcap"></p></div></div>
+
+<script>
+const STYLES=[['painterly','Живопись'],['stylized','Стилизация'],['ink','Гравюра'],['flat','Плоская графика']];
+const ROWS=[
+ ['o1','Серафина','Драконья наследница',true],
+ ['o6','Грета','Алхимик без лицензии',true],
+ ['o9','Эльмар','Проклятый рыцарь',true],
+ ['o14','Лира','Бард с чужой флейтой',true],
+ ['shard','Осколок сердца','реликвия',false],
+ ['crown','Корона пепла','реликвия',false],
+ ['focus','Фокус силы','реликвия',false],
+ ['flute','Костяная флейта','реликвия, в футляре осколок',false],
+];
+const grid=document.getElementById('grid');
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+grid.append(el('div','head corner',''));
+STYLES.forEach(([,n])=>grid.append(el('div','head',n)));
+ROWS.forEach(([id,name,sub,portrait])=>{
+ grid.append(el('div','rowlabel',`<b>${name}</b><span>${sub}</span>`));
+ STYLES.forEach(([st,sn])=>{
+  const src=`assets/concepts/${st}/${id}.jpg`, cap=`${name} · ${sn}`;
+  const f=el('figure',portrait?'':'item');
+  const b=el('button');b.type='button';b.setAttribute('aria-label','Открыть крупно: '+cap);
+  const img=new Image();img.src=src;img.alt=cap;img.loading='lazy';
+  img.onerror=()=>{f.replaceChild(el('div','missing','нет картинки'),b);const a=fc.querySelector('.avatar');if(a)a.remove()};
+  b.append(img);b.onclick=()=>openLb(src,cap);
+  const fc=el('figcaption');
+  if(portrait){const a=el('span','avatar');const ai=new Image();ai.src=src;ai.alt='';a.append(ai);fc.append(a)}
+  fc.append(el('span','',`<span class="mobile-style">${sn}. </span>${portrait?'аватар 64 px, кадр по лицу':name}`));
+  f.append(b,fc);grid.append(f);
+ });
+});
+const lb=document.getElementById('lb');
+function openLb(src,cap){document.getElementById('lbimg').src=src;document.getElementById('lbimg').alt=cap;document.getElementById('lbcap').textContent=cap;lb.classList.add('open')}
+lb.onclick=()=>lb.classList.remove('open');
+addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open')});
+</script>
+</body>
+</html>

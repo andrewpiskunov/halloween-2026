@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пять обличий ярмарки</title>
+<meta name="description" content="Сравнение визуальных направлений Telegram Mini App «Ярмарка украденной магии»: по три экрана на направление, референсы, палитры, шрифты и рекомендация.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Cormorant+SC:wght@500;600;700&family=Fira+Sans+Condensed:wght@400;500;600;800&family=Manrope:wght@400;500;600;700;800&family=Neucha&family=Nunito:wght@600;700;800;900&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Rubik:wght@500;700;800;900&family=Ruslan+Display&family=Unbounded:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ───────── Страница сравнения ───────── */
+:root{
+  --page:#16131a; --page-2:#1d1922; --ink:#eee8de; --mut:#a8a0b0; --line:#332d3a; --hi:#f2c66d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--page);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--hi);outline-offset:3px}
+.ic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+body.dim::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.4);pointer-events:none;z-index:100}
+
+.nav{position:sticky;top:0;z-index:60;background:rgba(22,19,26,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1280px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:6px}
+.nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.nav-links::-webkit-scrollbar{display:none}
+.nav a{flex:none;text-decoration:none;font-size:14px;font-weight:600;color:var(--mut);padding:9px 12px;border-radius:999px;white-space:nowrap}
+.nav a:hover{color:var(--ink);background:var(--page-2)}
+.dimbtn{flex:none;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--page-2);color:var(--ink);font:600 14px Manrope;cursor:pointer}
+.dimbtn[aria-pressed="true"]{border-color:var(--hi);color:var(--hi)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px}
+.intro{padding:56px 0 28px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:end;border-bottom:1px solid var(--line)}
+.intro h1{font:400 clamp(34px,5vw,60px)/1.04 'Old Standard TT',serif;margin:0;letter-spacing:-.01em}
+.intro h1 span{display:block;font:italic 400 .52em/1.3 'Old Standard TT',serif;color:var(--mut);margin-top:10px;letter-spacing:0}
+.intro p{margin:0 0 12px;color:#cfc7d6;max-width:60ch}
+.intro .how{font-size:14px;color:var(--mut)}
+
+.dir{padding:64px 0 24px;border-bottom:1px solid var(--line)}
+.dir-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:40px;margin-bottom:36px}
+.dir-letter{font:500 14px Manrope;color:var(--mut);margin:0 0 6px}
+.dir h2{margin:0 0 12px;font-size:44px;line-height:1.05;font-weight:400}
+.dir .lede{margin:0 0 20px;color:#d6cfdc;max-width:52ch}
+.refs{margin:0;display:grid;gap:14px}
+.refs div{border-left:2px solid var(--acc,#555);padding-left:14px}
+.refs dt{font-weight:700;font-size:15px}
+.refs dd{margin:2px 0 0;font-size:14.5px;color:#cbc3d1}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;padding:0;list-style:none}
+.swatches li{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mut);width:76px}
+.swatches i{display:block;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.12)}
+.typepair{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;color:var(--mut)}
+.typepair div{background:var(--page-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.typepair b{display:block;color:var(--ink);font-size:26px;line-height:1.15;font-weight:400;margin-bottom:4px}
+.typepair .tb b{font-size:17px;line-height:1.4}
+
+.phones{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.ph{margin:0;width:390px;max-width:100%}
+.ph figcaption{font-size:14px;color:var(--mut);margin:14px 6px 0;line-height:1.5}
+.ph figcaption b{color:var(--ink);font-weight:700}
+.phone{height:830px;border-radius:48px;padding:9px;background:#050406;box-shadow:0 0 0 1px #3c3540,0 40px 70px -30px #000}
+.screen{height:100%;border-radius:39px;overflow:hidden;display:flex;flex-direction:column;position:relative;isolation:isolate}
+.tg{flex:none;height:50px;padding:8px 22px 0;display:flex;align-items:center;justify-content:space-between;font:500 14px/1 Manrope,system-ui,sans-serif}
+.tg b{font-weight:700;font-size:14px}
+.app{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.body{flex:1;min-height:0;overflow:hidden;position:relative}
+.tabs{flex:none;display:flex;justify-content:space-around}
+.tabs span{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;min-height:48px;justify-content:center}
+
+/* ───────── A. Золото и пепел ───────── */
+.dA{--acc:#c9a24a}
+.dA h2{font-family:'Cormorant SC',serif;font-weight:600;color:#ecd9a8;font-size:52px}
+.dA .screen{background:radial-gradient(130% 55% at 50% 0%,#2e2218 0%,#140f0b 58%,#0c0907 100%);color:#f1e4c4;font:16px/1.45 'Alegreya Sans',sans-serif}
+.dA .tg{background:#0c0907;color:#bfa77a;border-bottom:1px solid #33271a}
+.dA .tg b{color:#e9d6a6}
+.a-hud{flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 18px;font:600 17px 'Cormorant SC',serif;color:#c9a24a;letter-spacing:.04em}
+.a-hud .t{font:600 22px 'Cormorant Garamond',serif;color:#f6e3b0;font-variant-numeric:tabular-nums}
+.a-hud .g{display:flex;align-items:center;gap:6px;color:#f6e3b0}
+.a-hud .g .ic{width:18px;height:18px;color:#c9a24a}
+.a-arch{margin:2px 22px 0;height:262px;border-radius:170px 170px 4px 4px;overflow:hidden;border:2px solid #c9a24a;box-shadow:0 0 0 5px #120d09,0 0 0 6px #6d5428,0 16px 30px rgba(0,0,0,.6)}
+.a-arch img{width:100%;height:100%;object-fit:cover;object-position:50% 14%}
+.a-plaque{position:relative;margin:-34px 30px 0;background:linear-gradient(#2c2117,#16100b);border:1px solid #c9a24a;padding:8px 14px 10px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,.6)}
+.a-plaque::before,.a-plaque::after{content:"";position:absolute;top:50%;width:10px;height:10px;background:#c9a24a;transform:translateY(-50%) rotate(45deg)}
+.a-plaque::before{left:-6px}.a-plaque::after{right:-6px}
+.a-plaque h3{margin:0;font:700 30px/1 'Cormorant SC',serif;color:#f6e3b0;letter-spacing:.03em}
+.a-plaque p{margin:3px 0 0;font:italic 500 18px/1.2 'Cormorant Garamond',serif;color:#d8c194}
+.a-side{display:flex;justify-content:center;align-items:center;gap:8px;margin:10px 0 0;font-size:15px;color:#e8ad65}
+.a-side i{width:9px;height:9px;background:#e8ad65;transform:rotate(45deg);box-shadow:0 0 8px #e8ad65}
+.a-side em{color:#a99572;font-style:italic}
+.a-panel{position:relative;margin:12px 16px 0;padding:11px 14px 12px;background:linear-gradient(180deg,rgba(44,33,23,.95),rgba(22,16,11,.95));border:1px solid #4d3b22}
+.a-panel::before{content:"";position:absolute;inset:3px;border:1px solid rgba(201,162,74,.18);pointer-events:none}
+.a-panel h4{display:flex;align-items:center;gap:10px;margin:0 0 6px;font:600 19px/1.2 'Cormorant SC',serif;color:#c9a24a;letter-spacing:.03em}
+.a-panel h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#6d5428,transparent)}
+.a-panel h4 small{font:italic 500 15px 'Cormorant Garamond',serif;color:#a99572;letter-spacing:0;order:3}
+.a-goals{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:15.5px;line-height:1.38}
+.a-goals li{display:grid;grid-template-columns:14px 1fr;gap:8px}
+.a-goals li::before{content:"";width:7px;height:7px;margin-top:7px;background:#c9a24a;transform:rotate(45deg)}
+.a-secret{border-color:#6e2318}
+.a-secret h4{color:#d76a58}
+.a-secret h4::after{background:linear-gradient(90deg,#6e2318,transparent)}
+.a-secret p{margin:0;font-size:15.5px;line-height:1.38;color:#f0d9c8}
+.dA .tabs{background:#0c0907;border-top:1px solid #3a2c1a;padding:6px 4px 14px;box-shadow:inset 0 1px 0 rgba(201,162,74,.15)}
+.dA .tabs span{font:600 13px 'Cormorant SC',serif;color:#8d7a58;letter-spacing:.03em}
+.dA .tabs .ic{width:24px;height:24px;stroke-width:1.5}
+.dA .tabs .on{color:#f6e3b0}
+.dA .tabs .on .ic{color:#c9a24a;filter:drop-shadow(0 0 6px rgba(201,162,74,.7))}
+.a-title{margin:6px 18px 2px;font:600 28px/1.1 'Cormorant SC',serif;color:#f6e3b0;display:flex;align-items:center;gap:12px}
+.a-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#6d5428,transparent)}
+.a-offer{border-color:#c9a24a;box-shadow:0 0 0 1px #120d09,0 0 22px rgba(201,162,74,.18)}
+.a-who{display:flex;gap:12px;align-items:center}
+.a-mono{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;font:700 26px 'Cormorant SC',serif;color:#f6e3b0;background:radial-gradient(#4b3a22,#1a130d);border:2px solid #c4b0ec;box-shadow:0 0 0 3px #120d09,0 0 0 4px #6d5428}
+.a-who b{display:block;font:700 22px/1.1 'Cormorant SC',serif;color:#f6e3b0}
+.a-who span{font:italic 500 16px 'Cormorant Garamond',serif;color:#cdb68a}
+.a-timer{margin-left:auto;text-align:right;font:600 28px/1 'Cormorant Garamond',serif;color:#f6e3b0;font-variant-numeric:tabular-nums}
+.a-timer small{display:block;font:500 13px 'Alegreya Sans';color:#a99572;margin-top:3px}
+.a-bar{height:3px;background:#2e2318;margin:10px 0 12px;position:relative}
+.a-bar b{position:absolute;inset:0 3% 0 0;background:linear-gradient(90deg,#8a6220,#f2c66d)}
+.a-swap{display:grid;grid-template-columns:1fr 26px 1fr;gap:6px;align-items:center;margin-bottom:12px}
+.a-swap div{border:1px solid #4d3b22;background:rgba(0,0,0,.25);padding:8px 10px;min-height:66px}
+.a-swap small{display:block;font-size:13px;color:#a99572}
+.a-swap b{display:flex;align-items:center;gap:6px;font:700 19px/1.15 'Cormorant Garamond',serif;color:#f6e3b0}
+.a-swap .ic{width:18px;height:18px;color:#c9a24a}
+.a-swap>.ic{width:24px;height:24px;color:#c9a24a;justify-self:center}
+.a-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.a-btn{min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font:700 20px 'Cormorant SC',serif;letter-spacing:.04em;border:1px solid #c9a24a;color:#f1e4c4;background:linear-gradient(#2c2117,#18110c);box-shadow:inset 0 0 0 2px #120d09,inset 0 0 0 3px rgba(201,162,74,.35)}
+.a-btn.gold{background:linear-gradient(#f3d389,#c79a3e 55%,#a5762a);color:#24180a;border-color:#f6e3b0;box-shadow:inset 0 1px 0 #fff4cf,0 0 18px rgba(201,162,74,.35);text-shadow:0 1px 0 rgba(255,240,200,.6)}
+.a-btn.red{border-color:#8c2a1d;color:#efb3a6}
+.a-btn .ic{width:20px;height:20px}
+.a-field{display:flex;justify-content:space-between;align-items:center;min-height:50px;border-bottom:1px solid #3a2c1a}
+.a-field small{display:block;font-size:13px;color:#a99572}
+.a-field b{font:600 19px/1.15 'Cormorant Garamond',serif;color:#f6e3b0}
+.a-field .ic{color:#c9a24a;width:20px;height:20px}
+.a-full{margin-top:12px;width:100%}
+.a-clock{text-align:center;padding:16px 14px 14px}
+.a-clock .act{font:600 22px 'Cormorant SC',serif;color:#c9a24a;letter-spacing:.06em}
+.a-clock .big{font:500 92px/1 'Cormorant Garamond',serif;color:#f6e3b0;font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(242,198,109,.25);margin:4px 0}
+.a-clock p{margin:0;color:#a99572;font-size:15px}
+.a-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 0}
+.a-acts span{height:4px;background:#2e2318;position:relative}
+.a-acts span.done{background:linear-gradient(90deg,#8a6220,#f2c66d 75%,#2e2318 75%)}
+.a-acts em{display:block;font:600 14px 'Cormorant SC';color:#8d7a58;font-style:normal;margin-top:8px}
+.a-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 16px 0}
+.a-ctl .a-btn{font-size:18px}
+.a-ctl .wide{grid-column:1/-1}
+.a-text{border:1px solid #4d3b22;background:rgba(0,0,0,.3);padding:10px 12px;font:italic 500 17px/1.35 'Cormorant Garamond',serif;color:#efe0bd;min-height:92px}
+.a-stats{display:flex;justify-content:space-between;margin:12px 18px 0;font-size:14px;color:#a99572}
+.a-stats b{color:#f6e3b0;font-weight:700}
+
+/* ───────── B. Ярмарочный стол ───────── */
+.dB{--acc:#ff8a3d}
+.dB h2{font:900 46px/1.02 Rubik,sans-serif;color:#ffd75e;-webkit-text-stroke:2px #3a1d0b;paint-order:stroke fill;text-shadow:0 4px 0 #3a1d0b}
+.dB .screen{background:radial-gradient(90% 40% at 50% 0%,#4b2a63 0%,#2a1838 55%,#1c1026 100%);color:#fff6e4;font:600 16px/1.4 Nunito,sans-serif}
+.dB .tg{background:#1c1026;color:#cbb6dc}
+.dB .tg b{color:#fff6e4}
+.b-hud{flex:none;display:flex;gap:8px;align-items:center;padding:8px 14px 6px}
+.b-pill{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px 0 6px;border-radius:999px;background:#140a1c;border:2px solid #5d3a78;font:800 17px Rubik;color:#fff}
+.b-pill i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:15px;background:linear-gradient(#ffe07a,#f0a020);box-shadow:inset 0 -3px 0 #b86a0c}
+.b-pill.act i{background:linear-gradient(#c99bff,#7b3fe4);box-shadow:inset 0 -3px 0 #4b1fa0;color:#fff;font:800 13px Rubik}
+.b-pill.r{margin-left:auto}
+.b-card{position:relative;margin:4px 34px 0;border-radius:22px;padding:7px;background:linear-gradient(#ffe38a,#e7a42b);box-shadow:0 0 0 3px #3a1d0b,0 10px 0 #3a1d0b,0 18px 28px rgba(0,0,0,.45);transform:rotate(-1.5deg)}
+.b-card .art{height:214px;border-radius:16px;overflow:hidden;border:3px solid #3a1d0b}
+.b-card .art img{width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.b-gem{position:absolute;top:-10px;left:-12px;width:52px;height:52px;display:grid;place-items:center;font-size:26px;background:radial-gradient(circle at 35% 30%,#ffd2a1,#ff7a2f 60%,#b8410e);border:3px solid #3a1d0b;border-radius:14px;transform:rotate(45deg)}
+.b-gem span{transform:rotate(-45deg)}
+.b-ribbon{position:relative;margin:-30px -22px 0;padding:6px 20px 8px;text-align:center;background:#c2372b;border:3px solid #3a1d0b;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%);}
+.b-ribbon h3{margin:0;font:900 30px/1 Rubik;color:#fff;-webkit-text-stroke:5px #3a1d0b;paint-order:stroke fill;letter-spacing:.01em}
+.b-ribbon p{margin:2px 0 0;font:800 15px/1.1 Nunito;color:#ffe2c9}
+.b-sidechip{display:flex;justify-content:center;margin:14px 0 0}
+.b-sidechip span{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:#e8ad65;color:#3a1d0b;font:800 15px Rubik;border:2px solid #3a1d0b;box-shadow:0 3px 0 #3a1d0b}
+.b-quest{margin:10px 14px 0;display:grid;gap:8px}
+.b-q{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:16px;background:#fff4dc;color:#3a1d0b;box-shadow:0 4px 0 #b08a5a;font:700 15px/1.32 Nunito}
+.b-q i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-style:normal;font:900 15px Rubik;color:#fff;background:#ff7a2f;box-shadow:inset 0 -3px 0 #b8410e}
+.b-q.sec{background:#2a1838;color:#ffe2f0;box-shadow:0 4px 0 #0f0716;border:2px dashed #d64a7a}
+.b-q.sec i{background:#d64a7a;box-shadow:inset 0 -3px 0 #8c1d47}
+.b-q b{display:block;font:800 13px Rubik;color:#d64a7a;margin-bottom:1px}
+.dB .tabs{margin:0 10px 12px;border-radius:22px;background:#140a1c;border:2px solid #5d3a78;padding:6px 2px}
+.dB .tabs span{font:800 12px Nunito;color:#9f86b5}
+.dB .tabs span i{font-style:normal;font-size:22px;line-height:1;width:40px;height:32px;display:grid;place-items:center;border-radius:10px}
+.dB .tabs .on{color:#ffd75e}
+.dB .tabs .on i{background:linear-gradient(#ffe07a,#f0a020);box-shadow:inset 0 -3px 0 #b86a0c}
+.b-h{margin:6px 16px 8px;font:900 30px Rubik;color:#ffd75e;-webkit-text-stroke:5px #3a1d0b;paint-order:stroke fill}
+.b-offer{position:relative;margin:0 14px;padding:14px;border-radius:22px;background:#fff4dc;color:#3a1d0b;box-shadow:0 0 0 3px #3a1d0b,0 7px 0 #3a1d0b}
+.b-timer{position:absolute;top:-14px;right:-6px;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#ff7a2f 0 97%,#3a1d0b 97% 100%);border:3px solid #3a1d0b;box-shadow:0 4px 0 #3a1d0b}
+.b-timer b{width:54px;height:54px;border-radius:50%;background:#fff4dc;display:grid;place-items:center;font:900 19px Rubik;color:#3a1d0b}
+.b-from{display:flex;gap:10px;align-items:center;padding-right:66px}
+.b-ava{width:52px;height:52px;flex:none;border-radius:16px;display:grid;place-items:center;font-size:28px;background:linear-gradient(#b9a0ff,#7b3fe4);border:3px solid #3a1d0b;box-shadow:0 3px 0 #3a1d0b}
+.b-from b{display:block;font:900 21px/1.05 Rubik}
+.b-from span{font:700 14px Nunito;color:#8a5a2b}
+.b-trade{display:grid;grid-template-columns:1fr 30px 1fr;align-items:center;margin:12px 0}
+.b-tile{text-align:center;padding:8px 4px;border-radius:16px;background:#ffe3b0;border:2px solid #e0b26a}
+.b-tile i{display:block;font-style:normal;font-size:30px;line-height:1.1}
+.b-tile b{display:block;font:900 17px/1.1 Rubik}
+.b-tile small{font:800 12px Nunito;color:#8a5a2b}
+.b-trade>span{text-align:center;font:900 22px Rubik;color:#c2372b}
+.b-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.b-btn{min-height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;font:900 19px Rubik;color:#fff;-webkit-text-stroke:3px rgba(0,0,0,.3);paint-order:stroke fill;border:3px solid #3a1d0b;box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 5px 0 #3a1d0b}
+.b-btn.ok{background:linear-gradient(#6ee7b7,#22a67a)}
+.b-btn.no{background:linear-gradient(#ff8f8f,#d6403f)}
+.b-btn.go{background:linear-gradient(#ffb36b,#ff6a1f)}
+.b-btn.y{background:linear-gradient(#ffe07a,#f0a020);color:#3a1d0b;-webkit-text-stroke:0}
+.b-btn.p{background:linear-gradient(#c99bff,#7b3fe4)}
+.b-form{margin:16px 14px 0;padding:12px;border-radius:22px;background:#3a2350;border:2px solid #5d3a78}
+.b-form h4{margin:0 0 8px;font:900 18px Rubik;color:#fff}
+.b-sel{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 10px;margin-bottom:8px;border-radius:14px;background:#140a1c}
+.b-sel i{font-style:normal;font-size:22px}
+.b-sel small{font:800 12px Nunito;color:#9f86b5;display:block}
+.b-sel b{font:800 16px/1.1 Nunito;color:#fff6e4}
+.b-sel .ic{margin-left:auto;color:#9f86b5}
+.b-plank{margin:4px 14px 0;padding:14px;border-radius:22px;text-align:center;background:repeating-linear-gradient(90deg,#7a4a24 0 2px,#8b5a2e 2px 60px),#8b5a2e;box-shadow:0 0 0 3px #3a1d0b,0 7px 0 #3a1d0b,inset 0 0 0 4px #a56d3a}
+.b-plank .act{font:900 18px Rubik;color:#ffe3b0}
+.b-plank .big{font:900 82px/1 Rubik;color:#fff4dc;-webkit-text-stroke:8px #3a1d0b;paint-order:stroke fill;font-variant-numeric:tabular-nums;margin:2px 0 4px}
+.b-plank p{margin:0;font:800 14px Nunito;color:#ffe3b0}
+.b-track{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px;background:#3a1d0b;border-radius:999px;padding:3px}
+.b-track span{height:12px;border-radius:999px;background:#5a3417}
+.b-track .done{background:linear-gradient(90deg,#ffd75e 75%,#5a3417 75%)}
+.b-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 14px 0}
+.b-ctl .wide{grid-column:1/-1}
+.b-say{margin:18px 14px 0;position:relative;padding:12px 14px;border-radius:20px;background:#fff4dc;color:#3a1d0b;font:700 15px/1.35 Nunito;box-shadow:0 0 0 3px #3a1d0b}
+.b-say::after{content:"";position:absolute;left:28px;bottom:-14px;border:9px solid transparent;border-top:12px solid #fff4dc;filter:drop-shadow(0 3px 0 #3a1d0b)}
+.b-say b{display:block;font:900 15px Rubik;color:#c2372b;margin-bottom:3px}
+.b-sayrow{margin:22px 14px 0}
+
+/* ───────── C. Гравюра ───────── */
+.dC{--acc:#b8433a}
+.dC h2{font:400 50px/1 'Old Standard TT',serif;letter-spacing:.02em;color:#efe5cf}
+.dC .screen{background:radial-gradient(110% 70% at 50% 30%,#1a1612 0%,#0a0908 70%);color:#221a12;font:16px/1.45 'Old Standard TT',serif}
+.dC .tg{background:#0a0908;color:#8e826c}
+.dC .tg b{color:#d9ccb0;font-family:'Old Standard TT',serif;font-weight:400}
+.c-hud{flex:none;display:flex;justify-content:space-between;align-items:baseline;padding:8px 20px 8px;color:#d9ccb0;font-size:15px;border-bottom:1px solid #3a3226;margin:0 14px}
+.c-hud .t{font:italic 400 22px 'Old Standard TT';color:#efe5cf}
+.paper{background:#e9dfc7;background-image:radial-gradient(120% 90% at 50% 40%,transparent 60%,rgba(120,90,50,.18)),repeating-linear-gradient(0deg,transparent 0 3px,rgba(90,70,40,.025) 3px 4px)}
+.c-tarot{position:relative;margin:12px auto 0;width:214px;padding:10px;box-shadow:0 18px 40px rgba(0,0,0,.7)}
+.c-tarot::before{content:"";position:absolute;inset:5px;border:1px solid #2a2118;pointer-events:none}
+.c-tarot .num{text-align:center;font:400 16px 'Old Standard TT';letter-spacing:.3em;margin:0 0 6px}
+.c-art{height:180px;overflow:hidden;border:1.5px solid #2a2118;position:relative;background:#e9dfc7}
+.c-art img{width:100%;height:100%;object-fit:cover;object-position:50% 14%;filter:grayscale(1) contrast(1.45) brightness(1.18) sepia(.5);mix-blend-mode:multiply}
+.c-art::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-35deg,rgba(233,223,199,.22) 0 1px,transparent 1px 4px);mix-blend-mode:screen}
+.c-tarot h3{margin:8px 0 0;text-align:center;font:700 19px 'Old Standard TT';letter-spacing:.22em}
+.c-tarot p{margin:0;text-align:center;font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-side{display:flex;justify-content:center;gap:8px;align-items:center;margin:10px 0 0;color:#d9ccb0;font:italic 400 16px 'Old Standard TT'}
+.c-side i{width:8px;height:8px;background:#e8ad65;transform:rotate(45deg)}
+.c-sheet{margin:12px 14px 0;padding:12px 16px 14px;box-shadow:0 10px 26px rgba(0,0,0,.6)}
+.c-sheet h4{margin:0 0 6px;font:italic 400 17px 'Old Standard TT';color:#8a2b1f;border-bottom:1px solid #2a2118;padding-bottom:4px}
+.c-goals{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:15px;line-height:1.38}
+.c-goals li{display:grid;grid-template-columns:18px 1fr;gap:6px}
+.c-goals li::before{content:"✶";color:#8a2b1f;font-size:13px;margin-top:1px}
+.c-secret{position:relative;margin:12px 14px 0;padding:10px 14px 12px 64px;border:1px solid #6b2a20;color:#e7d9bd;background:#150e0b}
+.c-seal{position:absolute;left:10px;top:12px;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c4473a,#7a1c14 70%);box-shadow:0 0 0 3px rgba(122,28,20,.35);display:grid;place-items:center;color:#f2d6c4;font:700 16px 'Old Standard TT'}
+.c-secret b{display:block;font:italic 400 15px 'Old Standard TT';color:#d07a68}
+.c-secret p{margin:2px 0 0;font:19px/1.25 Neucha,cursive;color:#f1e4c9}
+.dC .tabs{border-top:1px solid #3a3226;margin:0 14px;padding:6px 0 14px}
+.dC .tabs span{font:400 13px 'Old Standard TT';color:#8e826c}
+.dC .tabs span i{font-style:normal;font-size:21px;line-height:1;color:#8e826c;height:24px}
+.dC .tabs .on{color:#efe5cf}
+.dC .tabs .on i{color:#e8ad65}
+.dC .tabs .on::after{content:"";width:18px;height:1px;background:#e8ad65;margin-top:1px}
+.c-h{margin:16px 20px 10px;color:#efe5cf;font:400 26px 'Old Standard TT';display:flex;justify-content:space-between;align-items:baseline}
+.c-h small{font:italic 400 15px 'Old Standard TT';color:#8e826c}
+.c-card{margin:0 14px;padding:14px 16px;box-shadow:0 14px 34px rgba(0,0,0,.65);position:relative}
+.c-card::before{content:"";position:absolute;inset:5px;border:1px solid rgba(42,33,24,.55);pointer-events:none}
+.c-offer{display:grid;grid-template-columns:1fr 84px;gap:12px;align-items:center}
+.c-offer .who{font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-offer .who b{display:block;font:700 22px/1.1 'Old Standard TT';color:#221a12;font-style:normal;letter-spacing:.04em}
+.c-ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(#8a2b1f 0 97%,rgba(42,33,24,.15) 97% 100%);display:grid;place-items:center;-webkit-mask:radial-gradient(circle,transparent 0 0) ;}
+.c-ring{-webkit-mask:none}
+.c-ring b{width:72px;height:72px;border-radius:50%;background:#e9dfc7;display:grid;place-items:center;font:400 22px 'Old Standard TT';font-variant-numeric:tabular-nums}
+.c-ledger{margin:12px 0;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #2a2118;border-bottom:1px solid #2a2118}
+.c-ledger div{padding:8px 4px 8px 0}
+.c-ledger div+div{border-left:1px solid #2a2118;padding-left:12px}
+.c-ledger small{display:block;font:italic 400 14px 'Old Standard TT';color:#5a4a36}
+.c-ledger b{font:700 19px/1.2 'Old Standard TT'}
+.c-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c-btn{min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font:400 18px 'Old Standard TT';letter-spacing:.06em;border:1.5px solid #221a12;color:#221a12;background:transparent}
+.c-btn.ink{background:#221a12;color:#efe5cf}
+.c-btn.dark{border-color:#d9ccb0;color:#efe5cf}
+.c-btn.dark.ink{background:#e9dfc7;color:#221a12;border-color:#e9dfc7}
+.c-btn.red{background:#8a2b1f;border-color:#8a2b1f;color:#f6e8d6}
+.c-form{margin:14px 14px 0}
+.c-line{display:grid;grid-template-columns:86px 1fr;align-items:end;min-height:46px;border-bottom:1px solid #2a2118;padding-bottom:4px}
+.c-line small{font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-line b{font:400 23px/1 Neucha,cursive;color:#1d3a5c}
+.c-form .c-btn{margin-top:14px;width:100%}
+.c-clock{text-align:center;padding:16px}
+.c-clock .act{font:400 17px 'Old Standard TT';letter-spacing:.3em}
+.c-clock .big{font:400 88px/1 'Old Standard TT';font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.c-clock p{margin:0;font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-acts{display:flex;justify-content:space-between;align-items:center;margin:14px 6px 2px;position:relative}
+.c-acts::before{content:"";position:absolute;left:10px;right:10px;top:50%;height:1px;background:#2a2118}
+.c-acts span{position:relative;background:#e9dfc7;padding:0 8px;font:400 16px 'Old Standard TT';color:#5a4a36}
+.c-acts span.on{color:#8a2b1f;font-weight:700}
+.c-acts span.pin{width:9px;height:9px;padding:0;border-radius:50%;background:#8a2b1f}
+.c-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 14px 0}
+.c-ctl .wide{grid-column:1/-1}
+.c-note{margin:14px 14px 0}
+.c-note h4{margin:0 0 6px;font:italic 400 16px 'Old Standard TT';color:#8a2b1f}
+.c-note .hand{font:20px/1.3 Neucha,cursive;color:#1d3a5c;min-height:84px}
+
+/* ───────── D. Стекло и тыква ───────── */
+.dD{--acc:#ff8a3d}
+.dD h2{font:800 42px/1.02 Unbounded,sans-serif;letter-spacing:-.02em;background:linear-gradient(90deg,#ffb35a,#ff6a1f 40%,#a77bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dD .screen{background:#08070d;color:#f5f3ff;font:500 16px/1.45 Manrope,sans-serif}
+.dD .screen::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(60% 35% at 15% 70%,rgba(255,106,31,.42),transparent 70%),radial-gradient(60% 40% at 90% 40%,rgba(123,63,228,.5),transparent 70%),radial-gradient(50% 30% at 50% 100%,rgba(255,106,31,.25),transparent)}
+.dD .tg{background:transparent;color:#ff9a4d;position:relative;z-index:2}
+.dD .tg b{color:#f5f3ff}
+.glass{background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.13);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5)}
+.d-hero{position:relative;height:300px}
+.d-hero img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;-webkit-mask:linear-gradient(#000 55%,transparent);mask:linear-gradient(#000 55%,transparent)}
+.d-hero .tx{position:absolute;left:20px;right:20px;bottom:0}
+.d-hero h3{margin:0;font:800 38px/1 Unbounded;letter-spacing:-.02em}
+.d-hero p{margin:6px 0 0;font:500 17px Manrope;color:#cfc8e8}
+.d-chip{display:inline-flex;align-items:center;gap:8px;margin:12px 20px 0;padding:7px 14px;border-radius:999px;font:700 14px Manrope}
+.d-chip i{width:8px;height:8px;border-radius:50%;background:#ffb35a;box-shadow:0 0 10px #ffb35a}
+.d-chip em{font-style:normal;color:#a9a3c4;font-weight:500}
+.d-cap{margin:16px 32px 6px;font:600 13px Manrope;color:#a9a3c4}
+.d-group{margin:0 16px;border-radius:22px;overflow:hidden}
+.d-row{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:11px 14px;font-size:15px;line-height:1.38}
+.d-row+.d-row{border-top:1px solid rgba(255,255,255,.08)}
+.d-row .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 12px Unbounded;background:rgba(255,154,77,.18);color:#ffb35a}
+.d-secret{margin:12px 16px 0;border-radius:22px;padding:12px 14px;display:grid;grid-template-columns:30px 1fr;gap:10px;background:linear-gradient(135deg,rgba(123,63,228,.35),rgba(255,106,31,.12));border:1px solid rgba(167,123,255,.35)}
+.d-secret .ic{color:#c9b0ff}
+.d-secret b{display:block;font:700 14px Manrope;color:#c9b0ff}
+.d-secret p{margin:2px 0 0;font-size:15px;line-height:1.38}
+.dD .tabs{position:absolute;left:14px;right:14px;bottom:14px;border-radius:30px;padding:6px;z-index:3}
+.dD .tabs span{font:600 11px Manrope;color:#a9a3c4;border-radius:24px;flex:1}
+.dD .tabs .on{background:rgba(255,255,255,.12);color:#fff}
+.dD .tabs .on .ic{color:#ff9a4d}
+.d-h{margin:4px 20px 12px;font:800 30px Unbounded;letter-spacing:-.02em}
+.d-reign{margin:0 16px;border-radius:30px;padding:18px 16px 16px;text-align:center}
+.d-ava{width:64px;height:64px;margin:0 auto;border-radius:50%;display:grid;place-items:center;font-size:30px;background:linear-gradient(135deg,#a77bff,#5b2bc4);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.d-reign .who{margin:8px 0 0;font:700 17px Manrope}
+.d-reign .who span{display:block;font-weight:500;font-size:14px;color:#a9a3c4}
+.d-count{font:700 46px/1 Unbounded;letter-spacing:-.03em;margin:10px 0 4px;font-variant-numeric:tabular-nums}
+.d-line{height:4px;border-radius:4px;background:rgba(255,255,255,.12);margin:0 30px 14px;overflow:hidden}
+.d-line b{display:block;height:100%;width:97%;background:linear-gradient(90deg,#ff6a1f,#ffb35a)}
+.d-swap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;text-align:left}
+.d-swap div{border-radius:18px;background:rgba(0,0,0,.25);padding:10px 12px}
+.d-swap small{display:block;font:600 12px Manrope;color:#a9a3c4}
+.d-swap b{font:700 17px/1.2 Manrope}
+.d-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.d-btn{min-height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font:700 16px Manrope;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16)}
+.d-btn.hot{background:linear-gradient(135deg,#ff9a4d,#ff5a1f);border-color:rgba(255,220,190,.4);box-shadow:0 8px 24px rgba(255,106,31,.35),inset 0 1px 0 rgba(255,255,255,.4)}
+.d-btn.vio{background:linear-gradient(135deg,#a77bff,#6a35e0);border-color:rgba(220,200,255,.35)}
+.d-list{margin:0 16px;border-radius:22px;overflow:hidden}
+.d-li{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px}
+.d-li+.d-li{border-top:1px solid rgba(255,255,255,.08)}
+.d-li span{color:#a9a3c4;font-size:15px;width:70px}
+.d-li b{flex:1;font-weight:700;font-size:16px}
+.d-li .ic{color:#6f6990;width:18px;height:18px}
+.d-main{margin:14px 16px 0;width:calc(100% - 32px)}
+.d-clock{margin:0 16px;border-radius:30px;padding:18px 18px 16px}
+.d-clock .act{display:flex;justify-content:space-between;font:600 14px Manrope;color:#a9a3c4}
+.d-clock .act b{color:#ffb35a}
+.d-clock .big{font:800 86px/1 Unbounded;letter-spacing:-.05em;margin:12px 0 8px;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff,#d8cfff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.d-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.d-seg span{height:6px;border-radius:6px;background:rgba(255,255,255,.12)}
+.d-seg .done{background:linear-gradient(90deg,#ff6a1f,#ffb35a 75%,rgba(255,255,255,.12) 75%)}
+.d-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 16px 0}
+.d-ctl .wide{grid-column:1/-1}
+.d-ann{margin:14px 16px 0;border-radius:24px;padding:12px 12px 12px 16px;display:grid;grid-template-columns:1fr 48px;gap:10px;align-items:end}
+.d-ann small{display:block;font:600 13px Manrope;color:#a9a3c4;margin-bottom:4px}
+.d-ann p{margin:0;font-size:15px;line-height:1.4}
+.d-send{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ff9a4d,#ff5a1f)}
+
+/* ───────── E. Балаган ───────── */
+.dE{--acc:#e0332a}
+.dE h2{font:400 48px/1 'Ruslan Display',serif;color:#f3e7cf;text-shadow:3px 3px 0 #d42a20}
+.dE .screen{background:#1b1512;color:#f3e7cf;font:500 16px/1.4 'Fira Sans Condensed',sans-serif}
+.dE .tg{background:#d42a20;color:#ffd9c4}
+.dE .tg b{color:#fff;font-family:'Fira Sans Condensed';font-weight:800;font-size:15px}
+.e-band{flex:none;display:flex;justify-content:space-between;align-items:center;padding:6px 16px 8px;background:#d42a20;border-bottom:3px solid #1b1512;color:#fff;font:800 16px 'Fira Sans Condensed'}
+.e-band .t{font:400 22px 'Ruslan Display';letter-spacing:.04em}
+.e-stage{position:relative;height:262px;display:grid;place-items:center;overflow:hidden;background:repeating-conic-gradient(from 0deg at 50% 55%,#f4a51c 0 10deg,#e58f0c 10deg 20deg)}
+.e-stage::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,transparent 40%,rgba(27,21,18,.55) 100%)}
+.e-ring{position:relative;z-index:1;width:212px;height:212px;border-radius:50%;padding:6px;background:#f3e7cf;box-shadow:0 0 0 5px #1b1512,8px 8px 0 5px #1b1512;margin-top:8px}
+.e-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 14%;border:3px solid #1b1512}
+.e-star{position:absolute;z-index:2;font-size:26px;color:#1b1512}
+.e-name{text-align:center;margin:-22px 0 0;position:relative;z-index:3}
+.e-name h3{display:inline-block;margin:0;padding:4px 18px 2px;background:#1b1512;font:400 34px/1.05 'Ruslan Display';color:#f3e7cf;text-shadow:2px 2px 0 #d42a20;letter-spacing:.03em}
+.e-name p{margin:6px 0 0;font:600 18px 'Fira Sans Condensed';font-style:italic;color:#f4a51c}
+.e-stamp{position:absolute;right:14px;top:14px;z-index:4;transform:rotate(9deg);border:3px solid #f4a51c;color:#f4a51c;padding:3px 10px;font:800 15px/1.1 'Fira Sans Condensed';text-align:center;border-radius:6px;background:rgba(27,21,18,.85)}
+.e-stamp small{display:block;font-weight:500;font-size:12px}
+.e-bill{margin:14px 14px 0;padding:10px 14px 12px;background:#f3e7cf;color:#1b1512;border:3px solid #1b1512;box-shadow:5px 5px 0 #d42a20}
+.e-bill h4{margin:0 0 4px;font:400 17px 'Ruslan Display';color:#d42a20;letter-spacing:.04em}
+.e-goals{margin:0;padding:0;list-style:none;display:grid;gap:6px;font:500 16px/1.3 'Fira Sans Condensed'}
+.e-goals li{display:grid;grid-template-columns:18px 1fr;gap:6px}
+.e-goals li::before{content:"★";color:#d42a20}
+.e-env{margin:14px 14px 0;padding:10px 14px 12px;background:#d42a20;border:3px solid #1b1512;box-shadow:5px 5px 0 #f4a51c;color:#fff}
+.e-env b{display:block;font:800 15px 'Fira Sans Condensed';color:#ffd9c4}
+.e-env p{margin:2px 0 0;font:500 16px/1.3 'Fira Sans Condensed'}
+.dE .tabs{background:#f3e7cf;border-top:3px solid #1b1512;padding:6px 4px 14px}
+.dE .tabs span{font:800 13px 'Fira Sans Condensed';color:#6c5c50}
+.dE .tabs .ic{stroke-width:2.4}
+.dE .tabs .on{color:#d42a20}
+.e-btn.k{border-color:#f3e7cf}
+.e-h{margin:10px 16px 8px;font:400 28px 'Ruslan Display';color:#f3e7cf;text-shadow:2px 2px 0 #d42a20}
+.e-ticket{position:relative;margin:0 14px;color:#1b1512;background:#f3e7cf;-webkit-mask:radial-gradient(circle 12px at 0 128px,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 128px,#0000 98%,#000) right/51% 100% no-repeat;mask:radial-gradient(circle 12px at 0 128px,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 128px,#0000 98%,#000) right/51% 100% no-repeat}
+.e-ticket .top{padding:12px 16px 10px;display:flex;gap:12px;align-items:center;height:128px;border-bottom:2px dashed #1b1512}
+.e-ava{width:62px;height:62px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:30px;background:repeating-conic-gradient(#f4a51c 0 15deg,#e58f0c 15deg 30deg);border:3px solid #1b1512}
+.e-ticket .top small{font:600 14px 'Fira Sans Condensed';color:#6c5c50;display:block}
+.e-ticket .top b{display:block;font:400 25px/1 'Ruslan Display';margin:2px 0}
+.e-ticket .top span{font:italic 600 15px 'Fira Sans Condensed';color:#d42a20}
+.e-flip{margin-left:auto;display:flex;gap:3px;align-items:center;font:400 26px 'Ruslan Display'}
+.e-flip i{font-style:normal;background:#1b1512;color:#f3e7cf;width:28px;height:42px;display:grid;place-items:center;border-radius:4px}
+.e-ticket .bot{padding:12px 16px 14px}
+.e-trade{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:12px}
+.e-trade small{display:block;font:600 14px 'Fira Sans Condensed';color:#6c5c50}
+.e-trade b{font:800 20px/1.1 'Fira Sans Condensed'}
+.e-trade .x{font:400 24px 'Ruslan Display';color:#d42a20}
+.e-btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.e-btn{min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font:800 19px 'Fira Sans Condensed';border:3px solid #1b1512;box-shadow:4px 4px 0 #1b1512;color:#1b1512;background:#f3e7cf}
+.e-btn.y{background:#f4a51c}
+.e-btn.r{background:#d42a20;color:#fff}
+.e-btn.k{background:#1b1512;color:#f3e7cf;box-shadow:4px 4px 0 #d42a20;border-color:#1b1512}
+.e-form{margin:12px 14px 0}
+.e-form h4{margin:0 0 8px;font:400 18px 'Ruslan Display';color:#f4a51c}
+.e-f{display:flex;align-items:center;min-height:48px;padding:0 12px;margin-bottom:8px;background:#2a211c;border:2px solid #f3e7cf}
+.e-f small{width:72px;font:600 14px 'Fira Sans Condensed';color:#c9b9a0}
+.e-f b{flex:1;font:800 17px 'Fira Sans Condensed'}
+.e-f .ic{color:#f4a51c}
+.e-form .e-btn{width:100%;margin-top:4px}
+.e-marquee{position:relative;margin:16px 16px 0;padding:22px 16px 18px;background:#d42a20;border:3px solid #1b1512;text-align:center;color:#fff}
+.e-marquee::before{content:"";position:absolute;inset:6px;border:8px dotted #ffe28a;border-radius:4px;filter:drop-shadow(0 0 4px #ffcf4a);pointer-events:none}
+.e-marquee .act{font:400 20px 'Ruslan Display';letter-spacing:.06em}
+.e-marquee .big{display:inline-block;margin:8px 0;padding:4px 16px;background:#1b1512;font:400 76px/1 'Ruslan Display';color:#f3e7cf;font-variant-numeric:tabular-nums}
+.e-marquee p{margin:0;font:600 15px 'Fira Sans Condensed';color:#ffe2c9}
+.e-ctl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 16px 0}
+.e-ctl .wide{grid-column:1/-1}
+.e-ann{margin:18px 16px 0;padding:10px 14px 12px;background:#f3e7cf;color:#1b1512;border:3px solid #1b1512;box-shadow:5px 5px 0 #f4a51c}
+.e-ann b{display:flex;align-items:center;gap:6px;font:800 15px 'Fira Sans Condensed';color:#d42a20}
+.e-ann p{margin:4px 0 0;font:500 16px/1.32 'Fira Sans Condensed'}
+
+/* ───────── Сравнение ───────── */
+.cmp{padding:64px 0 40px}
+.cmp h2{font:400 44px/1.05 'Old Standard TT',serif;margin:0 0 10px}
+.cmp>p{color:#cfc7d6;max-width:66ch;margin:0 0 24px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:14px 16px;border-bottom:1px solid var(--line)}
+thead th{font-weight:700;color:var(--mut);font-size:13.5px;background:var(--page-2)}
+tbody th{font-weight:700;font-size:16px;width:170px}
+tbody th small{display:block;font-weight:500;color:var(--mut);font-size:13px}
+tr:last-child td,tr:last-child th{border-bottom:0}
+.pips{display:flex;gap:4px;margin-bottom:6px}
+.pips i{width:12px;height:12px;border-radius:50%;border:1.5px solid #6b6274}
+.pips i.f{background:var(--hi);border-color:var(--hi)}
+td span{color:#cbc3d1}
+.rec{margin:40px 0 0;display:grid;grid-template-columns:240px 1fr;gap:32px;padding:28px;border:1px solid #6b5428;border-radius:16px;background:linear-gradient(135deg,rgba(242,198,109,.08),transparent 60%)}
+.rec h3{margin:0;font:400 30px/1.1 'Old Standard TT',serif;color:var(--hi)}
+.rec h3 small{display:block;font:500 14px Manrope;color:var(--mut);margin-top:8px}
+.rec p{margin:0 0 12px;max-width:72ch}
+.foot{padding:30px 0 60px;color:var(--mut);font-size:14px}
+
+@media (max-width:1000px){
+  .intro,.dir-head{grid-template-columns:1fr;gap:24px}
+  .rec{grid-template-columns:1fr;gap:12px}
+}
+@media (max-width:560px){
+  .wrap,.nav-in{padding-left:16px;padding-right:16px}
+  .intro{padding-top:32px}
+  .dir{padding-top:44px}
+  .dir h2{font-size:38px}
+  .dB h2{font-size:38px}.dD h2{font-size:32px}.dE h2{font-size:36px}
+  .typepair{grid-template-columns:1fr}
+  .dimbtn span{display:none}
+  .cmp h2{font-size:34px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-deal" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-altar" viewBox="0 0 24 24"><path d="M10 21V11h4v10M6 21h12"/><path d="M12 8c-1.4-1.3-1.2-3 0-4.6 1.2 1.6 1.4 3.3 0 4.6z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2.5-6.5z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2 7h7l-5.5 4 2 7-5.5-4.3L6.5 21l2-7L3 10h7z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.8 3.4-6 6.5-6s5.7 2.2 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14c2 .8 3.2 2.8 3.5 6"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M8 4h10v13a3 3 0 0 1-3 3H6"/><path d="M8 4a2 2 0 0 0-2 2v12a2 2 0 1 0 4 0v-1h8"/><path d="M11 8h4M11 11h4"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4h12l-2.5 4 2.5 4H5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-mega" viewBox="0 0 24 24"><path d="M3 10v4h4l8 5V5l-8 5z"/><path d="M18.5 9a4 4 0 0 1 0 6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+</svg>
+
+<nav class="nav" aria-label="Направления">
+  <div class="nav-in">
+    <div class="nav-links">
+      <a href="#a">Золото и пепел</a>
+      <a href="#b">Ярмарочный стол</a>
+      <a href="#c">Гравюра</a>
+      <a href="#d">Стекло и тыква</a>
+      <a href="#e">Балаган</a>
+      <a href="#cmp">Сравнение</a>
+    </div>
+    <button class="dimbtn" id="dim" type="button" aria-pressed="false"><svg class="ic"><use href="#i-moon"/></svg><span>Тёмная комната</span></button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <header class="intro">
+    <h1>Пять обличий ярмарки<span>Как может выглядеть приложение «Ярмарки украденной магии» в руках гостя</span></h1>
+    <div>
+      <p>У каждого направления свои шрифты, рамки, кнопки и иконки. Экраны везде одни и те же: роль Серафины, входящее предложение от Греты с формой новой сделки и пульт ведущего. Так их удобно сравнивать между собой.</p>
+      <p class="how">Портрет сгенерирован для примера и одинаков во всех вариантах. Кнопка «Тёмная комната» затемняет страницу на 40%, как телефон на вечеринке при свечах. Тексты и цифры взяты из данных версии 0.2.</p>
+    </div>
+  </header>
+
+  <!-- ═════════ A ═════════ -->
+  <section class="dir dA" id="a" aria-labelledby="a-t">
+    <div class="dir-head">
+      <div>
+        <p class="dir-letter">Направление А</p>
+        <h2 id="a-t">Золото и пепел</h2>
+        <p class="lede">Развитие текущего прототипа. Тёмная копоть, тонкое золото, портрет в стрельчатой арке. Красный цвет появляется только там, где опасность или тайна.</p>
+        <ul class="swatches">
+          <li><i style="background:#140f0b"></i>#140F0B копоть</li>
+          <li><i style="background:#2c2117"></i>#2C2117 панель</li>
+          <li><i style="background:#c9a24a"></i>#C9A24A золото</li>
+          <li><i style="background:#f1e4c4"></i>#F1E4C4 пергамент</li>
+          <li><i style="background:#8c2a1d"></i>#8C2A1D кровь</li>
+        </ul>
+        <div class="typepair">
+          <div><b style="font-family:'Cormorant SC';font-weight:700;color:#f6e3b0">Серафина</b>Cormorant SC: заголовки, кнопки</div>
+          <div class="tb"><b style="font-family:'Alegreya Sans'">Держать Корону пепла в инвентаре</b>Alegreya Sans: основной текст</div>
+        </div>
+      </div>
+      <dl class="refs">
+        <div><dt>Diablo IV</dt><dd>Сдержанный цвет: в Blizzard приглушили яркость и насыщенность фона иконок, а редкость показывают орнаментом рамки. У нас так же: золото рамки означает важное (входящая сделка, тайна), фон остаётся тёмным и спокойным.</dd></div>
+        <div><dt>Baldur's Gate 3</dt><dd>Тёмные полупрозрачные панели с тонкой золотой линией и внутренним вторым контуром. Варианты выбора идут чистым текстом без значков, поэтому цели здесь простой список с ромбом вместо иконок.</dd></div>
+        <div><dt>Gwent</dt><dd>Золотая рамка карты как знак ранга и табличка с именем, наложенная на нижний край портрета. Отсюда арка портрета и плашка «Серафина» с ромбами по бокам.</dd></div>
+      </dl>
+    </div>
+    <div class="phones">
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="a-hud"><span>Акт I</span><span class="t">21:08</span><span class="g"><svg class="ic"><use href="#i-coin"/></svg>6</span></div>
+          <div class="body">
+            <div class="a-arch"><img src="assets/concepts/sample-serafina.png" alt="Портрет Серафины"></div>
+            <div class="a-plaque"><h3>Серафина</h3><p>Драконья наследница</p></div>
+            <div class="a-side"><i></i>Пробудить <em>«Он должен жить»</em></div>
+            <section class="a-panel"><h4>Цели</h4>
+              <ul class="a-goals"><li>Держать Корону пепла в своём инвентаре в момент фиксации финала.</li><li>Вложить хотя бы один Фокус силы в ритуал пробуждения. Вклад засчитывается, даже если ритуал не состоится.</li></ul>
+            </section>
+            <section class="a-panel a-secret"><h4>Тайна <small>видите только вы</small></h4><p>Вы не потомок Сарна. Корона станет вашей по праву только если в это поверят.</p></section>
+          </div>
+          <nav class="tabs"><span class="on"><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Роль.</b> Арка и табличка с именем держат композицию. Тайна выделена приглушённым красным и стоит последней.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="a-hud"><span>Акт I</span><span class="t">21:08</span><span class="g"><svg class="ic"><use href="#i-coin"/></svg>6</span></div>
+          <div class="body">
+            <div class="a-title">Сделки</div>
+            <section class="a-panel a-offer">
+              <div class="a-who"><span class="a-mono">Г</span><div><b>Грета</b><span>Алхимик без лицензии</span></div><div class="a-timer">4:51<small>на ответ</small></div></div>
+              <div class="a-bar"><b></b></div>
+              <div class="a-swap">
+                <div><small>Вы отдаёте</small><b><svg class="ic"><use href="#i-coin"/></svg>2 золота</b></div>
+                <svg class="ic"><use href="#i-deal"/></svg>
+                <div><small>Вы получаете</small><b>✦ Фокус силы</b></div>
+              </div>
+              <div class="a-btns"><span class="a-btn gold"><svg class="ic"><use href="#i-check"/></svg>Принять</span><span class="a-btn red"><svg class="ic"><use href="#i-x"/></svg>Отклонить</span></div>
+            </section>
+            <section class="a-panel"><h4>Новое предложение</h4>
+              <div class="a-field"><div><small>Кому</small><b>Грим, гоблин-скупщик</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="a-field"><div><small>Отдаю</small><b>Пепел феникса ×1, 1 золото</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="a-field"><div><small>Прошу</small><b>Корона пепла</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <span class="a-btn a-full"><svg class="ic"><use href="#i-send"/></svg>Отправить</span>
+            </section>
+          </div>
+          <nav class="tabs"><span><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span class="on"><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Сделки.</b> Входящее предложение получает золотую рамку и свечение, обычные панели его не имеют. Таймер стоит рядом с именем и дублирован полосой.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Пульт ведущего</b><span>⋯</span></div>
+        <div class="app">
+          <div class="a-hud"><span>Ведущий</span><span class="g">17 гостей</span></div>
+          <div class="body">
+            <section class="a-panel a-clock">
+              <div class="act">Акт I</div>
+              <div class="big">21:08</div>
+              <p>до конца акта, ярмарка идёт 13 минут</p>
+              <div class="a-acts"><div><span class="done" style="display:block"></span><em>Акт I</em></div><div><span style="display:block"></span><em>Акт II</em></div><div><span style="display:block"></span><em>Акт III</em></div></div>
+            </section>
+            <div class="a-ctl">
+              <span class="a-btn"><svg class="ic"><use href="#i-pause"/></svg>Пауза</span>
+              <span class="a-btn"><svg class="ic"><use href="#i-plus"/></svg>5 минут</span>
+              <span class="a-btn gold wide"><svg class="ic"><use href="#i-play"/></svg>Начать акт II</span>
+            </div>
+            <section class="a-panel"><h4>Объявление</h4>
+              <div class="a-text">Брод открылся. Осколок IV привезли вместе с обрывком договора столетней давности. Победитель торга получит оба.</div>
+              <span class="a-btn a-full"><svg class="ic"><use href="#i-mega"/></svg>Объявить всем</span>
+            </section>
+            <div class="a-stats"><span>Сделок ждут: <b>3</b></span><span>Не в сети: <b>1</b></span></div>
+          </div>
+          <nav class="tabs"><span><svg class="ic"><use href="#i-users"/></svg>Состав</span><span class="on"><svg class="ic"><use href="#i-clock"/></svg>Пульт</span><span><svg class="ic"><use href="#i-scroll"/></svg>Журнал</span><span><svg class="ic"><use href="#i-flag"/></svg>Закрытие</span></nav>
+        </div>
+      </div></div><figcaption><b>Пульт.</b> Часы набраны антиквой в 92 px, их видно с вытянутой руки. Единственная золотая кнопка ведёт к следующему акту.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═════════ B ═════════ -->
+  <section class="dir dB" id="b" aria-labelledby="b-t">
+    <div class="dir-head">
+      <div>
+        <p class="dir-letter">Направление Б</p>
+        <h2 id="b-t">Ярмарочный стол</h2>
+        <p class="lede">Тёплое и игровое. Карта персонажа как в коллекционной игре, толстые обводки, выпуклые кнопки, которые хочется нажать. Ночь фиолетовая, а не чёрная, акценты тыквенные.</p>
+        <ul class="swatches">
+          <li><i style="background:#2a1838"></i>#2A1838 ночь</li>
+          <li><i style="background:#3a1d0b"></i>#3A1D0B обводка</li>
+          <li><i style="background:#ffd75e"></i>#FFD75E солнце</li>
+          <li><i style="background:#ff7a2f"></i>#FF7A2F тыква</li>
+          <li><i style="background:#22a67a"></i>#22A67A мята</li>
+          <li><i style="background:#fff4dc"></i>#FFF4DC сливки</li>
+        </ul>
+        <div class="typepair">
+          <div><b style="font:900 28px Rubik;color:#ffd75e;-webkit-text-stroke:4px #3a1d0b;paint-order:stroke fill">Серафина</b>Rubik 900 с обводкой</div>
+          <div class="tb"><b style="font:700 17px Nunito">Держать Корону пепла в инвентаре</b>Nunito: основной текст</div>
+        </div>
+      </div>
+      <dl class="refs">
+        <div><dt>Hearthstone</dt><dd>Арт-директор Бен Томпсон описывал интерфейс как «очень физический»: кнопки сделаны как предметы на столе. Берём выпуклые кнопки с нижней «толщиной», которая проседает при нажатии, и деревянную доску под часами ведущего.</dd></div>
+        <div><dt>Slay the Spire</dt><dd>Лента-баннер с названием поперёк нижнего края карты и камень в углу. У нас лента с именем Серафины и ромб-самоцвет со знаком роли.</dd></div>
+        <div><dt>Marvel Snap</dt><dd>Жирные цифры с обводкой, читаемые на любом фоне, и отклик на каждое действие. Отсюда таймер в круглом жетоне и цифры часов с толстой обводкой.</dd></div>
+      </dl>
+    </div>
+    <div class="phones">
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="b-hud"><span class="b-pill act"><i>I</i>Акт 21:08</span><span class="b-pill r"><i>🪙</i>6</span></div>
+          <div class="body">
+            <div class="b-card"><span class="b-gem"><span>🐉</span></span><div class="art"><img src="assets/concepts/sample-serafina.png" alt="Портрет Серафины"></div>
+              <div class="b-ribbon"><h3>Серафина</h3><p>Драконья наследница</p></div></div>
+            <div class="b-sidechip"><span>🔥 Пробудить</span></div>
+            <div class="b-quest">
+              <div class="b-q"><i>1</i><div>Держать Корону пепла в своём инвентаре в момент фиксации финала.</div></div>
+              <div class="b-q"><i>2</i><div>Вложить хотя бы один Фокус силы в ритуал пробуждения. Засчитается, даже если ритуал не состоится.</div></div>
+              <div class="b-q sec"><i>🤫</i><div><b>Тайна только для вас</b>Вы не потомок Сарна. Корона станет вашей по праву только если в это поверят.</div></div>
+            </div>
+          </div>
+          <nav class="tabs"><span class="on"><i>🧙</i>Роль</span><span><i>🎒</i>Сумка</span><span><i>🤝</i>Сделки</span><span><i>🕯️</i>Алтари</span><span><i>📣</i>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Роль.</b> Портрет становится коллекционной картой, слегка повёрнутой, как будто её положили на стол. Цели и тайна идут карточками-заданиями.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="b-hud"><span class="b-pill act"><i>I</i>Акт 21:08</span><span class="b-pill r"><i>🪙</i>6</span></div>
+          <div class="body">
+            <div class="b-h">Сделки</div>
+            <div class="b-offer">
+              <div class="b-timer"><b>4:51</b></div>
+              <div class="b-from"><span class="b-ava">⚗️</span><div><b>Грета</b><span>Алхимик без лицензии</span></div></div>
+              <div class="b-trade">
+                <div class="b-tile"><i>🪙</i><b>2 золота</b><small>отдаёте</small></div>
+                <span>⇄</span>
+                <div class="b-tile"><i>✨</i><b>Фокус силы</b><small>получаете</small></div>
+              </div>
+              <div class="b-btns"><span class="b-btn ok">Принять</span><span class="b-btn no">Отклонить</span></div>
+            </div>
+            <div class="b-form"><h4>Новое предложение</h4>
+              <div class="b-sel"><i>👺</i><div><small>Кому</small><b>Грим</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="b-sel"><i>🔥</i><div><small>Отдаю</small><b>Пепел феникса и 🪙 1</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="b-sel"><i>👑</i><div><small>Прошу</small><b>Корона пепла</b></div><svg class="ic"><use href="#i-chev"/></svg></div>
+              <span class="b-btn go">Отправить</span>
+            </div>
+          </div>
+          <nav class="tabs"><span><i>🧙</i>Роль</span><span><i>🎒</i>Сумка</span><span class="on"><i>🤝</i>Сделки</span><span><i>🕯️</i>Алтари</span><span><i>📣</i>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Сделки.</b> Обмен показан двумя «предметами» с крупной эмодзи. Таймер в оранжевом жетоне убывает по кругу.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Пульт ведущего</b><span>⋯</span></div>
+        <div class="app">
+          <div class="b-hud"><span class="b-pill act"><i>👑</i>Ведущий</span><span class="b-pill r"><i>👥</i>17</span></div>
+          <div class="body">
+            <div class="b-plank">
+              <div class="act">Акт I идёт</div>
+              <div class="big">21:08</div>
+              <p>до конца акта</p>
+              <div class="b-track"><span class="done"></span><span></span><span></span></div>
+            </div>
+            <div class="b-ctl">
+              <span class="b-btn y">⏸ Пауза</span>
+              <span class="b-btn p">+5 минут</span>
+              <span class="b-btn go wide">Начать акт II</span>
+            </div>
+            <div class="b-say"><b>📣 Объявление</b>Брод открылся! Осколок IV привезли вместе с обрывком договора столетней давности. Победитель торга получит оба.</div>
+            <div class="b-sayrow"><span class="b-btn ok">Объявить всем</span></div>
+          </div>
+          <nav class="tabs"><span><i>👥</i>Состав</span><span class="on"><i>⏱️</i>Пульт</span><span><i>📜</i>Журнал</span><span><i>🏁</i>Закрытие</span></nav>
+        </div>
+      </div></div><figcaption><b>Пульт.</b> Часы на доске, у каждой кнопки свой цвет: пауза жёлтая, время фиолетовое, следующий акт оранжевый.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═════════ C ═════════ -->
+  <section class="dir dC" id="c" aria-labelledby="c-t">
+    <div class="dir-head">
+      <div>
+        <p class="dir-letter">Направление В</p>
+        <h2 id="c-t">Гравюра</h2>
+        <p class="lede">Бумажные карты таро на чёрном поле. Чернила, киноварь и рукописные пометки. Портрет переведён в гравюру фильтрами, поэтому разные сгенерированные портреты выглядят одной колодой.</p>
+        <ul class="swatches">
+          <li><i style="background:#0a0908"></i>#0A0908 поле</li>
+          <li><i style="background:#e9dfc7"></i>#E9DFC7 бумага</li>
+          <li><i style="background:#221a12"></i>#221A12 чернила</li>
+          <li><i style="background:#8a2b1f"></i>#8A2B1F киноварь</li>
+          <li><i style="background:#1d3a5c"></i>#1D3A5C перо</li>
+          <li><i style="background:#e8ad65"></i>#E8AD65 охра</li>
+        </ul>
+        <div class="typepair">
+          <div><b style="font:700 24px 'Old Standard TT';letter-spacing:.2em">СЕРАФИНА</b>Old Standard TT: всё, кроме пометок</div>
+          <div class="tb"><b style="font:22px Neucha;color:#9cb8d8">Грим, Корона пепла</b>Neucha: рукописные значения</div>
+        </div>
+      </div>
+      <dl class="refs">
+        <div><dt>Cultist Simulator</dt><dd>Карты-прямоугольники с минимальной иллюстрацией и цветовой кодировкой; время действия показано кольцом, которое убывает вокруг числа. Берём кольцо таймера сделки и простую карту без лишних рамок.</dd></div>
+        <div><dt>Inscryption</dt><dd>Бежевые карты с грубым чернильным контуром в тёмной комнате, на карте только имя и рисунок, остальное вынесено. Записки от руки. Отсюда рукописные значения в форме сделки и записка ведущего.</dd></div>
+        <div><dt>Darkest Dungeon</dt><dd>Крис Бурасса не использует «мёртвый серый»: чёрный есть только в чернилах, холодные цвета слегка пожелтевшие, как старый пергамент. Палитра тёплая, тайна запечатана красной сургучной печатью.</dd></div>
+      </dl>
+    </div>
+    <div class="phones">
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="c-hud"><span>Акт I</span><span class="t">21:08</span><span>6 золотых</span></div>
+          <div class="body">
+            <div class="c-tarot paper"><div class="num">I</div><div class="c-art"><img src="assets/concepts/sample-serafina.png" alt="Портрет Серафины в виде гравюры"></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+            <div class="c-side"><i></i>Пробудить. Он должен жить.</div>
+            <div class="c-sheet paper"><h4>Ваши цели</h4>
+              <ul class="c-goals"><li>Держать Корону пепла в своём инвентаре в момент фиксации финала.</li><li>Вложить хотя бы один Фокус силы в ритуал пробуждения. Вклад засчитывается, даже если ритуал не состоится.</li></ul>
+            </div>
+            <div class="c-secret"><span class="c-seal">✠</span><b>Тайна, только для вас</b><p>Вы не потомок Сарна. Корона станет вашей по праву, только если в это поверят.</p></div>
+          </div>
+          <nav class="tabs"><span class="on"><i>☉</i>Роль</span><span><i>⚱</i>Сумка</span><span><i>⚖</i>Сделки</span><span><i>✠</i>Алтари</span><span><i>☽</i>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Роль.</b> Римская I совпадает с осколком I Серафины. Портрет прошёл через grayscale, контраст, сепию и штриховку.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="c-hud"><span>Акт I</span><span class="t">21:08</span><span>6 золотых</span></div>
+          <div class="body">
+            <div class="c-h">Сделки <small>одна ждёт ответа</small></div>
+            <div class="c-card paper">
+              <div class="c-offer"><div class="who">Предлагает<b>Грета</b>Алхимик без лицензии</div><div class="c-ring"><b>4:51</b></div></div>
+              <div class="c-ledger"><div><small>Вы отдаёте</small><b>2 золота</b></div><div><small>Вы получаете</small><b>✦ Фокус силы</b></div></div>
+              <div class="c-btns"><span class="c-btn ink">Принять</span><span class="c-btn">Отклонить</span></div>
+            </div>
+            <div class="c-form">
+              <div class="c-card paper">
+                <div class="c-line"><small>Кому</small><b>Гриму</b></div>
+                <div class="c-line"><small>Отдаю</small><b>пепел и монету</b></div>
+                <div class="c-line"><small>Прошу</small><b>Корону пепла</b></div>
+                <span class="c-btn red" style="margin-top:14px">Запечатать и отправить</span>
+              </div>
+            </div>
+          </div>
+          <nav class="tabs"><span><i>☉</i>Роль</span><span><i>⚱</i>Сумка</span><span class="on"><i>⚖</i>Сделки</span><span><i>✠</i>Алтари</span><span><i>☽</i>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Сделки.</b> Кольцо убывает, как у действий в Cultist Simulator. В форме значения вписаны «пером», а у каждого поля своя строка.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Пульт ведущего</b><span>⋯</span></div>
+        <div class="app">
+          <div class="c-hud"><span>Ведущий</span><span>17 гостей</span></div>
+          <div class="body">
+            <div class="c-card paper c-clock" style="margin-top:14px">
+              <div class="act">АКТ I</div>
+              <div class="big">21:08</div>
+              <p>до конца акта; ярмарка идёт 13 минут</p>
+              <div class="c-acts"><span class="on">I</span><span class="pin"></span><span>II</span><span>III</span><span>финал</span></div>
+            </div>
+            <div class="c-ctl">
+              <span class="c-btn dark">Пауза</span>
+              <span class="c-btn dark">+5 минут</span>
+              <span class="c-btn dark ink wide">Начать акт II</span>
+            </div>
+            <div class="c-note"><div class="c-card paper"><h4>Объявление всем</h4><div class="hand">Брод открылся. Осколок IV привезли с обрывком договора. Победитель торга получит оба.</div><span class="c-btn ink" style="margin-top:8px">Объявить</span></div></div>
+          </div>
+          <nav class="tabs"><span><i>☿</i>Состав</span><span class="on"><i>⧗</i>Пульт</span><span><i>✎</i>Журнал</span><span><i>⚑</i>Закрытие</span></nav>
+        </div>
+      </div></div><figcaption><b>Пульт.</b> Шкала актов идёт римскими цифрами с красной отметкой «сейчас». Кнопки на чёрном поле контурные, а главная светлая.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═════════ D ═════════ -->
+  <section class="dir dD" id="d" aria-labelledby="d-t">
+    <div class="dir-head">
+      <div>
+        <p class="dir-letter">Направление Г</p>
+        <h2 id="d-t">Стекло и тыква</h2>
+        <p class="lede">Премиальное мобильное приложение. Крупная типографика, полупрозрачные панели над тёплым и фиолетовым свечением, плавающая капсула вкладок. Хэллоуин передан цветом свечения, а не орнаментом.</p>
+        <ul class="swatches">
+          <li><i style="background:#08070d"></i>#08070D ночь</li>
+          <li><i style="background:#ff6a1f"></i>#FF6A1F тыква</li>
+          <li><i style="background:#ffb35a"></i>#FFB35A фонарь</li>
+          <li><i style="background:#7b3fe4"></i>#7B3FE4 фиалка</li>
+          <li><i style="background:rgba(255,255,255,.12)"></i>белый 12% стекло</li>
+        </ul>
+        <div class="typepair">
+          <div><b style="font:800 24px Unbounded;letter-spacing:-.02em">Серафина</b>Unbounded: имя, цифры</div>
+          <div class="tb"><b style="font:500 17px Manrope">Держать Корону пепла в инвентаре</b>Manrope: текст и кнопки</div>
+        </div>
+      </div>
+      <dl class="refs">
+        <div><dt>Telegram и Telegram Premium</dt><dd>Сгруппированные списки со скруглёнными блоками и подписью секции над ними, широкая главная кнопка внизу экрана, фиолетово-оранжевые градиенты Premium. Мини-приложение выглядит родным внутри Telegram.</dd></div>
+        <div><dt>iOS 26, Liquid Glass</dt><dd>Полупрозрачные слои с размытием и бликом по верхней кромке; вкладки отделены от контента и плавают капсулой. Фон под стеклом даёт цветное свечение, а не картинку.</dd></div>
+        <div><dt>Reigns</dt><dd>Одна большая карта решения в центре и два ответа. Входящее предложение занимает экран целиком, внимание ничем не отвлекается.</dd></div>
+      </dl>
+    </div>
+    <div class="phones">
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="body">
+            <div class="d-hero"><img src="assets/concepts/sample-serafina.png" alt="Портрет Серафины"><div class="tx"><h3>Серафина</h3><p>Драконья наследница</p></div></div>
+            <span class="d-chip glass"><i></i>Пробудить <em>акт I, 21:08</em></span>
+            <div class="d-cap">Цели</div>
+            <div class="d-group glass">
+              <div class="d-row"><span class="n">1</span><span>Держать Корону пепла в своём инвентаре в момент фиксации финала.</span></div>
+              <div class="d-row"><span class="n">2</span><span>Вложить хотя бы один Фокус силы в ритуал пробуждения. Вклад засчитывается, даже если ритуал не состоится.</span></div>
+            </div>
+            <div class="d-secret"><svg class="ic"><use href="#i-lock"/></svg><div><b>Тайна, видите только вы</b><p>Вы не потомок Сарна. Корона станет вашей по праву только если в это поверят.</p></div></div>
+          </div>
+          <nav class="tabs glass"><span class="on"><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Роль.</b> Портрет во всю ширину растворяется в фоне. Имя набрано широким гротеском, цели идут списком в стиле настроек iOS.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="body">
+            <div class="d-h">Сделки</div>
+            <div class="d-reign glass">
+              <div class="d-ava">⚗️</div>
+              <p class="who">Грета предлагает обмен<span>Алхимик без лицензии</span></p>
+              <div class="d-count">4:51</div>
+              <div class="d-line"><b></b></div>
+              <div class="d-swap"><div><small>Вы отдаёте</small><b>2 золота</b></div><div><small>Вы получаете</small><b>Фокус силы</b></div></div>
+              <div class="d-btns"><span class="d-btn">Отклонить</span><span class="d-btn hot">Принять</span></div>
+            </div>
+            <div class="d-cap">Новое предложение</div>
+            <div class="d-list glass">
+              <div class="d-li"><span>Кому</span><b>Грим</b><svg class="ic"><use href="#i-right"/></svg></div>
+              <div class="d-li"><span>Отдаю</span><b>Пепел феникса, 1 золото</b><svg class="ic"><use href="#i-right"/></svg></div>
+              <div class="d-li"><span>Прошу</span><b>Корона пепла</b><svg class="ic"><use href="#i-right"/></svg></div>
+            </div>
+            <span class="d-btn vio d-main">Отправить предложение</span>
+          </div>
+          <nav class="tabs glass"><span><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span class="on"><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Сделки.</b> Карта решения как в Reigns: отсчёт крупно, «Принять» справа под большим пальцем. Форма собрана нативными строками с шевронами.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Пульт ведущего</b><span>⋯</span></div>
+        <div class="app">
+          <div class="body">
+            <div class="d-h" style="margin-top:8px">Пульт</div>
+            <div class="d-clock glass">
+              <div class="act"><b>Акт I</b><span>17 гостей, 3 сделки ждут</span></div>
+              <div class="big">21:08</div>
+              <div class="d-seg"><span class="done"></span><span></span><span></span></div>
+            </div>
+            <div class="d-ctl">
+              <span class="d-btn"><svg class="ic"><use href="#i-pause"/></svg>Пауза</span>
+              <span class="d-btn"><svg class="ic"><use href="#i-plus"/></svg>5 минут</span>
+              <span class="d-btn hot wide"><svg class="ic"><use href="#i-play"/></svg>Начать акт II</span>
+            </div>
+            <div class="d-ann glass"><div><small>Объявление всем</small><p>Брод открылся. Осколок IV привезли вместе с обрывком договора столетней давности. Победитель торга получит оба.</p></div><span class="d-send"><svg class="ic"><use href="#i-send"/></svg></span></div>
+          </div>
+          <nav class="tabs glass"><span><svg class="ic"><use href="#i-users"/></svg>Состав</span><span class="on"><svg class="ic"><use href="#i-clock"/></svg>Пульт</span><span><svg class="ic"><use href="#i-scroll"/></svg>Журнал</span><span><svg class="ic"><use href="#i-flag"/></svg>Закрытие</span></nav>
+        </div>
+      </div></div><figcaption><b>Пульт.</b> Цифры 86 px с градиентом, сегменты актов как полоски загрузки. Объявление отправляется круглой кнопкой, как сообщение в чате.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═════════ E ═════════ -->
+  <section class="dir dE" id="e" aria-labelledby="e-t">
+    <div class="dir-head">
+      <div>
+        <p class="dir-letter">Направление Д, на мой вкус</p>
+        <h2 id="e-t">Балаган</h2>
+        <p class="lede">Ярмарочная афиша: красный, кремовый и чёрный, лучи за портретом, билет вместо карточки сделки, лампочки вокруг часов. Мило и жутковато одновременно, как бродячий цирк в полночь.</p>
+        <ul class="swatches">
+          <li><i style="background:#1b1512"></i>#1B1512 сажа</li>
+          <li><i style="background:#d42a20"></i>#D42A20 шатёр</li>
+          <li><i style="background:#f4a51c"></i>#F4A51C лучи</li>
+          <li><i style="background:#f3e7cf"></i>#F3E7CF афиша</li>
+          <li><i style="background:#ffe28a"></i>#FFE28A лампы</li>
+        </ul>
+        <div class="typepair">
+          <div><b style="font:400 26px 'Ruslan Display';text-shadow:2px 2px 0 #d42a20">Серафина</b>Ruslan Display: имена, часы</div>
+          <div class="tb"><b style="font:500 18px 'Fira Sans Condensed'">Держать Корону пепла в инвентаре</b>Fira Sans Condensed: текст</div>
+        </div>
+      </div>
+      <dl class="refs">
+        <div><dt>Cult of the Lamb</dt><dd>Милое-жуткое: толстый чёрный контур, ограниченная палитра красного, кремового и чёрного, наклейки и штампы под углом. Берём жёсткую смещённую тень у кнопок и повёрнутый штамп стороны.</dd></div>
+        <div><dt>Hades</dt><dd>Ориентиры Supergiant: тушь Майка Миньолы и плакаты Фреда Тейлора, то есть крупные плоские заливки и чёткие силуэты. Имя героя на тёмной плашке поверх арта, титул цветом под ним.</dd></div>
+        <div><dt>Афиши бродячих цирков</dt><dd>Лучи за главным номером, рамка из лампочек, билет с перфорацией и вырезами. Таймер сделки собран из отдельных табличек, как на табло.</dd></div>
+      </dl>
+    </div>
+    <div class="phones">
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="e-band"><span>Акт I</span><span class="t">21:08</span><span>🪙 6</span></div>
+          <div class="body">
+            <div class="e-stage"><span class="e-ring"><img src="assets/concepts/sample-serafina.png" alt="Портрет Серафины"></span><span class="e-star" style="left:34px;top:40px">★</span><span class="e-star" style="right:40px;top:70px">★</span></div>
+            <div class="e-name"><h3>Серафина</h3><p>Драконья наследница</p></div>
+            <div class="e-stamp">Пробудить<small>он должен жить</small></div>
+            <div class="e-bill"><h4>Цели</h4><ul class="e-goals"><li>Держать Корону пепла в своём инвентаре в момент фиксации финала.</li><li>Вложить хотя бы один Фокус силы в ритуал пробуждения. Засчитается, даже если ритуал не состоится.</li></ul></div>
+            <div class="e-env"><b>🤫 Тайна только для вас</b><p>Вы не потомок Сарна. Корона станет вашей по праву только если в это поверят.</p></div>
+          </div>
+          <nav class="tabs"><span class="on"><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Роль.</b> Портрет в круге на фоне лучей, имя на чёрной плашке со сбитым красным оттиском. Сторона поставлена штампом.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+        <div class="app">
+          <div class="e-band"><span>Акт I</span><span class="t">21:08</span><span>🪙 6</span></div>
+          <div class="body">
+            <div class="e-h">Сделки</div>
+            <div class="e-ticket">
+              <div class="top"><span class="e-ava">🧪</span><div><small>Билет на сделку от</small><b>Грета</b><span>Алхимик без лицензии</span></div></div>
+              <div class="bot">
+                <div class="e-trade"><div><small>Вы отдаёте</small><b>🪙 2 золота</b></div><span class="x">⇄</span><div><small>Получаете</small><b>✨ Фокус силы</b></div></div>
+                <div class="e-trade" style="grid-template-columns:1fr auto"><small style="font:600 15px 'Fira Sans Condensed';color:#6c5c50">Билет сгорит через</small><span class="e-flip"><i>4</i>:<i>5</i><i>1</i></span></div>
+                <div class="e-btns"><span class="e-btn y">Принять</span><span class="e-btn">Отклонить</span></div>
+              </div>
+            </div>
+            <div class="e-form"><h4>Новый билет</h4>
+              <div class="e-f"><small>Кому</small><b>Грим</b><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="e-f"><small>Отдаю</small><b>Пепел феникса, 🪙 1</b><svg class="ic"><use href="#i-chev"/></svg></div>
+              <div class="e-f"><small>Прошу</small><b>Корона пепла</b><svg class="ic"><use href="#i-chev"/></svg></div>
+              <span class="e-btn r">Отправить</span>
+            </div>
+          </div>
+          <nav class="tabs"><span><svg class="ic"><use href="#i-user"/></svg>Роль</span><span><svg class="ic"><use href="#i-bag"/></svg>Сумка</span><span class="on"><svg class="ic"><use href="#i-deal"/></svg>Сделки</span><span><svg class="ic"><use href="#i-altar"/></svg>Алтари</span><span><svg class="ic"><use href="#i-bell"/></svg>События</span></nav>
+        </div>
+      </div></div><figcaption><b>Сделки.</b> Предложение оформлено билетом с вырезами по бокам. Отсчёт собран из табличек, кнопки отбрасывают жёсткую тень.</figcaption></figure>
+
+      <figure class="ph"><div class="phone"><div class="screen">
+        <div class="tg"><span>Закрыть</span><b>Пульт ведущего</b><span>⋯</span></div>
+        <div class="app">
+          <div class="e-band"><span>Ведущий</span><span>👥 17</span></div>
+          <div class="body">
+            <div class="e-marquee"><div class="act">Акт I</div><div class="big">21:08</div><p>до конца акта, ярмарка идёт 13 минут</p></div>
+            <div class="e-ctl">
+              <span class="e-btn"><svg class="ic"><use href="#i-pause"/></svg>Пауза</span>
+              <span class="e-btn"><svg class="ic"><use href="#i-plus"/></svg>5 минут</span>
+              <span class="e-btn y wide"><svg class="ic"><use href="#i-play"/></svg>Начать акт II</span>
+            </div>
+            <div class="e-ann"><b><svg class="ic"><use href="#i-mega"/></svg>Объявление</b><p>Брод открылся! Осколок IV привезли вместе с обрывком договора столетней давности. Победитель торга получит оба.</p></div>
+            <div style="margin:16px 16px 0"><span class="e-btn k">Объявить всем</span></div>
+          </div>
+          <nav class="tabs"><span><svg class="ic"><use href="#i-users"/></svg>Состав</span><span class="on"><svg class="ic"><use href="#i-clock"/></svg>Пульт</span><span><svg class="ic"><use href="#i-scroll"/></svg>Журнал</span><span><svg class="ic"><use href="#i-flag"/></svg>Закрытие</span></nav>
+        </div>
+      </div></div><figcaption><b>Пульт.</b> Часы в шатре с рамкой из лампочек, это главная деталь направления. Остальное строго: три кнопки и объявление.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═════════ Сравнение ═════════ -->
+  <section class="cmp" id="cmp" aria-labelledby="cmp-t">
+    <h2 id="cmp-t">Сравнение</h2>
+    <p>Оценки от одного до пяти. Читаемость проверял переключателем «Тёмная комната». Сложность считается для текущего Preact-клиента: стили лежат в одном <code>styles.css</code>, сборка Vite, Telegram WebView на iOS и Android.</p>
+    <div class="tbl" role="region" aria-label="Таблица сравнения" tabindex="0">
+      <table>
+        <thead><tr><th>Направление</th><th>Читаемость в полутьме</th><th>Кнопки 44+ px</th><th>Хэллоуин</th><th>Реализация в Preact</th><th>Красота, субъективно</th></tr></thead>
+        <tbody>
+          <tr><th>Золото и пепел<small>А</small></th>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Светлый текст на тёмном хорош. Cormorant тонкий, мельче 18 px его ставить нельзя.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>52 px, рамки дают чёткую зону нажатия.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Скорее тёмное фэнтези, чем хэллоуин. Атмосферно, но привычно.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Проще всех: это доработка текущих <code>--rpg-*</code>, вёрстка почти та же.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Благородно, но похоже на десятки RPG.</span></td></tr>
+          <tr><th>Ярмарочный стол<small>Б</small></th>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Лучшая: жирный шрифт, обводки, светлые карточки.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>54 px и видимая «толщина» кнопки.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span>Слишком добрый для украденного сердца дракона. Скорее настолка в выходной.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Чистый CSS. <code>paint-order</code> для обводки работает в WebView, но стоит проверить на старом Android.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span>Весело, но эмодзи и цвета быстро становятся пёстрыми.</span></td></tr>
+          <tr><th>Гравюра<small>В</small></th>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Тёмные чернила на светлой бумаге контрастнее любых вариантов на тёмном фоне. Минус: бумага ярче, чем хотелось бы в тёмной комнате.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>52 px, но контурные кнопки выглядят легче и требуют чётких состояний.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Таро, сургуч, свечи. Точнее всех попадает в «запретную ярмарку».</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Фильтры портрета и текстура бумаги в CSS, без картинок. Нужен второй шрифт для пометок.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Самое цельное и узнаваемое. Разношёрстные портреты становятся одной колодой.</span></td></tr>
+          <tr><th>Стекло и тыква<small>Г</small></th>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Крупный кегль помогает. Серый текст на стекле в полутьме теряется, нужен запас контраста.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>52 px капсулы, кнопка во всю ширину как MainButton.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></div><span>Без тыквенного свечения это любое приложение. Магии мало.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><span><code>backdrop-filter</code> тормозит на дешёвых Android в WebView. Нужен запасной вариант без размытия.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Современно и дорого, но без характера игры.</span></td></tr>
+          <tr><th>Балаган<small>Д</small></th>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Крем и чёрный читаются отлично. Красные плашки в полутьме тяжелее.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>52 px, жёсткая тень сразу показывает, где кнопка.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></div><span>Ночная ярмарка буквально. Подходит к слову «ярмарка» в названии.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Простой CSS. Маска билета и лучи требуют аккуратности, Ruslan Display есть только в одном начертании.</span></td>
+            <td><div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div><span>Ярко и смешно. Может утомить за полтора часа игры.</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rec">
+      <h3>Рекомендую «Гравюру»<small>с золотом из направления А для редких акцентов</small></h3>
+      <div>
+        <p>У «Гравюры» лучшая читаемость: чернила на бумаге контрастнее, чем светлый текст на тёмном фоне, а именно это важно, когда гость смотрит в телефон при свечах и одновременно торгуется. Направление сильнее остальных отличает игру от типовой RPG и прямо отвечает теме: таро, сургучная печать тайны, рукописные условия сделки. Практический плюс: фильтр гравюры сводит к одной колоде портреты, сгенерированные в разное время и разными моделями, чего не дают ни золото, ни стекло. Перенос в Preact дешёвый: это новый набор переменных и классов в <code>styles.css</code>, плюс шрифты Old Standard TT и Neucha. Рисков два. Яркая бумага в тёмной комнате слепит, поэтому для неё стоит взять тон темнее (около #D9CEB3) и ограничить светлые карточки главными блоками. Тонкие контурные кнопки нужно сделать плотнее в нажатом и неактивном состояниях. Если хочется ближе к текущему прототипу, запасной вариант «Золото и пепел», его можно внедрить почти без переделки вёрстки.</p>
+      </div>
+    </div>
+  </section>
+  <p class="foot">Файл автономный: шрифты подключены из Google Fonts, портрет лежит в <code>assets/concepts/sample-serafina.png</code>. Экраны свёрстаны HTML и CSS, игровая логика здесь не работает.</p>
+</main>
+
+<script>
+(function(){
+  var b=document.getElementById('dim');
+  function set(on){document.body.classList.toggle('dim',on);b.setAttribute('aria-pressed',on?'true':'false');try{localStorage.setItem('ui-dim',on?'1':'0')}catch(e){}}
+  b.addEventListener('click',function(){set(!document.body.classList.contains('dim'))});
+  try{if(localStorage.getItem('ui-dim')==='1')set(true)}catch(e){}
+})();
+</script>
+</body>
+</html>
