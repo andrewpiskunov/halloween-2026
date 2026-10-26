@@ -1,4 +1,4 @@
-import type { Bundle, Ingredient, Item, PlayerView } from '@fair/shared';
+import type { Bundle, Ingredient, Item, PlayerView, Want } from '@fair/shared';
 
 export const INGREDIENTS: { key: Ingredient; name: string; short: string; emoji: string }[] = [
   { key: 'ash', name: 'Пепел феникса', short: 'пепел', emoji: '🔥' },
@@ -72,6 +72,7 @@ export function bundleText(b: Bundle, v: PlayerView): string {
     const it = offerItem(id, v);
     parts.push(it ? itemLabel(it, v).name : 'вещь');
   }
+  for (const w of b.wants ?? []) parts.push(itemLabel(w, v).name);
   if (b.rumor) parts.push(`слух: «${b.rumor}»`);
   return parts.length ? parts.join(', ') : 'ничего';
 }
@@ -111,6 +112,20 @@ export function bundleWords(b: Bundle, v: PlayerView): string {
     const it = offerItem(id, v);
     parts.push(it ? itemLabel(it, v).name : 'вещь');
   }
+  for (const w of b.wants ?? []) parts.push(itemLabel(w, v).name);
   if (b.rumor?.trim()) parts.push('слух');
   return parts.join(', ');
+}
+
+/** Вид изделия по рецепту: копия KIND_BY_RECIPE из engine/shop.ts (клиент берёт из shared только типы). */
+const KIND_BY_RECIPE: Record<string, Item['kind']> = { cleanse: 'potion', ward: 'ward', focus: 'focus', shape: 'shape' };
+
+/** Каталог вещей, которые можно попросить по названию: реликвии, осколки, улики, изделия. */
+export function wantCatalog(v: PlayerView): (Want & { name: string; emoji: string; group: string })[] {
+  const out: (Want & { name: string; emoji: string; group: string })[] = [];
+  for (const r of v.public.relics) out.push({ kind: 'relic', ref: r.name, name: r.name, emoji: r.emoji, group: 'Реликвии' });
+  for (const s of v.public.shards) out.push({ kind: 'shard', ref: s.id, name: `Осколок ${s.id}`, emoji: '💠', group: 'Осколки' });
+  for (const c of v.public.clues) out.push({ kind: 'clue', ref: c.id, name: c.name, emoji: c.emoji, group: 'Улики' });
+  for (const r of v.recipes) out.push({ kind: KIND_BY_RECIPE[r.id] ?? 'potion', ref: r.id, name: r.name, emoji: r.emoji, group: 'Изделия' });
+  return out;
 }

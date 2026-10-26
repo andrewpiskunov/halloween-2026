@@ -15,7 +15,11 @@ export interface PlayerView {
   altars: { side: AltarSide; name: string; contributions: (Contribution & { name: string; itemRef?: string })[] }[];
   lots: (Omit<Lot, 'items'> & { items: Item[] })[];
   announcements: Announcement[];
-  public: { factions: Faction[]; resources: Resource[]; shards: { id: string; status: 'player' | 'lot' | 'altar' | 'unknown' }[]; clues: Clue[]; story: string };
+  public: {
+    factions: Faction[]; resources: Resource[]; shards: { id: string; status: 'player' | 'lot' | 'altar' | 'unknown' }[]; clues: Clue[]; story: string;
+    /** Каталог реликвий для просьб по названию: без стартовых владельцев. */
+    relics: { name: string; emoji: string; lore: string }[];
+  };
 }
 
 export interface GmView {
@@ -140,6 +144,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       shards: shardStatuses(state, content),
       clues: content.clues,
       story: content.story.public,
+      relics: content.relics.map(r => ({ name: r.name, emoji: r.emoji, lore: r.lore })),
     },
   };
 }

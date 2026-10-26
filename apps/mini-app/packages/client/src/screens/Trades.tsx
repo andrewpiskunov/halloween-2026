@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Bundle, Ingredient, Offer, PlayerView } from '@fair/shared';
+import type { Bundle, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
 import { Portrait } from '../components/Portrait';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
 import { Thumb } from '../components/Thumb';
-import { GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, offerItem, plural, roleEmoji, roleName } from '../labels';
-import { canOffer, offerRemainingMs } from '../rules';
+import { GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, offerItem, plural, roleEmoji, roleName, wantCatalog } from '../labels';
+import { canOffer, missingWants, offerRemainingMs } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
 
 /** Срок ответа на предложение; копия OFFER_TTL_MS из engine/offers.ts (клиент берёт из shared только типы). */
@@ -47,20 +47,26 @@ export function Trades({ v }: { v: PlayerView }) {
     <>
       <h2 class="scr-h">Сделки {waiting && <small>{waiting}</small>}</h2>
 
-      {incoming.map(o => (
-        <div class="m-card hot" key={o.id}>
-          <OfferHead v={v} o={o} roleKey={o.from} label="Входящее от" />
-          <div class="ledger">
-            <div><small>Вы отдаёте</small><BundleList b={o.get} v={v} /></div>
-            <div><small>Вы получаете</small><BundleList b={o.give} v={v} /></div>
+      {incoming.map(o => {
+        const missing = missingWants(o.get, v);
+        return (
+          <div class="m-card hot" key={o.id}>
+            <OfferHead v={v} o={o} roleKey={o.from} label="Входящее от" />
+            <div class="ledger">
+              <div><small>Вы отдаёте</small><BundleList b={o.get} v={v} /></div>
+              <div><small>Вы получаете</small><BundleList b={o.give} v={v} /></div>
+            </div>
+            {o.service && <p class="m-note">Включает услугу: договоритесь о ней лично.</p>}
+            {missing.length > 0 && (
+              <p class="m-note warn">У вас нет: {missing.map(w => itemLabel(w, v).name).join(', ')}. Принять нельзя.</p>
+            )}
+            <div class="m-btns two">
+              <Button disabled={missing.length > 0} onClick={() => accept(o)}>Принять</Button>
+              <Button kind="sec" onClick={() => decline(o)}>Отклонить</Button>
+            </div>
           </div>
-          {o.service && <p class="m-note">Включает услугу: договоритесь о ней лично.</p>}
-          <div class="m-btns two">
-            <Button onClick={() => accept(o)}>Принять</Button>
-            <Button kind="sec" onClick={() => decline(o)}>Отклонить</Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {outgoing.map(o => (
         <div class="m-card" key={o.id}>
@@ -123,6 +129,10 @@ function BundleList({ b, v }: { b: Bundle; v: PlayerView }) {
     if (it) { const l = itemLabel(it, v); rows.push({ key: id, img: itemImageUrl(it), emoji: l.emoji, text: l.name }); }
     else rows.push({ key: id, emoji: '📦', text: 'вещь' });
   }
+  for (const w of b.wants ?? []) {
+    const l = itemLabel(w, v);
+    rows.push({ key: `want:${w.kind}:${w.ref}`, img: itemImageUrl(w), emoji: l.emoji, text: l.name });
+  }
   return (
     <ul class="bl">
       {rows.map(r => <li key={r.key}><Thumb src={r.img} emoji={r.emoji} size="sm" /><span>{r.text}</span></li>)}
@@ -133,8 +143,8 @@ function BundleList({ b, v }: { b: Bundle; v: PlayerView }) {
 }
 
 /**
- * Новое предложение. «Прошу» — только золото, ингредиенты и слух:
- * вещей собеседника в моей проекции нет, и выбрать их нельзя.
+ * Новое предложение. В «Прошу» вещи собеседника выбираются по названию из каталога:
+ * его сумки в моей проекции нет, а при принятии сервер сам найдёт у него такую вещь.
  */
 function OfferForm({ v }: { v: PlayerView }) {
   const [to, setTo] = useState('');
@@ -152,13 +162,25 @@ function OfferForm({ v }: { v: PlayerView }) {
 
   const a = v.me.available;
   const freeItems = v.me.items.filter(i => canOffer(i, v));
-  const empty = (b: Bundle) => !b.gold && !b.items.length && !b.rumor?.trim() && INGREDIENTS.every(i => !b.ingredients[i.key]);
+  const empty = (b: Bundle) => !b.gold && !b.items.length && !b.wants?.length && !b.rumor?.trim() && INGREDIENTS.every(i => !b.ingredients[i.key]);
+  const catalog = wantCatalog(v);
+  const wantKey = (w: Want) => `${w.kind}:${w.ref}`;
+  const wants = get.wants ?? [];
+  const addWant = (key: string) => {
+    const w = catalog.find(c => wantKey(c) === key);
+    if (!w || wants.some(x => wantKey(x) === key)) return;
+    setGet({ ...get, wants: [...wants, { kind: w.kind, ref: w.ref }] });
+  };
+  const removeWant = (w: Want) => setGet({ ...get, wants: wants.filter(x => wantKey(x) !== wantKey(w)) });
   const canSend = !!to && v.others.some(o => o.roleKey === to) && !(empty(give) && empty(get)) && !sending;
 
   const submit = async () => {
     const clean = (b: Bundle): Bundle => {
       const rumor = b.rumor?.trim();
-      return { gold: b.gold, ingredients: { ...b.ingredients }, items: [...b.items], ...(rumor ? { rumor } : {}) };
+      return {
+        gold: b.gold, ingredients: { ...b.ingredients }, items: [...b.items],
+        ...(rumor ? { rumor } : {}), ...(b.wants?.length ? { wants: b.wants.map(w => ({ kind: w.kind, ref: w.ref })) } : {}),
+      };
     };
     setSending(true);
     const r = await run({ type: 'offer.create', to, give: clean(give), get: clean(get) });
@@ -198,7 +220,22 @@ function OfferForm({ v }: { v: PlayerView }) {
 
       <div class="line"><small>Прошу</small><span class={`hand ${getWords ? '' : 'none'}`}>{getWords || 'ничего'}</span></div>
       <BundleEditor value={get} onChange={setGet} />
-      <p class="m-note">Вещи собеседника приложение не показывает: попросите вещь словами в слухе или пусть он предложит её сам.</p>
+      <div class="wants">
+        {wants.map(w => {
+          const l = itemLabel(w, v);
+          return (
+            <span class="want" key={wantKey(w)}>
+              <Thumb src={itemImageUrl(w)} emoji={l.emoji} size="sm" />{l.name}
+              <button type="button" aria-label={`Убрать ${l.name}`} onClick={() => removeWant(w)}>×</button>
+            </span>
+          );
+        })}
+        <Select label="Вещь по названию" value="" onChange={addWant} placeholder="добавить вещь по названию"
+          options={catalog.filter(c => !wants.some(x => wantKey(x) === wantKey(c))).map(c => ({
+            value: wantKey(c), label: c.name, hint: c.group, icon: c.emoji, image: itemImageUrl(c),
+          }))} />
+      </div>
+      <p class="m-note">Сумку собеседника приложение не показывает. Если просимой вещи у него нет, принять сделку он не сможет.</p>
 
       <p class="m-note">Отданное будет обещано до ответа. Отменить можно, пока не приняли.</p>
       <Button kind="red" disabled={!canSend} onClick={() => void submit()}>Запечатать и отправить</Button>

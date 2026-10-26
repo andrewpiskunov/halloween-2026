@@ -84,7 +84,27 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(wake.locator('.altar-need')).toContainText('золото 2/6');
     await expect(wake.locator('.altar-need')).toContainText('вкладчики золота 1/3');
 
-    // 6. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
+    // 6. Просьба по названию: Грета просит у Серафины Осколок I за 1 золото, не видя её сумки.
+    await greta.locator('nav.tabs').getByRole('button', { name: 'Сделки' }).click();
+    await greta.getByRole('combobox', { name: 'Кому' }).click();
+    await greta.getByRole('option', { name: /Серафина/ }).click();
+    await greta.locator('.bundle').nth(0).locator('.m-row', { hasText: 'Золото' }).getByRole('button', { name: '+' }).click();
+    await greta.getByRole('combobox', { name: 'Вещь по названию' }).click();
+    await greta.getByRole('option', { name: /^Осколок I\b/ }).click();
+    await expect(greta.locator('.want', { hasText: 'Осколок I' })).toBeVisible();
+    await greta.getByRole('button', { name: 'Запечатать и отправить' }).click();
+    await expect(greta.locator('.m-card', { hasText: 'Исходящее' }).locator('.bl li', { hasText: 'Осколок I' })).toBeVisible();
+
+    await serafina.locator('nav.tabs').getByRole('button', { name: 'Сделки' }).click();
+    const askShard = serafina.locator('.m-card.hot', { hasText: 'Осколок I' });
+    await expect(askShard.locator('.bl li', { hasText: 'Осколок I' }).locator('img')).toHaveAttribute('src', '/assets/items/shard.jpg');
+    await askShard.getByRole('button', { name: 'Принять' }).click();
+    await serafina.getByRole('dialog').getByRole('button', { name: 'Принять' }).click();
+    await expect(serafina.getByText('принято')).toBeVisible();
+    await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
+    await expect(greta.locator('.item-block', { hasText: 'Осколок I' })).toBeVisible();
+
+    // 7. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
     await gm.locator('.gm-role', { hasText: 'Серафина' }).getByRole('button', { name: 'Играть за' }).click();
     await expect(gm.locator('.as-bar')).toContainText('Экраны игрока: Серафина');
     await gm.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();

@@ -1,4 +1,4 @@
-import type { GameState, Item, Offer, Phase, PlayerView } from '@fair/shared';
+import type { Bundle, GameState, Item, Offer, Phase, PlayerView, Want } from '@fair/shared';
 
 const PHASE_LABEL: Record<Phase, string> = {
   setup: 'Подготовка', act1: 'Акт 1', act2: 'Акт 2', act3: 'Акт 3', closed: 'Закрыто', revealed: 'Закрыто',
@@ -15,6 +15,17 @@ export function offerRemainingMs(o: Pick<Offer, 'expiresAt'>, clock: { paused: b
 export function canOffer(item: Item, v: PlayerView): boolean {
   if (!v.me.available.items.includes(item.id)) return false;
   return !(item.hiddenUntilAct !== undefined && v.act !== 3);
+}
+
+/** Просьбы по названию из входящего предложения, на которые у меня нет свободной подходящей вещи. */
+export function missingWants(get: Bundle, v: PlayerView): Want[] {
+  const taken = new Set(get.items);
+  const missing: Want[] = [];
+  for (const w of get.wants ?? []) {
+    const it = v.me.items.find(i => i.kind === w.kind && i.ref === w.ref && !taken.has(i.id) && canOffer(i, v));
+    if (it) taken.add(it.id); else missing.push(w);
+  }
+  return missing;
 }
 
 /** Какие вещи сервер примет на алтарь: копия ALTAR_KINDS из engine/altars.ts (клиент берёт из shared только типы). */

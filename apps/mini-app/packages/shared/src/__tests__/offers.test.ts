@@ -272,4 +272,45 @@ describe('сделки с резервом', () => {
     const paused = must(s1, { type: 'clock.pause' }, gm, 2000).state;
     expect(errorOf(paused, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('ok');
   });
+
+  test('wants: просьба по названию; при принятии сервер находит вещь адресата и переносит её', () => {
+    const s0 = makeGame(12);
+    const shard = itemOf(s0, 'o1', 'I');
+    // Грета просит у Серафины Осколок I за 3 золота, не зная id вещи.
+    const give = bundle({ gold: 3 });
+    const get = bundle({ wants: [{ kind: 'shard', ref: 'I' }] });
+    const { state: s1, id } = create(s0, 'o6', 'o1', give, get);
+    const r = must(s1, { type: 'offer.accept', id }, player('o1'), 5000);
+    const e = r.events[0] as Extract<Event, { type: 'OfferAccepted' }>;
+    expect(e.type).toBe('OfferAccepted');
+    expect(e.get.items).toEqual([shard.id]);
+    expect(e.exchanged).toBe(true);
+    expect(r.state.items[shard.id].owner).toEqual({ type: 'player', key: 'o6' });
+    expect(r.state.players.o1.gold).toBe(6 + 3);
+  });
+
+  test('wants: у адресата нет такой вещи → expired, reason counterparty; вещь в резерве другой сделки не берётся', () => {
+    const s0 = makeGame(12);
+    const get = bundle({ wants: [{ kind: 'relic', ref: 'Корона пепла' }] });
+    const { state: s1, id } = create(s0, 'o6', 'o1', bundle({ gold: 1 }), get);
+    const r = must(s1, { type: 'offer.accept', id }, player('o1'), 5000);
+    expect(r.events[0]).toMatchObject({ type: 'OfferClosed', id, status: 'expired', reason: 'counterparty' });
+    expect(r.state.players.o6).toMatchObject({ gold: 6, reservedGold: 0 });
+
+    // Осколок I Серафина уже обещала в другой сделке: просьба по названию его не получит.
+    const shard = itemOf(s0, 'o1', 'I');
+    const { state: s2 } = create(s0, 'o1', 'o9', bundle({ items: [shard.id] }), bundle({ gold: 1 }));
+    const { state: s3, id: id2 } = create(s2, 'o6', 'o1', bundle({ gold: 1 }), bundle({ wants: [{ kind: 'shard', ref: 'I' }] }));
+    const r2 = must(s3, { type: 'offer.accept', id: id2 }, player('o1'), 5000);
+    expect(r2.events[0]).toMatchObject({ type: 'OfferClosed', status: 'expired', reason: 'counterparty' });
+  });
+
+  test('wants: пустое предложение из одних wants считается непустым; дубли и чужие виды отклоняются (invalid)', () => {
+    const s0 = makeGame(12);
+    expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle(), get: bundle({ wants: [{ kind: 'shard', ref: 'II' }] }) }, player('o6'))).toBe('ok');
+    expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle(), get: bundle({ wants: [{ kind: 'shard', ref: 'II' }, { kind: 'shard', ref: 'II' }] }) }, player('o6'))).toBe('invalid');
+    expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle(), get: bundle({ wants: [{ kind: 'dragon' as never, ref: 'x' }] }) }, player('o6'))).toBe('invalid');
+    // wants в give смысла не имеют: автор отдаёт только конкретные вещи.
+    expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle({ wants: [{ kind: 'shard', ref: 'I' }] }), get: bundle({ gold: 1 }) }, player('o6'))).toBe('invalid');
+  });
 });

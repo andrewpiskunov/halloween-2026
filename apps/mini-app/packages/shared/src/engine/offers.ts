@@ -1,4 +1,4 @@
-import type { Bundle, GameState, Offer } from '../types';
+import type { Bundle, GameState, Item, Offer, Want } from '../types';
 import { INGREDIENTS, available, isTradable, transfer } from './bundles';
 import { isActPhase, participant } from './guards';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
@@ -6,10 +6,34 @@ import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, typ
 const OFFER_TTL_MS = 300000;
 
 const isNonNegInt = (n: number) => Number.isInteger(n) && n >= 0;
+const ITEM_KINDS: Item['kind'][] = ['relic', 'shard', 'clue', 'potion', 'ward', 'focus', 'shape'];
+const MAX_WANTS = 10;
+const wantKey = (w: Want) => `${w.kind}:${w.ref}`;
+const validWants = (ws: Want[] | undefined) => ws === undefined || (
+  Array.isArray(ws) && ws.length <= MAX_WANTS && new Set(ws.map(wantKey)).size === ws.length &&
+  ws.every(w => ITEM_KINDS.includes(w.kind) && typeof w.ref === 'string' && w.ref.length > 0 && w.ref.length <= 64));
 const validShape = (b: Bundle) =>
-  isNonNegInt(b.gold) && INGREDIENTS.every(k => isNonNegInt(b.ingredients[k])) && new Set(b.items).size === b.items.length;
-/** Есть ли в наборе что-то материальное: золото, ингредиент или вещь. */
-const hasGoods = (b: Bundle) => b.gold > 0 || INGREDIENTS.some(k => b.ingredients[k] > 0) || b.items.length > 0;
+  isNonNegInt(b.gold) && INGREDIENTS.every(k => isNonNegInt(b.ingredients[k])) && new Set(b.items).size === b.items.length && validWants(b.wants);
+/** Есть ли в наборе что-то материальное: золото, ингредиент, вещь или просьба о вещи. */
+const hasGoods = (b: Bundle) => b.gold > 0 || INGREDIENTS.some(k => b.ingredients[k] > 0) || b.items.length > 0 || (b.wants?.length ?? 0) > 0;
+
+/**
+ * Подбирает у владельца по одной свободной вещи на каждую просьбу по названию;
+ * undefined, если какой-то вещи нет. Уже выбранные id и вещи из b.items не берутся повторно.
+ */
+function resolveWants(state: GameState, owner: string, b: Bundle): string[] | undefined {
+  const taken = new Set(b.items);
+  const ids: string[] = [];
+  for (const w of b.wants ?? []) {
+    const it = Object.values(state.items).find(i =>
+      i.kind === w.kind && i.ref === w.ref && i.owner.type === 'player' && i.owner.key === owner &&
+      i.reservedFor === undefined && !taken.has(i.id) && isTradable(state, i.id, state.phase));
+    if (!it) return undefined;
+    taken.add(it.id);
+    ids.push(it.id);
+  }
+  return ids;
+}
 const hasRumor = (b: Bundle) => (b.rumor?.trim() ?? '') !== '';
 
 /** Проверка, что автор может отдать набор: код ошибки или undefined. */
@@ -38,8 +62,9 @@ function authorStillHas(state: GameState, o: Offer): boolean {
   });
 }
 
-/** Адресат может отдать запрошенное прямо сейчас. */
-const counterpartyHas = (state: GameState, o: Offer) => checkGive(state, o.to, o.get) === undefined;
+/** Адресат может отдать запрошенное прямо сейчас: конкретные вещи и вещи по названию. */
+const counterpartyHas = (state: GameState, o: Offer) =>
+  checkGive(state, o.to, o.get) === undefined && resolveWants(state, o.to, o.get) !== undefined;
 
 function pendingOffer(state: GameState, id: string): Offer | Result {
   const o = state.offers[id];
@@ -59,6 +84,7 @@ export const offerCommands: CommandHandlers = {
     if (!state.roster.includes(cmd.to) || !state.players[cmd.to]?.present) return fail('not_found', cmd.to);
     if (cmd.to === from) return fail('invalid', 'нельзя предлагать самому себе');
     if (!validShape(cmd.give) || !validShape(cmd.get)) return fail('invalid', 'некорректные количества');
+    if ((cmd.give.wants?.length ?? 0) > 0) return fail('invalid', 'отдавать можно только конкретные вещи');
     if (![cmd.give, cmd.get].some(b => hasGoods(b) || hasRumor(b))) return fail('invalid', 'пустое предложение');
     const err = checkGive(state, from, cmd.give);
     if (err) return fail(err);
@@ -77,8 +103,11 @@ export const offerCommands: CommandHandlers = {
     if (isOverdue(state, o, ctx.now)) return fail('phase', 'срок ответа истёк');
     if (!authorStillHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'author' });
     if (!counterpartyHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'counterparty' });
+    // Просьбы по названию превращаются в конкретные вещи адресата; в событии остаются и сами просьбы для журнала.
+    const resolved = resolveWants(state, o.to, o.get) ?? [];
+    const get: Bundle = resolved.length ? { ...o.get, items: [...o.get.items, ...resolved] } : o.get;
     return ok({
-      type: 'OfferAccepted', at: ctx.now, id: o.id, from: o.from, to: o.to, give: o.give, get: o.get,
+      type: 'OfferAccepted', at: ctx.now, id: o.id, from: o.from, to: o.to, give: o.give, get,
       service: o.service, exchanged: hasGoods(o.give) || hasGoods(o.get),
     });
   },

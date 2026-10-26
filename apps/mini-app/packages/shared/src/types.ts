@@ -6,7 +6,9 @@ export type ItemKind = 'relic' | 'shard' | 'clue' | 'potion' | 'ward' | 'focus' 
 export type Owner = { type: 'player'; key: string } | { type: 'altar'; side: AltarSide } | { type: 'lot'; id: string };
 export interface Item { id: string; kind: ItemKind; ref: string; owner: Owner; createdBy?: string; hiddenUntilAct?: 3; reservedFor?: string }
 export type Counts = Record<Ingredient, number>;
-export interface Bundle { gold: number; ingredients: Counts; items: string[]; rumor?: string }
+/** Просьба о вещи по названию: вид и ref, без id. Только в get предложения; при принятии сервер находит вещь у адресата. */
+export interface Want { kind: Item['kind']; ref: string }
+export interface Bundle { gold: number; ingredients: Counts; items: string[]; rumor?: string; wants?: Want[] }
 export interface Player {
   roleKey: string; telegramId?: number; present: boolean;
   gold: number; reservedGold: number; ingredients: Counts;
