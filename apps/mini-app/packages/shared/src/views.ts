@@ -9,6 +9,8 @@ export interface PlayerView {
   contacts: { role: string | null; name?: string; text: string; absent: boolean }[];
   others: { roleKey: string; name: string; title: string; emoji: string }[];
   offers: Offer[];
+  /** Вид и ref вещей из моих предложений (в обе стороны): адресат должен видеть, что ему предлагают. Без владельца. */
+  offerItems: Record<string, { kind: Item['kind']; ref: string }>;
   workshop: Counts; recipes: Recipe[];
   altars: { side: AltarSide; name: string; contributions: (Contribution & { name: string; itemRef?: string })[] }[];
   lots: (Omit<Lot, 'items'> & { items: Item[] })[];
@@ -88,6 +90,15 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     }];
   });
 
+  const offers = Object.values(state.offers).filter(o => o.from === key || o.to === key);
+  const offerItems: PlayerView['offerItems'] = {};
+  for (const o of offers) {
+    for (const id of [...o.give.items, ...o.get.items]) {
+      const it = itemById(id);
+      if (it) offerItems[id] = { kind: it.kind, ref: it.ref };
+    }
+  }
+
   return {
     kind: 'player',
     phase: state.phase,
@@ -111,7 +122,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       const r = content.roleByKey[k];
       return { roleKey: k, name: r.name, title: r.title, emoji: r.emoji };
     }),
-    offers: Object.values(state.offers).filter(o => o.from === key || o.to === key),
+    offers,
+    offerItems,
     workshop: state.workshop,
     recipes: content.recipes,
     altars,

@@ -50,13 +50,18 @@ export function roleEmoji(key: string, v: PlayerView): string {
   return v.others.find(o => o.roleKey === key)?.emoji ?? '🧭';
 }
 
-/** Состав набора текстом: «🪙 2 · 🔥 1 · Осколок II · слух». Чужие вещи не видны и показываются как «вещь». */
+/** Вид и ref вещи по id: своя вещь или вещь из моего предложения; иначе undefined (вещь не видна). */
+export function offerItem(id: string, v: PlayerView): Pick<Item, 'kind' | 'ref'> | undefined {
+  return v.me.items.find(i => i.id === id) ?? v.offerItems?.[id];
+}
+
+/** Состав набора текстом: «🪙 2 · 🔥 1 · Осколок II · слух». Невидимые вещи показываются как «вещь». */
 export function bundleText(b: Bundle, v: PlayerView): string {
   const parts: string[] = [];
   if (b.gold) parts.push(`${GOLD.emoji} ${b.gold}`);
   for (const ing of INGREDIENTS) if (b.ingredients[ing.key]) parts.push(`${ing.emoji} ${ing.name} ×${b.ingredients[ing.key]}`);
   for (const id of b.items) {
-    const it = v.me.items.find(i => i.id === id);
+    const it = offerItem(id, v);
     if (it) { const l = itemLabel(it, v); parts.push(`${l.emoji} ${l.name}`); } else parts.push('📦 вещь');
   }
   if (b.rumor) parts.push(`👂 слух: «${b.rumor}»`);
@@ -95,7 +100,7 @@ export function bundleWords(b: Bundle, v: PlayerView): string {
   if (b.gold) parts.push(goldText(b.gold));
   for (const ing of INGREDIENTS) if (b.ingredients[ing.key]) parts.push(`${ing.short} ×${b.ingredients[ing.key]}`);
   for (const id of b.items) {
-    const it = v.me.items.find(i => i.id === id);
+    const it = offerItem(id, v);
     parts.push(it ? itemLabel(it, v).name : 'вещь');
   }
   if (b.rumor?.trim()) parts.push('слух');

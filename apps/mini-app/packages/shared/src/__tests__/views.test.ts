@@ -115,3 +115,21 @@ test('чужие ставки не видны: в закрытых торгах 
   expect(pv(viewFor(s, content, player('o2'), 0)).lots.find(l => l.id === lotId)?.bids).toEqual([{ player: 'o2', amount: 9, at: 2 }]);
   expect(pv(viewFor(s, content, player('o4'), 0)).lots.find(l => l.id === lotId)?.bids).toEqual([]);
 });
+
+test('offerItems: адресат видит вид и ref предложенной вещи, посторонний не видит ничего', () => {
+  let s = makeGame(12);
+  const item = Object.values(s.items).find(i => i.owner.type === 'player' && i.owner.key === 'o2' && !i.hiddenUntilAct)!;
+  expect(item).toBeDefined();
+  const none = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
+  const r = run(s, { type: 'offer.create', to: 'o4', give: { ...none, items: [item.id] }, get: { ...none, gold: 2 } }, player('o2'));
+  if (!r.ok) throw new Error(r.error);
+  s = r.state;
+
+  const to = pv(viewFor(s, content, player('o4'), 0));
+  expect(to.offerItems).toEqual({ [item.id]: { kind: item.kind, ref: item.ref } });
+  expect(pv(viewFor(s, content, player('o2'), 0)).offerItems[item.id]).toEqual({ kind: item.kind, ref: item.ref });
+
+  const third = pv(viewFor(s, content, player('o1'), 0));
+  expect(third.offerItems).toEqual({});
+  expect(JSON.stringify(third)).not.toContain(`"${item.id}"`);
+});

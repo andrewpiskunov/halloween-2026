@@ -6,7 +6,7 @@ import { Portrait } from '../components/Portrait';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
 import { Thumb } from '../components/Thumb';
-import { GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, plural, roleEmoji, roleName } from '../labels';
+import { GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, offerItem, plural, roleEmoji, roleName } from '../labels';
 import { canOffer, offerRemainingMs } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
 
@@ -110,7 +110,7 @@ function OfferHead({ v, o, roleKey, label }: { v: PlayerView; o: Offer; roleKey:
   );
 }
 
-/** Состав набора строками с цветными иконками. Чужие вещи не видны и показываются как «вещь». */
+/** Состав набора строками с иконками. Вещи из предложения берутся из offerItems; невидимые показываются как «вещь». */
 function BundleList({ b, v }: { b: Bundle; v: PlayerView }) {
   const rows: { key: string; img?: string; emoji: string; text: string }[] = [];
   if (b.gold) rows.push({ key: 'gold', img: resourceImageUrl('gold'), emoji: GOLD.emoji, text: goldText(b.gold) });
@@ -119,7 +119,7 @@ function BundleList({ b, v }: { b: Bundle; v: PlayerView }) {
     if (n) rows.push({ key: ing.key, img: resourceImageUrl(ing.key), emoji: ing.emoji, text: `${ing.name} ×${n}` });
   }
   for (const id of b.items) {
-    const it = v.me.items.find(i => i.id === id);
+    const it = offerItem(id, v);
     if (it) { const l = itemLabel(it, v); rows.push({ key: id, img: itemImageUrl(it), emoji: l.emoji, text: l.name }); }
     else rows.push({ key: id, emoji: '📦', text: 'вещь' });
   }
