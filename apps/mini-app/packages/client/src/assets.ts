@@ -1,4 +1,5 @@
 import type { Ingredient, Item } from '@fair/shared';
+import { BASE } from './base';
 
 /** Слаги картинок реликвий: имя реликвии из данных игры → файл в /assets/items. */
 export const RELIC_SLUGS: Record<string, string> = {
@@ -29,7 +30,7 @@ const RECIPE_KINDS = new Set<Item['kind']>(['potion', 'ward', 'focus', 'shape'])
 
 /** Портрет роли: /assets/portraits/<key>.jpg. */
 export function portraitUrl(roleKey: string): string {
-  return `/assets/portraits/${roleKey}.jpg`;
+  return `${BASE}assets/portraits/${roleKey}.jpg`;
 }
 
 /** Картинка предмета или undefined, если для него нет арта. Для изделий ref — id рецепта. */
@@ -39,10 +40,10 @@ export function itemImageUrl(item: Pick<Item, 'kind' | 'ref'>): string | undefin
   else if (item.kind === 'shard') file = 'shard.jpg';
   else if (item.kind === 'clue') file = `clue-${item.ref}.jpg`;
   else if (RECIPE_KINDS.has(item.kind)) file = `${item.ref}.jpg`;
-  return file && `/assets/items/${file}`;
+  return file && `${BASE}assets/items/${file}`;
 }
 
 /** Монета и ингредиенты: /assets/items/<gold|ash|moon|dew>.jpg. */
 export function resourceImageUrl(key: 'gold' | Ingredient): string {
-  return `/assets/items/${key}.jpg`;
+  return `${BASE}assets/items/${key}.jpg`;
 }

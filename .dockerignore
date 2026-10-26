@@ -1,0 +1,11 @@
+# Контекст сборки Docker — корень репозитория; в образ нужны только apps/mini-app и данные игры
+*
+!apps/mini-app
+!docs/design/game-data-v0.2.json
+apps/mini-app/node_modules
+apps/mini-app/**/node_modules
+apps/mini-app/**/dist
+apps/mini-app/test-results
+apps/mini-app/.env
+apps/mini-app/.env.*
+!apps/mini-app/.env.production.example

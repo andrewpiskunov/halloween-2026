@@ -1,4 +1,5 @@
 import type { Actor, Command, GmView, PlayerView } from '@fair/shared';
+import { BASE } from './base';
 
 /** Коды ошибок команд, которые присылает сервер. */
 export type ErrorCode =
@@ -50,7 +51,7 @@ export async function auth(): Promise<AuthResult> {
     const code = params.get('code') ?? undefined;
     body = { dev: { userId: Number(dev), ...(code ? { startParam: code } : {}) } };
   }
-  const res = await fetch('/api/auth', {
+  const res = await fetch(`${BASE}api/auth`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -76,7 +77,7 @@ export function connect(
   { WebSocketImpl = WebSocket, delays = DEFAULT_DELAYS, base = defaultBase() }: ConnectOptions = {},
 ): Connection {
   const pending = new Map<string, { resolve: (r: CmdResult) => void; cmd: Command }>();
-  const url = `${base}/ws?token=${encodeURIComponent(token)}`;
+  const url = `${base}${BASE}ws?token=${encodeURIComponent(token)}`;
   let ws: WebSocket | undefined;
   let attempt = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;

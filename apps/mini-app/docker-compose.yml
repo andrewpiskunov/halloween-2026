@@ -1,0 +1,35 @@
+# Боевой запуск рядом с системным nginx: сервер и статика клиента в двух контейнерах,
+# наружу только web на 127.0.0.1:3500. Запуск: docker compose up -d --build
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/mini-app/Dockerfile
+      target: app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: /data/session.sqlite
+      PORT: "8080"
+    # Хостер режет часть подсетей Telegram; DC на 149.154.167.220 доступен,
+    # поэтому api.telegram.org пришпилен к нему (как у tablechamp)
+    extra_hosts:
+      - "api.telegram.org:${TELEGRAM_API_IP:-149.154.167.220}"
+    volumes:
+      - fair-data:/data
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/mini-app/Dockerfile
+      target: web
+      args:
+        BASE_PATH: ${BASE_PATH:-/}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3500}:80"
+    depends_on:
+      - server
+
+volumes:
+  fair-data:
