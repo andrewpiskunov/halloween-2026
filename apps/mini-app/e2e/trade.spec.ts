@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const API = 'http://localhost:8091';
 
+// Ячейка «доступно»: монета теперь картинкой; эмодзи 🪙 остаётся только запасным вариантом, если картинка не загрузилась.
 const goldLine = (page: Page) => page.locator('.res > div', { hasText: 'доступно' });
 
 test('ведущий открывает ярмарку на 12, Грета продаёт Фокус Серафине', async ({ browser, request }) => {
@@ -47,7 +48,7 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(greta.getByRole('combobox', { name: 'Кому' })).toHaveText(/Серафина/);
     await greta.locator('.bundle').nth(1).locator('.m-row', { hasText: 'Золото' }).getByRole('button', { name: '+' }).click({ clickCount: 2 });
     await expect(greta.locator('.bundle').nth(1).locator('.m-row', { hasText: 'Золото' }).locator('b')).toHaveText('2');
-    await greta.getByRole('button', { name: /Отправить/ }).click();
+    await greta.getByRole('button', { name: 'Запечатать и отправить' }).click();
     await expect(greta.getByText(/Исходящее/)).toBeVisible();
 
     // 3. Серафина (o1): принимает.
@@ -62,10 +63,10 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     // 4. Итог: у Серафины Фокус и 4 золота, у Греты 5 (6 - 2 покупка - 1 рецепт + 2 продажа).
     await serafina.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
     await expect(serafina.locator('.item-block', { hasText: 'Фокус силы' })).toBeVisible();
-    await expect(goldLine(serafina)).toHaveText(/^🪙\s*4\s*доступно$/);
+    await expect(goldLine(serafina)).toHaveText(/^(🪙)?\s*4\s*доступно$/);
     await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
     await expect(greta.locator('.item-block', { hasText: 'Фокус силы' })).toHaveCount(0);
-    await expect(goldLine(greta)).toHaveText(/^🪙\s*5\s*доступно$/);
+    await expect(goldLine(greta)).toHaveText(/^(🪙)?\s*5\s*доступно$/);
   } finally {
     await Promise.all([gmCtx.close(), gretaCtx.close(), serafinaCtx.close()]);
   }
