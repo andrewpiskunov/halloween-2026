@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Гравюра и плоские портреты</title>
+<meta name="description" content="Проверка: как портреты в плоской графике смотрятся в интерфейсе «Гравюра» через фильтр, в цвете и в приглушённом варианте.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Neucha&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--page:#16131a;--page-2:#1d1922;--ink:#eee8de;--mut:#a8a0b0;--line:#332d3a;--hi:#e8ad65;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:hidden}
+img{display:block;max-width:100%}
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px}
+h1{font:400 clamp(32px,5vw,54px)/1.05 'Old Standard TT',serif;margin:48px 0 10px}
+h1 span{display:block;font:italic 400 .5em/1.3 'Old Standard TT',serif;color:var(--mut);margin-top:8px}
+h2{font:400 32px/1.1 'Old Standard TT',serif;margin:56px 0 8px}
+.lede{color:#d6cfdc;max-width:70ch;margin:0 0 20px}
+.note{font-size:14px;color:var(--mut);max-width:70ch}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:18px}
+.col h3{margin:0 0 4px;font:400 22px 'Old Standard TT',serif}
+.col p{margin:0 0 12px;font-size:14px;color:var(--mut);min-height:44px}
+.cardrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dimbtn{position:fixed;right:16px;bottom:16px;z-index:60;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--page-2);color:var(--ink);font:600 14px Manrope;cursor:pointer}
+.dimbtn[aria-pressed="true"]{border-color:var(--hi);color:var(--hi)}
+body.dim::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.4);pointer-events:none;z-index:50}
+
+/* Фон и бумага направления В */
+.field{background:radial-gradient(110% 70% at 50% 30%,#1a1612 0%,#0a0908 70%);padding:18px;border-radius:16px;color:#221a12;font:16px/1.45 'Old Standard TT',serif}
+.paper{background:#e9dfc7;background-image:radial-gradient(120% 90% at 50% 40%,transparent 60%,rgba(120,90,50,.18)),repeating-linear-gradient(0deg,transparent 0 3px,rgba(90,70,40,.025) 3px 4px)}
+.tarot{position:relative;padding:8px;box-shadow:0 14px 30px rgba(0,0,0,.7)}
+.tarot::before{content:"";position:absolute;inset:4px;border:1px solid #2a2118;pointer-events:none}
+.tarot .num{text-align:center;font:400 14px 'Old Standard TT';letter-spacing:.3em;margin:0 0 5px}
+.art{aspect-ratio:1/1;overflow:hidden;border:1.5px solid #2a2118;position:relative;background:#e9dfc7}
+.art img{width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.tarot h3{margin:7px 0 0;text-align:center;font:700 15px 'Old Standard TT';letter-spacing:.18em}
+.tarot p{margin:0;text-align:center;font:italic 400 13px 'Old Standard TT';color:#5a4a36}
+
+/* Три обработки */
+.engr .art img{filter:grayscale(1) contrast(1.45) brightness(1.18) sepia(.5);mix-blend-mode:multiply}
+.engr .art::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-35deg,rgba(233,223,199,.22) 0 1px,transparent 1px 4px);mix-blend-mode:screen}
+.color .art img{filter:none}
+.tint .art img{filter:sepia(.28) saturate(.8) contrast(1.08)}
+.tint .art::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-35deg,rgba(233,223,199,.14) 0 1px,transparent 1px 5px);mix-blend-mode:screen}
+
+/* Аватары */
+.avrow{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.av{display:flex;flex-direction:column;align-items:center;gap:6px;font:italic 400 13px 'Old Standard TT';color:#d9ccb0}
+.av i{width:64px;height:64px;border-radius:50%;overflow:hidden;display:block;border:2px solid #e8ad65;box-shadow:0 0 0 2px #2a1d08;background:#e9dfc7}
+.av img{width:100%;height:100%;object-fit:cover;object-position:50% 10%;transform:scale(1.9);transform-origin:50% 22%}
+.engr .av img{filter:grayscale(1) contrast(1.45) brightness(1.18) sepia(.5)}
+.tint .av img{filter:sepia(.28) saturate(.8) contrast(1.08)}
+
+/* Телефон */
+.phones{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.ph{margin:0;width:390px;max-width:100%}
+.ph figcaption{font-size:14px;color:var(--mut);margin:12px 6px 0;line-height:1.5}
+.ph figcaption b{color:var(--ink)}
+.phone{height:830px;border-radius:48px;padding:9px;background:#050406;box-shadow:0 0 0 1px #3c3540,0 40px 70px -30px #000}
+.screen{height:100%;border-radius:39px;overflow:hidden;display:flex;flex-direction:column;position:relative;isolation:isolate;background:radial-gradient(110% 70% at 50% 30%,#1a1612 0%,#0a0908 70%);color:#221a12;font:16px/1.45 'Old Standard TT',serif}
+.tg{flex:none;height:50px;padding:8px 22px 0;display:flex;align-items:center;justify-content:space-between;font:500 14px/1 Manrope;background:#0a0908;color:#8e826c}
+.tg b{color:#d9ccb0;font:400 14px 'Old Standard TT'}
+.app{flex:1;min-height:0;display:flex;flex-direction:column}
+.body{flex:1;min-height:0;overflow:hidden}
+.c-hud{flex:none;display:flex;justify-content:space-between;align-items:baseline;padding:8px 20px;color:#d9ccb0;font-size:15px;border-bottom:1px solid #3a3226;margin:0 14px}
+.c-hud .t{font:italic 400 22px 'Old Standard TT';color:#efe5cf}
+.c-tarot{position:relative;margin:12px auto 0;width:214px;padding:10px;box-shadow:0 18px 40px rgba(0,0,0,.7)}
+.c-tarot::before{content:"";position:absolute;inset:5px;border:1px solid #2a2118;pointer-events:none}
+.c-tarot .num{text-align:center;font:400 16px 'Old Standard TT';letter-spacing:.3em;margin:0 0 6px}
+.c-tarot .art{aspect-ratio:auto;height:180px}
+.c-tarot h3{margin:8px 0 0;text-align:center;font:700 19px 'Old Standard TT';letter-spacing:.22em}
+.c-tarot p{margin:0;text-align:center;font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-side{display:flex;justify-content:center;gap:8px;align-items:center;margin:10px 0 0;color:#d9ccb0;font:italic 400 16px 'Old Standard TT'}
+.c-side i{width:8px;height:8px;background:#e8ad65;transform:rotate(45deg)}
+.c-sheet{margin:12px 14px 0;padding:12px 16px 14px;box-shadow:0 10px 26px rgba(0,0,0,.6)}
+.c-sheet h4{margin:0 0 6px;font:italic 400 17px 'Old Standard TT';color:#8a2b1f;border-bottom:1px solid #2a2118;padding-bottom:4px}
+.c-goals{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:15px;line-height:1.38}
+.c-goals li{display:grid;grid-template-columns:18px 1fr;gap:6px}
+.c-goals li::before{content:"✶";color:#8a2b1f;font-size:13px}
+.c-secret{position:relative;margin:12px 14px 0;padding:10px 14px 12px 64px;border:1px solid #6b2a20;color:#e7d9bd;background:#150e0b}
+.c-seal{position:absolute;left:10px;top:12px;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c4473a,#7a1c14 70%);box-shadow:0 0 0 3px rgba(122,28,20,.35);display:grid;place-items:center;color:#f2d6c4;font:700 16px 'Old Standard TT'}
+.c-secret b{display:block;font:italic 400 15px 'Old Standard TT';color:#d07a68}
+.c-secret p{margin:2px 0 0;font:19px/1.25 Neucha,cursive;color:#f1e4c9}
+.tabs{flex:none;display:flex;justify-content:space-around;border-top:1px solid #3a3226;margin:0 14px;padding:6px 0 14px}
+.tabs span{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;min-height:48px;justify-content:center;font:400 13px 'Old Standard TT';color:#8e826c}
+.tabs span i{font-style:normal;font-size:21px;line-height:1;height:24px}
+.tabs .on{color:#efe5cf}.tabs .on i{color:#e8ad65}
+.c-h{margin:16px 20px 10px;color:#efe5cf;font:400 26px 'Old Standard TT';display:flex;justify-content:space-between;align-items:baseline}
+.c-h small{font:italic 400 15px 'Old Standard TT';color:#8e826c}
+.c-card{margin:0 14px;padding:14px 16px;box-shadow:0 14px 34px rgba(0,0,0,.65);position:relative}
+.c-card::before{content:"";position:absolute;inset:5px;border:1px solid rgba(42,33,24,.55);pointer-events:none}
+.c-offer{display:grid;grid-template-columns:56px 1fr 84px;gap:12px;align-items:center}
+.c-offer .who{font:italic 400 15px 'Old Standard TT';color:#5a4a36}
+.c-offer .who b{display:block;font:700 22px/1.1 'Old Standard TT';color:#221a12;font-style:normal;letter-spacing:.04em}
+.c-offer .av i{width:56px;height:56px;border-color:#2a2118;box-shadow:none}
+.c-ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(#8a2b1f 0 97%,rgba(42,33,24,.15) 97% 100%);display:grid;place-items:center}
+.c-ring b{width:72px;height:72px;border-radius:50%;background:#e9dfc7;display:grid;place-items:center;font:400 22px 'Old Standard TT'}
+.c-ledger{margin:12px 0;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #2a2118;border-bottom:1px solid #2a2118}
+.c-ledger div{padding:8px 4px 8px 0;display:flex;gap:8px;align-items:center}
+.c-ledger div+div{border-left:1px solid #2a2118;padding-left:12px}
+.c-ledger small{display:block;font:italic 400 14px 'Old Standard TT';color:#5a4a36}
+.c-ledger b{font:700 18px/1.2 'Old Standard TT'}
+.c-ledger img{width:40px;height:40px;border:1px solid #2a2118;flex:none}
+.c-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c-btn{min-height:52px;display:flex;align-items:center;justify-content:center;font:400 18px 'Old Standard TT';letter-spacing:.06em;border:1.5px solid #221a12;color:#221a12}
+.c-btn.ink{background:#221a12;color:#efe5cf}
+.c-btn.red{background:#8a2b1f;border-color:#8a2b1f;color:#f6e8d6}
+.bag{margin:12px 14px 0;padding:10px 12px;display:grid;gap:8px}
+.bag .it{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;border-bottom:1px solid #2a2118;padding:6px 0}
+.bag .it:last-child{border:0}
+.bag .it img{width:48px;height:48px;border:1px solid #2a2118}
+.bag .it b{display:block;font:700 15px 'Old Standard TT'}
+.bag .it small{font:italic 400 13px 'Old Standard TT';color:#5a4a36}
+.bag .it span.btn{font:400 14px 'Old Standard TT';border:1px solid #221a12;padding:6px 10px}
+
+/* Предметы на бумаге */
+.items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.item{padding:8px;text-align:center;box-shadow:0 10px 26px rgba(0,0,0,.6)}
+.item img{width:100%;aspect-ratio:1;object-fit:cover;border:1.5px solid #2a2118}
+.item b{display:block;margin-top:6px;font:700 13px 'Old Standard TT';letter-spacing:.08em}
+.items.engr img{filter:grayscale(1) contrast(1.4) brightness(1.15) sepia(.5);mix-blend-mode:multiply}
+.items.tint img{filter:sepia(.28) saturate(.8) contrast(1.08)}
+.items.dark .item{background:#150e0b;color:#e7d9bd;border:1px solid #3a3226}
+.items.dark img{border-color:#3a3226}
+
+.verdict{margin:32px 0 60px;padding:18px 22px;border:1px solid var(--line);border-radius:14px;background:var(--page-2)}
+.verdict h2{margin:0 0 8px;font-size:26px}
+.verdict ul{margin:0;padding-left:20px}
+.verdict li{margin:6px 0}
+@media (max-width:900px){.cols{grid-template-columns:1fr}.cardrow{grid-template-columns:1fr 1fr}.items{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<button class="dimbtn" type="button" aria-pressed="false" onclick="document.body.classList.toggle('dim');this.setAttribute('aria-pressed',document.body.classList.contains('dim'))">Тёмная комната</button>
+<div class="wrap">
+  <h1>Гравюра и плоские портреты<span>Проверка: фильтр, цвет и приглушённый вариант</span></h1>
+  <p class="lede">Интерфейс направления В («Гравюра») с портретами в выбранном стиле «плоская графика». Три обработки одной и той же картинки: гравюрный фильтр, как на странице направлений; цвет без изменений; и промежуточный вариант, где цвет чуть приглушён и добавлена лёгкая штриховка, чтобы портрет не спорил с бумагой.</p>
+  <p class="note">Кнопка «Тёмная комната» затемняет страницу на 40%, как тусклый свет на вечеринке.</p>
+
+  <h2>Карта роли</h2>
+  <div class="cols">
+    <div class="col engr">
+      <h3>1. Гравюрный фильтр</h3>
+      <p>grayscale, контраст, сепия, штриховка. Портреты становятся одной колодой, но плоский стиль теряет свой главный козырь: цвет.</p>
+      <div class="field"><div class="cardrow">
+        <div class="tarot paper"><div class="num">I</div><div class="art"><img src="assets/concepts/flat/o1.jpg" alt=""></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+        <div class="tarot paper"><div class="num">VI</div><div class="art"><img src="assets/concepts/flat/o6.jpg" alt=""></div><h3>ГРЕТА</h3><p>Алхимик без лицензии</p></div>
+        <div class="tarot paper"><div class="num">IX</div><div class="art"><img src="assets/concepts/flat/o9.jpg" alt=""></div><h3>ЭЛЬМАР</h3><p>Проклятый рыцарь</p></div>
+        <div class="tarot paper"><div class="num">XIV</div><div class="art"><img src="assets/concepts/flat/o14.jpg" alt=""></div><h3>ЛИРА</h3><p>Бард с чужой флейтой</p></div>
+      </div></div>
+    </div>
+    <div class="col color">
+      <h3>2. Цвет как есть</h3>
+      <p>Картинка без фильтра внутри чернильной рамки на бумаге. Толстый контур плоского стиля сам по себе рифмуется с гравюрой.</p>
+      <div class="field"><div class="cardrow">
+        <div class="tarot paper"><div class="num">I</div><div class="art"><img src="assets/concepts/flat/o1.jpg" alt=""></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+        <div class="tarot paper"><div class="num">VI</div><div class="art"><img src="assets/concepts/flat/o6.jpg" alt=""></div><h3>ГРЕТА</h3><p>Алхимик без лицензии</p></div>
+        <div class="tarot paper"><div class="num">IX</div><div class="art"><img src="assets/concepts/flat/o9.jpg" alt=""></div><h3>ЭЛЬМАР</h3><p>Проклятый рыцарь</p></div>
+        <div class="tarot paper"><div class="num">XIV</div><div class="art"><img src="assets/concepts/flat/o14.jpg" alt=""></div><h3>ЛИРА</h3><p>Бард с чужой флейтой</p></div>
+      </div></div>
+    </div>
+    <div class="col tint">
+      <h3>3. Приглушённый цвет</h3>
+      <p>Сепия 28%, насыщенность 80%, лёгкая штриховка. Цвет остаётся, но уходит в тон старой открытки. Моё предложение.</p>
+      <div class="field"><div class="cardrow">
+        <div class="tarot paper"><div class="num">I</div><div class="art"><img src="assets/concepts/flat/o1.jpg" alt=""></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+        <div class="tarot paper"><div class="num">VI</div><div class="art"><img src="assets/concepts/flat/o6.jpg" alt=""></div><h3>ГРЕТА</h3><p>Алхимик без лицензии</p></div>
+        <div class="tarot paper"><div class="num">IX</div><div class="art"><img src="assets/concepts/flat/o9.jpg" alt=""></div><h3>ЭЛЬМАР</h3><p>Проклятый рыцарь</p></div>
+        <div class="tarot paper"><div class="num">XIV</div><div class="art"><img src="assets/concepts/flat/o14.jpg" alt=""></div><h3>ЛИРА</h3><p>Бард с чужой флейтой</p></div>
+      </div></div>
+    </div>
+  </div>
+
+  <h2>Аватары 64 px</h2>
+  <p class="lede">Так портрет виден чаще всего: в списке участников, в карточке сделки, в алтарях. Кадр увеличен по лицу.</p>
+  <div class="cols">
+    <div class="col engr"><h3>1. Фильтр</h3><div class="field"><div class="avrow">
+      <div class="av"><i><img src="assets/concepts/flat/o1.jpg" alt=""></i>Серафина</div><div class="av"><i><img src="assets/concepts/flat/o6.jpg" alt=""></i>Грета</div><div class="av"><i><img src="assets/concepts/flat/o9.jpg" alt=""></i>Эльмар</div><div class="av"><i><img src="assets/concepts/flat/o14.jpg" alt=""></i>Лира</div>
+    </div></div></div>
+    <div class="col color"><h3>2. Цвет</h3><div class="field"><div class="avrow">
+      <div class="av"><i><img src="assets/concepts/flat/o1.jpg" alt=""></i>Серафина</div><div class="av"><i><img src="assets/concepts/flat/o6.jpg" alt=""></i>Грета</div><div class="av"><i><img src="assets/concepts/flat/o9.jpg" alt=""></i>Эльмар</div><div class="av"><i><img src="assets/concepts/flat/o14.jpg" alt=""></i>Лира</div>
+    </div></div></div>
+    <div class="col tint"><h3>3. Приглушённый</h3><div class="field"><div class="avrow">
+      <div class="av"><i><img src="assets/concepts/flat/o1.jpg" alt=""></i>Серафина</div><div class="av"><i><img src="assets/concepts/flat/o6.jpg" alt=""></i>Грета</div><div class="av"><i><img src="assets/concepts/flat/o9.jpg" alt=""></i>Эльмар</div><div class="av"><i><img src="assets/concepts/flat/o14.jpg" alt=""></i>Лира</div>
+    </div></div></div>
+  </div>
+
+  <h2>Экраны целиком</h2>
+  <div class="phones">
+    <figure class="ph engr"><div class="phone"><div class="screen">
+      <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+      <div class="app">
+        <div class="c-hud"><span>Акт I</span><span class="t">21:08</span><span>6 золотых</span></div>
+        <div class="body">
+          <div class="c-tarot paper"><div class="num">I</div><div class="art"><img src="assets/concepts/flat/o1.jpg" alt=""></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+          <div class="c-side"><i></i>Пробудить. Он должен жить.</div>
+          <div class="c-sheet paper"><h4>Ваши цели</h4><ul class="c-goals"><li>Держать Корону пепла в своём инвентаре в момент фиксации финала.</li><li>Вложить хотя бы один Фокус силы в ритуал пробуждения.</li></ul></div>
+          <div class="c-secret"><span class="c-seal">✠</span><b>Тайна, только для вас</b><p>Вы не потомок Сарна. Корона станет вашей по праву, только если в это поверят.</p></div>
+        </div>
+        <nav class="tabs"><span class="on"><i>☉</i>Роль</span><span><i>⚱</i>Сумка</span><span><i>⚖</i>Сделки</span><span><i>✠</i>Алтари</span><span><i>☽</i>События</span></nav>
+      </div>
+    </div></div><figcaption><b>Роль, фильтр.</b> Как на странице направлений, но с плоским портретом.</figcaption></figure>
+
+    <figure class="ph tint"><div class="phone"><div class="screen">
+      <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+      <div class="app">
+        <div class="c-hud"><span>Акт I</span><span class="t">21:08</span><span>6 золотых</span></div>
+        <div class="body">
+          <div class="c-tarot paper"><div class="num">I</div><div class="art"><img src="assets/concepts/flat/o1.jpg" alt=""></div><h3>СЕРАФИНА</h3><p>Драконья наследница</p></div>
+          <div class="c-side"><i></i>Пробудить. Он должен жить.</div>
+          <div class="c-sheet paper"><h4>Ваши цели</h4><ul class="c-goals"><li>Держать Корону пепла в своём инвентаре в момент фиксации финала.</li><li>Вложить хотя бы один Фокус силы в ритуал пробуждения.</li></ul></div>
+          <div class="c-secret"><span class="c-seal">✠</span><b>Тайна, только для вас</b><p>Вы не потомок Сарна. Корона станет вашей по праву, только если в это поверят.</p></div>
+        </div>
+        <nav class="tabs"><span class="on"><i>☉</i>Роль</span><span><i>⚱</i>Сумка</span><span><i>⚖</i>Сделки</span><span><i>✠</i>Алтари</span><span><i>☽</i>События</span></nav>
+      </div>
+    </div></div><figcaption><b>Роль, приглушённый цвет.</b> Портрет остаётся цветным, но в тоне бумаги.</figcaption></figure>
+
+    <figure class="ph color"><div class="phone"><div class="screen">
+      <div class="tg"><span>Закрыть</span><b>Ярмарка украденной магии</b><span>⋯</span></div>
+      <div class="app">
+        <div class="c-hud"><span>Акт I</span><span class="t">21:08</span><span>6 золотых</span></div>
+        <div class="body">
+          <div class="c-h">Сделки <small>одна ждёт ответа</small></div>
+          <div class="c-card paper">
+            <div class="c-offer"><div class="av"><i><img src="assets/concepts/flat/o6.jpg" alt=""></i></div><div class="who">Предлагает<b>Грета</b>Алхимик без лицензии</div><div class="c-ring"><b>4:51</b></div></div>
+            <div class="c-ledger"><div><img src="assets/concepts/flat/shard.jpg" alt=""><span><small>Вы отдаёте</small><b>2 золота</b></span></div><div><img src="assets/concepts/flat/focus.jpg" alt=""><span><small>Вы получаете</small><b>Фокус силы</b></span></div></div>
+            <div class="c-btns"><span class="c-btn ink">Принять</span><span class="c-btn">Отклонить</span></div>
+          </div>
+          <div class="bag paper">
+            <div class="it"><img src="assets/concepts/flat/crown.jpg" alt=""><span><b>Корона пепла</b><small>реликвия · Грим</small></span><span class="btn">Предложить</span></div>
+            <div class="it"><img src="assets/concepts/flat/flute.jpg" alt=""><span><b>Костяная флейта</b><small>реликвия · Лира</small></span><span class="btn">Предложить</span></div>
+            <div class="it"><img src="assets/concepts/flat/shard.jpg" alt=""><span><b>Осколок I</b><small>сердце Сарна</small></span><span class="btn">На алтарь</span></div>
+          </div>
+        </div>
+        <nav class="tabs"><span><i>☉</i>Роль</span><span><i>⚱</i>Сумка</span><span class="on"><i>⚖</i>Сделки</span><span><i>✠</i>Алтари</span><span><i>☽</i>События</span></nav>
+      </div>
+    </div></div><figcaption><b>Сделки, цвет.</b> Цветной аватар Греты и цветные иконки предметов на бумажных картах.</figcaption></figure>
+  </div>
+
+  <h2>Иконки предметов</h2>
+  <p class="lede">Предметы встречаются чаще портретов: сумка, сделки, алтари, лоты. Четыре готовые иконки в трёх обработках на бумаге и в цвете на тёмной карточке.</p>
+  <div class="cols">
+    <div class="col"><h3>1. Фильтр на бумаге</h3><div class="field"><div class="items engr">
+      <div class="item paper"><img src="assets/concepts/flat/shard.jpg" alt=""><b>ОСКОЛОК</b></div><div class="item paper"><img src="assets/concepts/flat/crown.jpg" alt=""><b>КОРОНА</b></div><div class="item paper"><img src="assets/concepts/flat/focus.jpg" alt=""><b>ФОКУС</b></div><div class="item paper"><img src="assets/concepts/flat/flute.jpg" alt=""><b>ФЛЕЙТА</b></div>
+    </div></div></div>
+    <div class="col"><h3>2. Цвет на бумаге</h3><div class="field"><div class="items color">
+      <div class="item paper"><img src="assets/concepts/flat/shard.jpg" alt=""><b>ОСКОЛОК</b></div><div class="item paper"><img src="assets/concepts/flat/crown.jpg" alt=""><b>КОРОНА</b></div><div class="item paper"><img src="assets/concepts/flat/focus.jpg" alt=""><b>ФОКУС</b></div><div class="item paper"><img src="assets/concepts/flat/flute.jpg" alt=""><b>ФЛЕЙТА</b></div>
+    </div></div></div>
+    <div class="col"><h3>3. Цвет на тёмной карточке</h3><div class="field"><div class="items dark">
+      <div class="item"><img src="assets/concepts/flat/shard.jpg" alt=""><b>ОСКОЛОК</b></div><div class="item"><img src="assets/concepts/flat/crown.jpg" alt=""><b>КОРОНА</b></div><div class="item"><img src="assets/concepts/flat/focus.jpg" alt=""><b>ФОКУС</b></div><div class="item"><img src="assets/concepts/flat/flute.jpg" alt=""><b>ФЛЕЙТА</b></div>
+    </div></div></div>
+  </div>
+
+  <div class="verdict">
+    <h2>Что видно</h2>
+    <ul>
+      <li><b>Фильтр</b> убивает главное достоинство плоской графики: чистые цветовые пятна. Эльмар и Грета становятся почти неотличимы в кружке 64 px.</li>
+      <li><b>Цвет как есть</b> в чернильной рамке смотрится цельно: толстый контур и ограниченная палитра сами по себе близки к гравюре. Тёмный фон картинок на бумаге читается как окно в ночь.</li>
+      <li><b>Приглушённый</b> вариант сохраняет узнаваемость и чуть сближает портреты с пергаментом. Это компромисс, если цвет покажется слишком ярким.</li>
+      <li><b>Иконки предметов</b> с тёмным фоном лучше всего смотрятся в цвете на тёмной карточке. На бумаге их тёмный квадрат спорит с фоном.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
