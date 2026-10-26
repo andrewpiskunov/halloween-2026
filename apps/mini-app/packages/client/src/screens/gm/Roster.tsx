@@ -45,7 +45,7 @@ export function Roster({ v }: { v: GmView }) {
   return (
     <>
       <div class="m-card">
-        <h5>👥 Состав</h5>
+        <h5>Состав</h5>
         <p class="m-note">В составе {state.roster.length} · пришли {presentCount}</p>
         {setup && (
           <>
@@ -54,27 +54,28 @@ export function Roster({ v }: { v: GmView }) {
               <input type="number" inputMode="numeric" min={12} max={30} value={n}
                 onInput={e => setN((e.currentTarget as HTMLInputElement).value)} />
             </label>
-            <Button icon="🎲" kind="sec" disabled={!nValid} onClick={() => { void run({ type: 'session.setN', n: nValue }); }}>
+            <Button kind="sec" disabled={!nValid} onClick={() => { void run({ type: 'session.setN', n: nValue }); }}>
               Состав по умолчанию
             </Button>
           </>
         )}
-        <Button icon="🔔" disabled={!setup || state.roster.length === 0} onClick={open}>Открыть ярмарку</Button>
+        <Button kind="red" disabled={!setup || state.roster.length === 0} onClick={open}>Открыть ярмарку</Button>
         {!setup && <p class="m-note">Ярмарка открыта, состав зафиксирован.</p>}
       </div>
 
       {shownLink && (
-        <div class="m-card hot"><h5>Ссылка</h5><p class="m-note"><code>{shownLink}</code></p></div>
+        <div class="m-card hot link-box"><h5>Ссылка</h5><code>{shownLink}</code></div>
       )}
 
-      <div class="m-card">
+      <h2 class="scr-h">Роли <small>{roles.length} карт</small></h2>
+      <div class="roster">
         {roles.map(r => {
           const inRoster = state.roster.includes(r.key);
           const i = inv.get(r.key);
           return (
             <div class={`gm-role ${inRoster ? '' : 'off'}`} key={r.key}>
               <div class="item">
-                <Portrait roleKey={r.key} emoji={r.emoji} size="sm" />
+                <Portrait roleKey={r.key} emoji={r.emoji} />
                 <div class="item-text">
                   <b>{r.name}</b>
                   <span>{r.title}</span>
@@ -101,8 +102,8 @@ export function Roster({ v }: { v: GmView }) {
               </div>
               {i && (
                 <div class="m-btns">
-                  <Button small kind="sec" icon="🔗" onClick={() => { void copy(i.code); }}>Скопировать ссылку</Button>
-                  <Button small kind="sec" icon="🔄" onClick={() => ask({
+                  <Button small kind="sec" onClick={() => { void copy(i.code); }}>Скопировать ссылку</Button>
+                  <Button small kind="sec" onClick={() => ask({
                     title: `Перевыдать код: ${r.name}?`,
                     text: 'Старая ссылка перестанет работать, игрока нужно будет пригласить заново.',
                     okLabel: 'Перевыдать', danger: true,

@@ -4,7 +4,8 @@ import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
 import { actNextPreview } from '../../gm/lots';
-import { INGREDIENTS, mmss } from '../../labels';
+import { itemImageUrl, resourceImageUrl } from '../../assets';
+import { INGREDIENTS, mmss, roman } from '../../labels';
 import { correctableItems } from '../../rules';
 import { ask, now, run, showToast } from '../../store';
 
@@ -18,8 +19,15 @@ export function Console({ v }: { v: GmView }) {
   const nextAct = actNextPreview(v);
   const act = state.phase === 'act1' ? 1 : state.phase === 'act2' ? 2 : 3;
   const elapsed = (state.clock.pausedAt ?? now.value) - state.clock.actStartedAt - state.clock.pausedTotal;
-  const clock = state.phase === 'setup' ? 'Ярмарка не открыта'
-    : running ? `Акт ${act} · ${mmss(elapsed)}${paused ? ' ⏸' : ''}` : 'Ярмарка закрыта';
+  const setup = state.phase === 'setup';
+  const head = setup ? 'Подготовка' : running ? `Акт ${roman(act)}` : 'Финал';
+  const note = setup ? 'Ярмарка не открыта'
+    : running ? (paused ? 'пауза; отсчёт стоит' : 'прошло с начала акта') : 'Ярмарка закрыта';
+  // Шкала актов: текущая отметка — красная точка после активного деления.
+  const marks: { key: string; label: string }[] = [
+    { key: 'act1', label: 'I' }, { key: 'act2', label: 'II' }, { key: 'act3', label: 'III' }, { key: 'final', label: 'финал' },
+  ];
+  const current = running ? state.phase : setup ? null : 'final';
 
   const [text, setText] = useState('');
   const announce = async () => {
@@ -29,38 +37,54 @@ export function Console({ v }: { v: GmView }) {
 
   return (
     <>
-      <div class="m-card hot">
-        <h5>⏱️ Часы</h5>
-        <p class="gm-clock">{clock}</p>
-        <div class="m-btns">
-          {paused
-            ? <Button icon="▶️" disabled={!running} onClick={() => { void run({ type: 'clock.resume' }); }}>Продолжить</Button>
-            : <Button icon="⏸️" kind="sec" disabled={!running} onClick={() => { void run({ type: 'clock.pause' }); }}>Пауза</Button>}
-          <Button icon="➕" kind="sec" disabled={!running} onClick={() => { void run({ type: 'clock.extend', minutes: 5 }); }}>+5 минут</Button>
+      <div class="m-card clock">
+        <div class="act">{head}</div>
+        <div class={`big ${running ? '' : 'idle'}`} role="timer">{running ? mmss(elapsed) : '00:00'}</div>
+        <p>{note}</p>
+        <div class="acts" aria-hidden="true">
+          {setup && [<span key="pin0" class="pin" />, <i key="seg0" class="seg" />]}
+          {marks.map((m, idx) => [
+            <span key={m.key} class={current === m.key ? 'on' : ''}>{m.label}</span>,
+            current === m.key && m.key !== 'final' ? [<i key={`${m.key}-s`} class="seg" />, <span key={`${m.key}-pin`} class="pin" />] : null,
+            idx < marks.length - 1 ? <i key={`${m.key}-seg`} class="seg" /> : null,
+          ])}
         </div>
-        <div class="m-btns">
-          <Button icon="🌗" disabled={!nextAct} onClick={() => {
+      </div>
+
+      <div class="ctl">
+        {paused
+          ? <Button disabled={!running} onClick={() => { void run({ type: 'clock.resume' }); }}>Продолжить</Button>
+          : <Button kind="sec" disabled={!running} onClick={() => { void run({ type: 'clock.pause' }); }}>Пауза</Button>}
+        <Button kind="sec" disabled={!running} onClick={() => { void run({ type: 'clock.extend', minutes: 5 }); }}>+5 минут</Button>
+        <span class="wide">
+          <Button disabled={!nextAct} onClick={() => {
             if (!nextAct) return;
             ask({
               title: `Начать акт ${nextAct.act}?`, text: nextAct.lines.join(' '), okLabel: `Акт ${nextAct.act}`,
               onOk: () => { void run({ type: 'act.next' }); },
             });
-          }}>{nextAct ? `Акт ${nextAct.act}` : 'Акт II'}</Button>
-          <Button icon="🔒" kind="sec" disabled>Закрыть ярмарку</Button>
-        </div>
-        <p class="m-note">В следующей версии</p>
+          }}>{nextAct ? `Начать акт ${nextAct.act}` : 'Начать акт II'}</Button>
+        </span>
+        <span class="wide">
+          <Button kind="sec" disabled>Закрыть ярмарку</Button>
+          <p class="m-note" style={{ textAlign: 'center' }}>Закрытие — в следующей версии</p>
+        </span>
       </div>
 
       <div class="m-card">
-        <h5>📣 Объявление</h5>
+        <h5>Объявление всем</h5>
         <label class="field">
           <textarea rows={3} value={text} placeholder="Текст для всех игроков"
             onInput={e => setText((e.currentTarget as HTMLTextAreaElement).value)} />
         </label>
-        <Button icon="📣" disabled={!text.trim()} onClick={() => { void announce(); }}>Объявить</Button>
-        {state.announcements.slice(-5).reverse().map((a, i) => (
-          <div class="m-row" key={i}><span><b>{a.title}</b> {a.text}</span></div>
-        ))}
+        <Button disabled={!text.trim()} onClick={() => { void announce(); }}>Объявить</Button>
+        {state.announcements.length > 0 && (
+          <div class="ann-log">
+            {state.announcements.slice(-5).reverse().map((a, i) => (
+              <div class="m-row" key={i}><b>{a.title}</b><p class="hand" style={{ margin: 0 }}>{a.text}</p></div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Correction v={v} />
@@ -83,6 +107,7 @@ function Correction({ v }: { v: GmView }) {
   const ownerLabel = (o: (typeof items)[number]['owner']) =>
     o.type === 'player' ? name(o.key) : o.type === 'altar' ? `алтарь ${o.side}` : 'лот';
   const itemIcon = (kind: string) => kind === 'shard' ? '💠' : kind === 'clue' ? '🔍' : kind === 'relic' ? '🏺' : '⚗️';
+  const roleOption = (k: string) => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji, avatar: k });
   const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${it.ref}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
 
   const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';
@@ -106,20 +131,20 @@ function Correction({ v }: { v: GmView }) {
 
   return (
     <div class="m-card">
-      <h5>🛠️ Исправление</h5>
+      <h5>Исправление</h5>
       <div class="field"><span>Игрок</span>
-        <Select label="Игрок" value={p} onChange={setPlayer} options={state.roster.map(k => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji }))} />
+        <Select label="Игрок" value={p} onChange={setPlayer} options={state.roster.map(roleOption)} />
       </div>
       <div class="field"><span>Что исправить</span>
         <Select label="Что исправить" value={field} onChange={s => setField(s as Field)} options={[
-          { value: 'gold', label: 'Золото', icon: '🪙' },
-          { value: 'ingredient', label: 'Ингредиент', icon: '🔥' },
+          { value: 'gold', label: 'Золото', icon: '🪙', image: resourceImageUrl('gold') },
+          { value: 'ingredient', label: 'Ингредиент', icon: '🔥', image: resourceImageUrl('ash') },
           { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
         ]} />
       </div>
       {field === 'ingredient' && (
         <div class="field"><span>Ингредиент</span>
-          <Select label="Ингредиент" value={ingredient} onChange={s => setIngredient(s as Ingredient)} options={INGREDIENTS.map(i => ({ value: i.key, label: i.name, icon: i.emoji }))} />
+          <Select label="Ингредиент" value={ingredient} onChange={s => setIngredient(s as Ingredient)} options={INGREDIENTS.map(i => ({ value: i.key, label: i.name, icon: i.emoji, image: resourceImageUrl(i.key) }))} />
         </div>
       )}
       {field !== 'itemOwner' ? (
@@ -127,17 +152,17 @@ function Correction({ v }: { v: GmView }) {
       ) : (
         <>
           <div class="field"><span>Вещь</span>
-            <Select label="Вещь" value={curItem} onChange={setItemId} placeholder="Нет вещей у игроков" options={items.map(it => ({ value: it.id, label: itemName(it), hint: ownerLabel(it.owner), icon: itemIcon(it.kind) }))} />
+            <Select label="Вещь" value={curItem} onChange={setItemId} placeholder="Нет вещей у игроков" options={items.map(it => ({ value: it.id, label: itemName(it), hint: ownerLabel(it.owner), icon: itemIcon(it.kind), image: itemImageUrl(it) }))} />
           </div>
           <div class="field"><span>Новый владелец</span>
-            <Select label="Новый владелец" value={curOwner} onChange={setNewOwner} options={state.roster.map(k => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji }))} />
+            <Select label="Новый владелец" value={curOwner} onChange={setNewOwner} options={state.roster.map(roleOption)} />
           </div>
         </>
       )}
       <label class="field"><span>Причина</span>
         <input type="text" value={reason} placeholder="Например: ошибка при выдаче" onInput={e => setReason((e.currentTarget as HTMLInputElement).value)} />
       </label>
-      <Button icon="🛠️" disabled={!ready} onClick={submit}>Исправить</Button>
+      <Button kind="red" disabled={!ready} onClick={submit}>Исправить</Button>
     </div>
   );
 }
