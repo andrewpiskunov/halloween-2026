@@ -3,7 +3,7 @@ import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Portrait } from '../../components/Portrait';
 import { lotsPreview } from '../../gm/lots';
-import { ask, botName, run, showToast } from '../../store';
+import { ask, botName, playAs, run, showToast } from '../../store';
 
 const inviteLink = (code: string) => `https://t.me/${botName.value}?startapp=${code}`;
 
@@ -100,6 +100,11 @@ export function Roster({ v }: { v: GmView }) {
                   </label>
                 )}
               </div>
+              {inRoster && (
+                <div class="m-btns">
+                  <Button small kind="sec" onClick={() => { void playAs(r.key, r.name); }}>Играть за</Button>
+                </div>
+              )}
               {i && (
                 <div class="m-btns">
                   <Button small kind="sec" onClick={() => { void copy(i.code); }}>Скопировать ссылку</Button>

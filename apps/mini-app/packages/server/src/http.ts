@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Content } from '@fair/shared';
 import type { Config } from './config';
 import type { Game } from './game';
-import { issueToken, verifyInitData } from './auth';
+import { issueToken, verifyInitData, verifyToken } from './auth';
 
 export interface ServerDeps { game: Game; content: Content; config: Config; now: () => number }
 
@@ -43,6 +43,18 @@ export function buildApp(deps: ServerDeps): FastifyInstance {
     const actor = game.actorFor(userId) ?? null;
     // Токен выдаётся и гостю без роли: клиент может повторить вход позже, а WS откажет без роли.
     return { token: issueToken({ telegramId: userId }, config.sessionSecret, now()), actor, botName: config.botName };
+  });
+
+  // Ведущий получает токен «за игрока»: с ним соединение видит и делает всё как этот игрок.
+  app.post('/api/gm/as', async (req, reply) => {
+    const body = (req.body ?? {}) as { token?: unknown; roleKey?: unknown };
+    const auth = typeof body.token === 'string' ? verifyToken(body.token, config.sessionSecret, now()) : null;
+    if (!auth) return reply.code(401).send({ error: 'unauthorized' });
+    if (typeof body.roleKey !== 'string') return reply.code(400).send({ error: 'invalid' });
+    const actor = game.actorForToken({ telegramId: auth.telegramId, as: body.roleKey });
+    if (!actor) return reply.code(403).send({ error: 'forbidden' });
+    console.log(`Ведущий ${auth.telegramId} открыл экраны игрока ${body.roleKey}`);
+    return { token: issueToken({ telegramId: auth.telegramId, as: body.roleKey }, config.sessionSecret, now()), actor, botName: config.botName };
   });
 
   app.get('/api/dev/codes', async (_req, reply) => {

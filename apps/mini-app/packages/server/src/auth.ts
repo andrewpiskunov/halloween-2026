@@ -39,20 +39,26 @@ export function verifyInitData(initData: string, botToken: string, now: number):
 
 const sign = (body: string, secret: string) => createHmac('sha256', secret).update(body).digest('base64url');
 
+/** Содержимое токена: аккаунт и, для ведущего, роль, за которую он играет (as). */
+export interface TokenPayload { telegramId: number; as?: string }
+
 /** Токен сессии: base64url(JSON) + '.' + подпись HMAC-SHA256, срок 12 ч. */
-export function issueToken(payload: { telegramId: number }, secret: string, now: number): string {
-  const body = Buffer.from(JSON.stringify({ telegramId: payload.telegramId, exp: now + TOKEN_TTL_MS })).toString('base64url');
+export function issueToken(payload: TokenPayload, secret: string, now: number): string {
+  const data: Record<string, unknown> = { telegramId: payload.telegramId, exp: now + TOKEN_TTL_MS };
+  if (payload.as !== undefined) data.as = payload.as;
+  const body = Buffer.from(JSON.stringify(data)).toString('base64url');
   return `${body}.${sign(body, secret)}`;
 }
 
-export function verifyToken(token: string, secret: string, now: number): { telegramId: number } | null {
+export function verifyToken(token: string, secret: string, now: number): TokenPayload | null {
   const [body, sig, extra] = token.split('.');
   if (!body || !sig || extra !== undefined) return null;
   if (!safeEqual(Buffer.from(sig), Buffer.from(sign(body, secret)))) return null;
   try {
-    const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as { telegramId: unknown; exp: unknown };
+    const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as { telegramId: unknown; exp: unknown; as?: unknown };
     if (typeof data.telegramId !== 'number' || typeof data.exp !== 'number' || data.exp <= now) return null;
-    return { telegramId: data.telegramId };
+    if (data.as !== undefined && typeof data.as !== 'string') return null;
+    return data.as === undefined ? { telegramId: data.telegramId } : { telegramId: data.telegramId, as: data.as };
   } catch {
     return null;
   }

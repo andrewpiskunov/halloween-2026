@@ -61,6 +61,17 @@ export async function auth(): Promise<AuthResult> {
   return res.json() as Promise<AuthResult>;
 }
 
+/** Ведущий получает токен «за игрока»: соединение с ним видит и делает всё как этот игрок. */
+export async function authAs(token: string, roleKey: string): Promise<AuthResult> {
+  const res = await fetch(`${BASE}api/gm/as`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token, roleKey }),
+  });
+  if (!res.ok) throw new Error(`as_failed_${res.status}`);
+  return res.json() as Promise<AuthResult>;
+}
+
 function defaultBase(): string {
   return `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
 }

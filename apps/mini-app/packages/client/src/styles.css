@@ -61,6 +61,17 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 }
 
 /* HUD: акт, время курсивом, золото */
+/* Плашка «ведущий играет за игрока» над HUD */
+.as-bar {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 14px; padding: 8px 0; border-bottom: 1px solid var(--cinnabar, #8a2b1f);
+  color: var(--bone-hi); font: italic 400 15px var(--serif);
+}
+.as-bar b { font-style: normal; letter-spacing: .06em; }
+.as-bar button {
+  min-height: 36px; padding: 0 14px; border: 1px solid var(--cinnabar, #8a2b1f); background: var(--cinnabar, #8a2b1f);
+  color: #f6e8d6; font: 400 15px var(--serif); letter-spacing: .04em; cursor: pointer;
+}
 .hud {
   position: sticky; top: 0; z-index: 5; background: var(--field);
   padding: 0 var(--gut);

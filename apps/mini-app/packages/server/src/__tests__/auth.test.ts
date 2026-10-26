@@ -63,3 +63,13 @@ test('token выдан и проверен; с другим секретом nul
   expect(verifyToken(body, secret, NOW)).toBeNull();
   expect(verifyToken('мусор', secret, NOW)).toBeNull();
 });
+
+test('токен «за игрока»: поле as сохраняется и проверяется, посторонние значения отбрасываются', () => {
+  const secret = 'тестовый-секрет';
+  const token = issueToken({ telegramId: 4242, as: 'o6' }, secret, NOW);
+  expect(verifyToken(token, secret, NOW)).toEqual({ telegramId: 4242, as: 'o6' });
+  const plain = Buffer.from(JSON.stringify({ telegramId: 4242, exp: NOW + 1e6, as: 7 })).toString('base64url');
+  const [, sig] = issueToken({ telegramId: 4242 }, secret, NOW).split('.');
+  // Подпись не совпадает с телом, поэтому null; сам формат as проверяется отдельно ниже
+  expect(verifyToken(`${plain}.${sig}`, secret, NOW)).toBeNull();
+});

@@ -1,6 +1,6 @@
 import { computed, signal } from '@preact/signals';
 import type { Command } from '@fair/shared';
-import { auth, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
+import { auth, authAs, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
@@ -21,6 +21,8 @@ export type GmTab = 'roster' | 'console';
 export const gmTab = signal<GmTab>('roster');
 /** Имя бота для ссылок-приглашений; приходит из /api/auth. */
 export const botName = signal('');
+/** Ведущий играет за игрока: его роль и имя; null — обычный режим. */
+export const playingAs = signal<{ roleKey: string; name: string } | null>(null);
 /** Вещь, с которой надо открыть форму сделки (кнопка «Предложить» в сумке). */
 export const tradeDraft = signal<{ itemId: string } | null>(null);
 
@@ -42,6 +44,8 @@ export const ERROR_TEXT: Record<ErrorCode, string> = {
 };
 
 let connection: Connection | null = null;
+/** Собственный токен аккаунта: к нему возвращается ведущий после игры за игрока. */
+let ownToken = '';
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function showToast(text: string): void {
@@ -61,12 +65,40 @@ export async function run(cmd: Command): Promise<CmdResult> {
   return result;
 }
 
+/** Закрывает текущее соединение и открывает новое с другим токеном; проекция сбрасывается до первой новой. */
+function reconnect(token: string): void {
+  connection?.close();
+  view.value = null;
+  status.value = 'connecting';
+  connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
+}
+
+/** Ведущий открывает экраны игрока и действует от его имени. */
+export async function playAs(roleKey: string, name: string): Promise<void> {
+  try {
+    const { token } = await authAs(ownToken, roleKey);
+    playingAs.value = { roleKey, name };
+    tab.value = 'role';
+    reconnect(token);
+  } catch {
+    showToast('Не удалось открыть экраны игрока');
+  }
+}
+
+/** Возврат ведущего к своим экранам. */
+export function backToGm(): void {
+  if (!playingAs.value) return;
+  playingAs.value = null;
+  reconnect(ownToken);
+}
+
 /** Вход и соединение. Вызывается один раз из main.tsx. */
 export async function start(): Promise<void> {
   setInterval(() => { now.value = Date.now(); }, 1000);
   try {
     const { token, botName: bot } = await auth();
     botName.value = bot;
+    ownToken = token;
     connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';

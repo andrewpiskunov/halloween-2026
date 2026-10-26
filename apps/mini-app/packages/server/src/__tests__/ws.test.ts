@@ -239,3 +239,30 @@ test('closeWs закрывает подключённых клиентов и з
   await within(a.close());
   st.close();
 });
+
+test('ведущий получает токен «за игрока» и видит его проекцию; игроку и за чужую роль отказ', async () => {
+  const gmAuth = await devAuth(1000);
+  const as = async (token: string, roleKey: string) => fetch(`${base}/api/gm/as`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, roleKey }),
+  });
+  const ok = await as(gmAuth.token, 'o6');
+  expect(ok.status).toBe(200);
+  const body = await ok.json() as { token: string; actor: unknown };
+  expect(body.actor).toEqual({ type: 'player', roleKey: 'o6' });
+
+  const c = connect(body.token);
+  await c.opened;
+  const view = await c.next(m => m.kind === 'view');
+  expect((view.view as { kind: string; me: { role: { key: string } } }).me.role.key).toBe('o6');
+  // Команда выполняется от имени Греты: покупка ингредиента списывает её золото
+  const before = game.state().players.o6.gold;
+  const r = await c.cmd('as-buy', { type: 'shop.buy', ingredient: 'dew' });
+  expect(r.ok).toBe(true);
+  expect(game.state().players.o6.gold).toBeLessThan(before);
+
+  // Игрок не может получить токен за другого, ведущий не может взять роль вне состава
+  const a1 = await devAuth(1001);
+  expect((await as(a1.token, 'o6')).status).toBe(403);
+  expect((await as(gmAuth.token, 'n18')).status).toBe(403);
+  expect((await as('мусор', 'o6')).status).toBe(401);
+});

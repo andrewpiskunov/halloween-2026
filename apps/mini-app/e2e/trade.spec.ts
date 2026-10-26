@@ -71,6 +71,15 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
     await expect(greta.locator('.item-block', { hasText: 'Фокус силы' })).toHaveCount(0);
     await expect(goldLine(greta)).toHaveText(/^(🪙)?\s*5\s*доступно$/);
+
+    // 5. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
+    await gm.locator('.gm-role', { hasText: 'Серафина' }).getByRole('button', { name: 'Играть за' }).click();
+    await expect(gm.locator('.as-bar')).toContainText('Экраны игрока: Серафина');
+    await gm.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
+    await expect(gm.locator('.item-block', { hasText: 'Фокус силы' })).toBeVisible();
+    await gm.locator('.as-bar').getByRole('button', { name: 'К пульту' }).click();
+    await expect(gm.getByText('Ярмарка открыта, состав зафиксирован.')).toBeVisible();
+    await expect(gm.locator('.as-bar')).toHaveCount(0);
   } finally {
     await Promise.all([gmCtx.close(), gretaCtx.close(), serafinaCtx.close()]);
   }

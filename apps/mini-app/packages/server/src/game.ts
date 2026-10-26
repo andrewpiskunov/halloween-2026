@@ -131,6 +131,17 @@ export class Game {
     return roleKey ? { type: 'player', roleKey } : undefined;
   }
 
+  /**
+   * Действующее лицо по содержимому токена. Поле as — роль, за которую играет ведущий:
+   * допустимо только пока аккаунт остаётся ведущим, а роль в составе.
+   */
+  actorForToken(auth: { telegramId: number; as?: string }): Actor | undefined {
+    const own = this.actorFor(auth.telegramId);
+    if (auth.as === undefined) return own;
+    if (own?.type !== 'gm' || !this.current.roster.includes(auth.as)) return undefined;
+    return { type: 'player', roleKey: auth.as };
+  }
+
   /** Привязывает аккаунт по коду приглашения и возвращает его роль (или undefined). */
   async bindByCode(code: string, telegramId: number): Promise<Actor | undefined> {
     // Каждое открытие ссылки — новая команда: движок сам идемпотентен для того же аккаунта,

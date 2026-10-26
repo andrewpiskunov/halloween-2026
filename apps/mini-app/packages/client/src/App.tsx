@@ -12,18 +12,27 @@ import { Roster } from './screens/gm/Roster';
 import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
 import { Workshop } from './screens/Workshop';
-import { gmTab, now, status, tab, toast, view, viewAt } from './store';
+import { backToGm, gmTab, now, playingAs, status, tab, toast, view, viewAt } from './store';
 
 /** Корень: экран статуса до первой проекции, дальше маршрут по view.kind. */
 export function App() {
   const s = status.value;
   const v = view.value;
+  const as = playingAs.value;
+  // Ведущий играл за игрока, но роль пропала (перепривязка, смена состава): вернуться к пульту.
+  if (as && s === 'no_role') { backToGm(); return <Notice icon="☿" text="Возвращение к пульту…" />; }
   if (s === 'no_auth') return <Notice icon="✉" text="Откройте приложение из Telegram" />;
   if (s === 'unauthorized') return <Notice icon="✠" text="Вход не удался. Откройте приложение из Telegram заново" />;
   if (s === 'no_role') return <Notice icon="☉" text="Роль не найдена, обратитесь к ведущему" />;
   if (!v) return <Notice icon="☽" text="Подключение к ярмарке…" />;
   return (
     <div class="app">
+      {as && v.kind === 'player' && (
+        <div class="as-bar" role="status">
+          <span>Экраны игрока: <b>{as.name}</b></span>
+          <button type="button" onClick={backToGm}>К пульту</button>
+        </div>
+      )}
       {v.kind === 'gm' ? <GmApp v={v} /> : <PlayerApp v={v} />}
       <Confirm />
       {toast.value && <div class="toast" role="alert" onClick={() => { toast.value = null; }}>{toast.value}</div>}

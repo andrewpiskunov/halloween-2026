@@ -55,7 +55,8 @@ export function parseCommandMessage(raw: string): { id: string; cmd: Command } |
   return { id, cmd: cmd as unknown as Command };
 }
 
-interface Conn { ws: WebSocket; telegramId: number; alive: boolean }
+/** Соединение: аккаунт и, для ведущего за игрока, роль из токена (as). */
+interface Conn { ws: WebSocket; telegramId: number; alive: boolean; as?: string }
 
 /** Остановка WS-сервера, созданного attachWs; заполняется в attachWs. */
 const closers = new WeakMap<WebSocketServer, () => Promise<void>>();
@@ -79,7 +80,7 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
 
   /** Отправляет проекцию; false — у аккаунта больше нет роли (соединение закрыто). */
   const pushView = (conn: Conn, state: GameState): boolean => {
-    const actor = game.actorFor(conn.telegramId);
+    const actor = game.actorForToken(conn);
     if (!actor) { conn.ws.close(CLOSE_FORBIDDEN, 'no role'); return false; }
     try {
       send(conn.ws, { kind: 'view', seq: state.seq, view: viewFor(state, content, actor, now()) });
@@ -96,9 +97,9 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
     const token = new URL(req.url ?? '/', 'http://localhost').searchParams.get('token') ?? '';
     const auth = verifyToken(token, config.sessionSecret, now());
     if (!auth) { ws.close(CLOSE_UNAUTHORIZED, 'unauthorized'); return; }
-    if (!game.actorFor(auth.telegramId)) { ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
+    if (!game.actorForToken(auth)) { ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
 
-    const conn: Conn = { ws, telegramId: auth.telegramId, alive: true };
+    const conn: Conn = { ws, telegramId: auth.telegramId, alive: true, ...(auth.as !== undefined ? { as: auth.as } : {}) };
     if (!pushView(conn, game.state())) return;
     conns.add(conn);
 
@@ -112,12 +113,13 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
         return;
       }
       // Роль могла смениться (перепривязка ведущим), поэтому actor определяется на каждую команду.
-      const actor: Actor | undefined = game.actorFor(conn.telegramId);
+      const actor: Actor | undefined = game.actorForToken(conn);
       if (!actor) { send(ws, { kind: 'result', id: parsed.id, ok: false, error: 'forbidden' }); ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
       try {
         // id клиента живёт в пространстве своего аккаунта: не пересекается с системными
         // (expire:…, bind:…) и с id других игроков.
-        const result = await game.submit(`ws:${conn.telegramId}:${parsed.id}`, parsed.cmd, actor);
+        const scope = conn.as === undefined ? `ws:${conn.telegramId}` : `ws:${conn.telegramId}:as:${conn.as}`;
+        const result = await game.submit(`${scope}:${parsed.id}`, parsed.cmd, actor);
         // Новую проекцию присылает подписка игры; здесь только результат.
         send(ws, { kind: 'result', id: parsed.id, ...result });
       } catch (err) {
