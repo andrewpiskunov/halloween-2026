@@ -18,6 +18,7 @@ export function Altars({ v }: { v: PlayerView }) {
   return (
     <>
       <h2 class="scr-h">Алтари</h2>
+      <p class="m-note altar-rule">Ритуал готов, когда на алтаре три разных осколка, два Фокуса силы и не меньше шести золота от трёх разных игроков. Готов может быть только один алтарь.</p>
       {v.altars.map(a => (
         <AltarCard key={a.side} v={v} a={a} open={open === a.side} toggle={() => setOpen(open === a.side ? null : a.side)} />
       ))}
@@ -40,6 +41,7 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
   const avail = v.me.available;
   const altarItems = v.me.items.filter(i => canPutOnAltar(i, v));
   const totalGold = a.contributions.reduce((s, c) => s + (c.gold ?? 0), 0);
+  const need = altarProgress(a, v);
 
   const contribute = (what: { itemId: string; name: string } | { gold: number }) => ask({
     title: 'itemId' in what ? `Вложить «${what.name}» в ${a.name}?` : `Вложить ${goldText(what.gold)} в ${a.name}?`,
@@ -56,6 +58,9 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
   return (
     <div class="m-card alt" style={{ '--accent': color }}>
       <div class="altar-h"><i aria-hidden="true" /><h4>{a.name}</h4></div>
+      <ul class="altar-need" aria-label="Чего не хватает">
+        {need.map(n => <li key={n.label} class={n.done ? 'ok' : ''}>{n.label} {n.have}/{n.goal}</li>)}
+      </ul>
       <h5>Вклады</h5>
       {a.contributions.length === 0 && <p class="m-note">Пока пусто.</p>}
       {a.contributions.map(c => {
@@ -93,4 +98,14 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
       )}
     </div>
   );
+}
+
+/** Счёт ритуала по формуле: разные осколки, Фокусы, золото и число вкладчиков золота. */
+export function altarProgress(a: Altar, v: PlayerView): { label: string; have: number; goal: number; done: boolean }[] {
+  const shards = new Set(a.contributions.filter(c => c.itemRef && refKind(c.itemRef, v) === 'shard').map(c => c.itemRef));
+  const focuses = a.contributions.filter(c => c.itemRef === 'focus').length;
+  const gold = a.contributions.reduce((s, c) => s + (c.gold ?? 0), 0);
+  const donors = new Set(a.contributions.filter(c => (c.gold ?? 0) > 0).map(c => c.player)).size;
+  const row = (label: string, have: number, goal: number) => ({ label, have, goal, done: have >= goal });
+  return [row('осколки', shards.size, 3), row('Фокусы', focuses, 2), row('золото', gold, 6), row('вкладчики золота', donors, 3)];
 }

@@ -72,7 +72,19 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(greta.locator('.item-block', { hasText: 'Фокус силы' })).toHaveCount(0);
     await expect(goldLine(greta)).toHaveText(/^(🪙)?\s*5\s*доступно$/);
 
-    // 5. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
+    // 5. Серафина кладёт 2 золота на алтарь пробуждения: счёт ритуала показывает золото и вкладчиков.
+    await serafina.locator('nav.tabs').getByRole('button', { name: 'Алтари' }).click();
+    const wake = serafina.locator('.alt', { hasText: 'Алтарь пробуждения' });
+    await expect(wake.locator('.altar-need')).toContainText('золото 0/6');
+    await wake.getByRole('button', { name: 'Вложить' }).first().click();
+    const goldRow = wake.locator('.m-row').filter({ has: serafina.locator('.stepper') });
+    await goldRow.getByRole('button', { name: '+' }).click();
+    await goldRow.getByRole('button', { name: 'Вложить' }).click();
+    await serafina.getByRole('dialog').getByRole('button', { name: 'Вложить' }).click();
+    await expect(wake.locator('.altar-need')).toContainText('золото 2/6');
+    await expect(wake.locator('.altar-need')).toContainText('вкладчики золота 1/3');
+
+    // 6. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
     await gm.locator('.gm-role', { hasText: 'Серафина' }).getByRole('button', { name: 'Играть за' }).click();
     await expect(gm.locator('.as-bar')).toContainText('Экраны игрока: Серафина');
     await gm.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
