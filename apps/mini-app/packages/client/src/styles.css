@@ -397,6 +397,9 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .clock .act { font-size: 17px; letter-spacing: .3em; padding-left: .3em; text-transform: uppercase; }
 .clock .big { font-size: 88px; line-height: 1; font-variant-numeric: tabular-nums; margin: 8px 0 4px; }
 .clock .big.idle { color: rgba(34, 26, 18, .3); }
+.clock .big.over { color: var(--cinnabar); }
+.act-due ol { margin: 6px 0 8px; padding-left: 20px; font-size: 15px; }
+.act-due li { margin: 4px 0; }
 .clock p { margin: 0; font-size: 15px; font-style: italic; color: var(--ink-soft); }
 .acts { display: flex; align-items: center; gap: 8px; margin: 16px 6px 2px; }
 .acts .seg { flex: 1; height: 1px; background: var(--ink-line); min-width: 8px; }

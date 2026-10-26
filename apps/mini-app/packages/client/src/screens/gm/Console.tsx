@@ -3,6 +3,7 @@ import type { GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
+import { actPlan } from '../../gm/clock';
 import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
 import { INGREDIENTS, mmss, roman } from '../../labels';
@@ -18,11 +19,14 @@ export function Console({ v }: { v: GmView }) {
   const paused = state.clock.pausedAt !== undefined;
   const nextAct = actNextPreview(v);
   const act = state.phase === 'act1' ? 1 : state.phase === 'act2' ? 2 : 3;
-  const elapsed = (state.clock.pausedAt ?? now.value) - state.clock.actStartedAt - state.clock.pausedTotal;
+  const plan = actPlan(state, now.value);
   const setup = state.phase === 'setup';
   const head = setup ? 'Подготовка' : running ? `Акт ${roman(act)}` : 'Финал';
+  // Часы показывают остаток акта по расписанию (25 минут); перебор идёт со знаком минус.
+  const remaining = plan ? Math.abs(plan.remainingMs) : 0;
   const note = setup ? 'Ярмарка не открыта'
-    : running ? (paused ? 'пауза; отсчёт стоит' : 'прошло с начала акта') : 'Ярмарка закрыта';
+    : !plan ? 'Ярмарка закрыта'
+      : `${plan.over ? 'акт перебран на' : 'до конца акта'}${paused ? '; пауза, отсчёт стоит' : ''}. По расписанию акт ${roman(act)} до ${plan.endsAtMinute}-й минуты вечера`;
   // Шкала актов: текущая отметка — красная точка после активного деления.
   const marks: { key: string; label: string }[] = [
     { key: 'act1', label: 'I' }, { key: 'act2', label: 'II' }, { key: 'act3', label: 'III' }, { key: 'final', label: 'финал' },
@@ -39,7 +43,7 @@ export function Console({ v }: { v: GmView }) {
     <>
       <div class="m-card clock">
         <div class="act">{head}</div>
-        <div class={`big ${running ? '' : 'idle'}`} role="timer">{running ? mmss(elapsed) : '00:00'}</div>
+        <div class={`big ${running ? '' : 'idle'} ${plan?.over ? 'over' : ''}`} role="timer">{plan ? `${plan.over ? '−' : ''}${mmss(remaining)}` : '00:00'}</div>
         <p>{note}</p>
         <div class="acts" aria-hidden="true">
           {setup && [<span key="pin0" class="pin" />, <i key="seg0" class="seg" />]}
@@ -50,6 +54,14 @@ export function Console({ v }: { v: GmView }) {
           ])}
         </div>
       </div>
+
+      {plan?.due && (
+        <div class="m-card hot act-due">
+          <h5>{plan.act === 3 ? 'Пора закрывать ярмарку' : `Пора объявлять акт ${roman(plan.act + 1)}`}</h5>
+          <ol>{plan.todo.map(t => <li key={t}>{t}</li>)}</ol>
+          <p class="m-note">Если игра идёт хорошо, «+5 минут» сдвинет срок; все акты сдвинутся вместе с ним.</p>
+        </div>
+      )}
 
       <div class="ctl">
         {paused
