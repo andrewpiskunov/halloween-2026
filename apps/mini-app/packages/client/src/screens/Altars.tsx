@@ -42,7 +42,7 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
   const totalGold = a.contributions.reduce((s, c) => s + (c.gold ?? 0), 0);
 
   const contribute = (what: { itemId: string; name: string } | { gold: number }) => ask({
-    title: 'itemId' in what ? `Вложить «${what.name}» в ${a.name}?` : `Вложить ${GOLD.emoji} ${what.gold} в ${a.name}?`,
+    title: 'itemId' in what ? `Вложить «${what.name}» в ${a.name}?` : `Вложить ${goldText(what.gold)} в ${a.name}?`,
     text: 'Своё можно забрать, пока ярмарка не закрыта.',
     okLabel: 'Вложить',
     onOk: async () => {

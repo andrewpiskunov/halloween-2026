@@ -411,3 +411,8 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .gm-toggles .check.on { border-color: var(--bone); color: var(--bone-hi); }
 .gm-role .m-btns { margin-top: 8px; }
 .link-box code { display: block; margin-top: 6px; color: var(--pen); }
+
+/* Иконки ресурсов в строке текста: стоимость рецептов, «Не хватает». */
+.res-cost { white-space: normal; }
+.res-cost > span { white-space: nowrap; }
+.res-ico { display: inline-block; width: 18px; height: 18px; border-radius: 50%; object-fit: cover; vertical-align: -3px; border: 1px solid var(--ink-line); font-size: 13px; line-height: 18px; text-align: center; font-style: normal; }

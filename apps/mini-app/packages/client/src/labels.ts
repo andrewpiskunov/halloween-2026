@@ -55,17 +55,25 @@ export function offerItem(id: string, v: PlayerView): Pick<Item, 'kind' | 'ref'>
   return v.me.items.find(i => i.id === id) ?? v.offerItems?.[id];
 }
 
-/** Состав набора текстом: «🪙 2 · 🔥 1 · Осколок II · слух». Невидимые вещи показываются как «вещь». */
+/** Золото и ингредиенты словами: «2 золотых, 1 пепел, 1 роса». */
+export function countsText(c: { gold?: number; ingredients?: Partial<Record<Ingredient, number>> }): string {
+  const parts: string[] = [];
+  if (c.gold) parts.push(goldText(c.gold));
+  for (const ing of INGREDIENTS) { const n = c.ingredients?.[ing.key]; if (n) parts.push(`${n} ${ing.short}`); }
+  return parts.join(', ');
+}
+
+/** Состав набора словами: «2 золотых, 1 пепел, Осколок II, слух: «…»». Невидимые вещи показываются как «вещь». */
 export function bundleText(b: Bundle, v: PlayerView): string {
   const parts: string[] = [];
-  if (b.gold) parts.push(`${GOLD.emoji} ${b.gold}`);
-  for (const ing of INGREDIENTS) if (b.ingredients[ing.key]) parts.push(`${ing.emoji} ${ing.name} ×${b.ingredients[ing.key]}`);
+  const counts = countsText(b);
+  if (counts) parts.push(counts);
   for (const id of b.items) {
     const it = offerItem(id, v);
-    if (it) { const l = itemLabel(it, v); parts.push(`${l.emoji} ${l.name}`); } else parts.push('📦 вещь');
+    parts.push(it ? itemLabel(it, v).name : 'вещь');
   }
-  if (b.rumor) parts.push(`👂 слух: «${b.rumor}»`);
-  return parts.length ? parts.join(' · ') : 'ничего';
+  if (b.rumor) parts.push(`слух: «${b.rumor}»`);
+  return parts.length ? parts.join(', ') : 'ничего';
 }
 
 export const emptyBundle = (): Bundle => ({ gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] });

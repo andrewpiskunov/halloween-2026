@@ -32,10 +32,10 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await greta.locator('nav.tabs').getByRole('button', { name: 'Мастерская' }).click();
     await greta.locator('.item', { hasText: 'Лунная пыль' }).getByRole('button').click();
     await greta.getByRole('dialog').getByRole('button', { name: 'Купить' }).click();
-    await expect(greta.getByText('У вас 🪙 4 доступно.')).toBeVisible();
+    await expect(greta.getByText('У вас 4 золотых доступно.')).toBeVisible();
     await greta.locator('.item', { hasText: 'Фокус силы' }).getByRole('button', { name: 'Создать' }).click();
     await greta.getByRole('dialog').getByRole('button', { name: 'Создать' }).click();
-    await expect(greta.getByText('У вас 🪙 3 доступно.')).toBeVisible();
+    await expect(greta.getByText('У вас 3 золотых доступно.')).toBeVisible();
 
     // Сумка: Фокус -> Предложить -> Серафине за 2 золота.
     await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
@@ -56,7 +56,11 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await serafina.goto(`/?dev=1&code=${codes.roles.o1}`);
     await serafina.locator('nav.tabs').getByRole('button', { name: 'Сделки' }).click();
     await expect(serafina.getByText(/Входящее/)).toBeVisible();
-    await serafina.locator('.m-card.hot').getByRole('button', { name: 'Принять' }).click();
+    // Адресат видит, что ему предлагают: название и картинку вещи, а не заглушку «вещь».
+    const incoming = serafina.locator('.m-card.hot');
+    await expect(incoming.locator('.bl li', { hasText: 'Фокус силы' }).locator('img')).toHaveAttribute('src', '/assets/items/focus.jpg');
+    await incoming.getByRole('button', { name: 'Принять' }).click();
+    await expect(serafina.getByRole('dialog')).toContainText('Вы отдаёте: 2 золотых. Вы получаете: Фокус силы.');
     await serafina.getByRole('dialog').getByRole('button', { name: 'Принять' }).click();
     await expect(serafina.getByText('принято')).toBeVisible();
 

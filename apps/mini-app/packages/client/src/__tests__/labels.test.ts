@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { PlayerView } from '@fair/shared';
-import { goldText, offerItem, plural, roman } from '../labels';
+import { countsText, goldText, offerItem, plural, roman } from '../labels';
 
 test('римские номера карт', () => {
   expect([1, 4, 9, 14, 19, 24, 28, 30].map(roman)).toEqual(['I', 'IV', 'IX', 'XIV', 'XIX', 'XXIV', 'XXVIII', 'XXX']);
@@ -20,4 +20,10 @@ test('вещь из предложения берётся из offerItems, не�
   expect(offerItem('m1', v)?.ref).toBe('Семя леса');
   expect(offerItem('x9', v)).toEqual({ kind: 'focus', ref: 'focus' });
   expect(offerItem('zz', v)).toBeUndefined();
+});
+
+test('ресурсы словами для подтверждений', () => {
+  expect(countsText({ gold: 2, ingredients: { ash: 1, moon: 1, dew: 1 } })).toBe('2 золотых, 1 пепел, 1 пыль, 1 роса');
+  expect(countsText({ gold: 1, ingredients: { moon: 0 } })).toBe('1 золотой');
+  expect(countsText({})).toBe('');
 });
