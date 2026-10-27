@@ -16,8 +16,10 @@ export const error = toast;
 /** Текущее время, обновляется раз в секунду: часы акта и обратные отсчёты. */
 export const now = signal(Date.now());
 
-export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events';
+export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events' | 'results';
 export const tab = signal<Tab>('role');
+/** Вкладка «Итоги» уже открывалась сама при первой проекции в revealed: дальше игрок ходит по вкладкам свободно. */
+export const resultsShown = signal(false);
 export type GmTab = 'roster' | 'console';
 export const gmTab = signal<GmTab>('roster');
 /** Имя бота для ссылок-приглашений; приходит из /api/auth. */
@@ -85,6 +87,8 @@ function onView(v: View): void {
     seen = r.seen;
     const text = noticeToast(r.texts);
     if (text) showToast(text);
+    // итоги объявлены: один раз открыть «Итоги» (и сразу, если приложение открыли уже после объявления)
+    if (v.phase === 'revealed' && !resultsShown.value) { resultsShown.value = true; tab.value = 'results'; }
   }
   view.value = v;
   viewAt.value = Date.now();
@@ -102,6 +106,7 @@ function reconnect(token: string): void {
   view.value = null;
   seen = null;
   bagSeenMarks.value = null;
+  resultsShown.value = false;
   status.value = 'connecting';
   connection = connect(token, onView, onStatus);
 }

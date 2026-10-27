@@ -2,10 +2,17 @@ import type { Bundle, GameState, Item, Phase, PlayerView, TargetMode, Want } fro
 import { roleName } from './labels';
 
 const PHASE_LABEL: Record<Phase, string> = {
-  setup: 'Подготовка', act1: 'Акт 1', act2: 'Акт 2', act3: 'Акт 3', closed: 'Закрыто', revealed: 'Закрыто',
+  setup: 'Подготовка', act1: 'Акт 1', act2: 'Акт 2', act3: 'Акт 3', closed: 'Закрыто', revealed: 'Итоги',
 };
 /** Фаза по-русски для верхней полосы. */
 export const phaseLabel = (phase: Phase) => PHASE_LABEL[phase];
+
+/** Ярмарка закрыта: вкладки читаются, действия выключены (спецификация этапа 5, §6.2). */
+export const gameFrozen = (v: PlayerView) => v.phase === 'closed' || v.phase === 'revealed';
+
+/** Кнопка «Выбрать сторону»: свободная роль, сторона ещё не выбрана, первый или второй акт (§6.4). */
+export const canChooseSide = (v: PlayerView) =>
+  v.me.role.side === 'free' && !v.me.player.side && (v.phase === 'act1' || v.phase === 'act2');
 
 /**
  * Сколько осталось до срока по часам ярмарки: ответ на сделку или просьбу, окно торга.

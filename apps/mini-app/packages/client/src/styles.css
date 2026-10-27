@@ -492,3 +492,20 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .gm-mark-row > b { flex: 0 0 86px; overflow-wrap: anywhere; }
 .gm-mark-row > span { flex: 1; min-width: 0; }
 button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: pointer; min-height: 28px; }
+
+/* Этап 5: цели с состоянием, выбор стороны, закрытая ярмарка, «Итоги» */
+.goal-state { display: block; font-size: 13px; font-style: italic; color: var(--note); }
+.goals li.done .goal-state { color: #3f6b2a; }
+.side-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.side-opt:last-child { border-bottom: 0; }
+.side-opt-text { min-width: 0; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.side-opt-text b { display: flex; align-items: center; gap: 8px; }
+.side-opt-text i { width: 8px; height: 8px; background: var(--side, var(--ochre)); transform: rotate(45deg); flex: none; }
+.side-opt-text span { font-size: 14px; font-style: italic; color: var(--note); }
+.frozen-note { margin: 0 6px; padding: 6px 10px; border: 1px solid var(--cinnabar); color: var(--bone-hi); font-style: italic; font-size: 15px; text-align: center; }
+.m-card.outcome h4 { margin: 0 0 6px; font-size: 20px; }
+.achv { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.achv b { font-size: 16px; }
+.achv.ok b { color: #3f6b2a; }
+.achv.no b { color: var(--cinnabar); }
+.results-side { justify-content: flex-start; margin-top: 10px; color: var(--fg); }

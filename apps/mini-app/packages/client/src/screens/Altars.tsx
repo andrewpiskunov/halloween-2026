@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import type { PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
+import { FrozenNote } from '../components/Frozen';
 import { ItemCard } from '../components/ItemCard';
 import { Stepper } from '../components/Stepper';
 import { GOLD, goldText, itemLabel, refKind, refLabel } from '../labels';
@@ -18,6 +19,7 @@ export function Altars({ v }: { v: PlayerView }) {
   return (
     <>
       <h2 class="scr-h">Алтари</h2>
+      <FrozenNote v={v} />
       <p class="m-note altar-rule">Ритуал готов, когда на алтаре три разных осколка, два Фокуса силы и не меньше шести золота от трёх разных игроков. Готов может быть только один алтарь.</p>
       {v.altars.map(a => (
         <AltarCard key={a.side} v={v} a={a} open={open === a.side} toggle={() => setOpen(open === a.side ? null : a.side)} />

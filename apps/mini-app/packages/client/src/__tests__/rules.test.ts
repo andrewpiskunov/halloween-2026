@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { GameState, Item, Offer, PlayerView } from '@fair/shared';
-import { GUISE_MAX, abilityTargets, canOffer, canPutOnAltar, canUseItem, correctableItems, phaseLabel, remainingMs } from '../rules';
+import { GUISE_MAX, abilityTargets, canChooseSide, canOffer, canPutOnAltar, canUseItem, correctableItems, gameFrozen, phaseLabel, remainingMs } from '../rules';
 
 const item = (over: Partial<Item>): Item => ({ id: 'i1', kind: 'shard', ref: 'I', owner: { type: 'player', key: 'o1' }, ...over });
 const view = (act: 0 | 1 | 2 | 3, free: string[]) => ({ act, me: { available: { items: free } } }) as unknown as PlayerView;
@@ -10,7 +10,7 @@ test('верхняя полоса ведущего: фаза по-русски',
   expect(phaseLabel('act1')).toBe('Акт 1');
   expect(phaseLabel('act3')).toBe('Акт 3');
   expect(phaseLabel('closed')).toBe('Закрыто');
-  expect(phaseLabel('revealed')).toBe('Закрыто');
+  expect(phaseLabel('revealed')).toBe('Итоги');
 });
 
 test('обратный отсчёт сделки и просьбы стоит на паузе', () => {
@@ -97,4 +97,25 @@ test('цели способности: «other» без себя, «any» с «�
   expect(any.map(t => t.roleKey)).toEqual(['o15', 'o2', 'o6']);
   expect(abilityTargets(pv({ target: 'none' }))).toEqual([]);
   expect(GUISE_MAX).toBe(40);
+});
+
+/** Проекция для выбора стороны: роль со стороной side, выбранная сторона chosen, фаза phase. */
+const sidePv = (phase: PlayerView['phase'], side: string, chosen?: string) =>
+  ({ phase, me: { role: { side }, player: { side: chosen } } }) as unknown as PlayerView;
+
+test('выбрать сторону может свободный без выбора в первом и втором актах', () => {
+  expect(canChooseSide(sidePv('act1', 'free'))).toBe(true);
+  expect(canChooseSide(sidePv('act2', 'free'))).toBe(true);
+  expect(canChooseSide(sidePv('act1', 'free', 'wake'))).toBe(false);
+  expect(canChooseSide(sidePv('act3', 'free'))).toBe(false);
+  expect(canChooseSide(sidePv('setup', 'free'))).toBe(false);
+  expect(canChooseSide(sidePv('closed', 'free'))).toBe(false);
+  expect(canChooseSide(sidePv('act1', 'wake'))).toBe(false);
+});
+
+test('после закрытия ярмарки игра заморожена', () => {
+  expect(gameFrozen(sidePv('closed', 'wake'))).toBe(true);
+  expect(gameFrozen(sidePv('revealed', 'wake'))).toBe(true);
+  expect(gameFrozen(sidePv('act3', 'wake'))).toBe(false);
+  expect(gameFrozen(sidePv('setup', 'wake'))).toBe(false);
 });

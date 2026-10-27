@@ -1,11 +1,11 @@
 import { useState } from 'preact/hooks';
-import type { ActionRecord, Intel, PlayerView } from '@fair/shared';
+import type { ActionRecord, AltarSide, Intel, PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
 import { Portrait } from '../components/Portrait';
 import { Thumb } from '../components/Thumb';
 import { GOLD, INGREDIENTS, goldText, ingredientName, itemLabel, mmss, ownActionText, roleEmoji, roleName, roman, waitingFor } from '../labels';
-import { remainingMs } from '../rules';
+import { canChooseSide, gameFrozen, remainingMs } from '../rules';
 import { abilityDraft, ask, now, run, tab } from '../store';
 import { AbilityForm } from './AbilityForm';
 
@@ -28,12 +28,22 @@ export function Role({ v }: { v: PlayerView }) {
           <i aria-hidden="true" /><span>{side.name}. {side.motto}</span>
         </div>
       )}
+      <SideChoice v={v} />
       {r.intro && <p class="lead">{r.intro}</p>}
 
       <div class="m-card">
         <h5>Ваши цели</h5>
-        <ul class="goals">{r.goals.map(g => <li key={g}>{g}</li>)}</ul>
-        <p class="m-note">Цели проверяются при закрытии ярмарки.</p>
+        <ul class="goals">
+          {v.me.goals.map((g, i) => (
+            <li key={i} class={g.done ? 'done' : ''}>
+              <span>
+                {g.text}
+                <small class="goal-state">{g.done ? '✓ выполнено' : gameFrozen(v) ? 'не выполнено' : 'пока нет'}{g.byGm && ' · отмечено ведущим'}</small>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {!gameFrozen(v) && <p class="m-note">Считается при закрытии ярмарки</p>}
       </div>
 
       <div class="secret">
@@ -49,7 +59,7 @@ export function Role({ v }: { v: PlayerView }) {
         <p class="text">{r.motivation}</p>
       </div>
 
-      <AbilityCard v={v} />
+      {gameFrozen(v) ? <ClosedCard v={v} /> : <AbilityCard v={v} />}
       <IntelCard v={v} />
       <UsesCard v={v} />
 
@@ -82,6 +92,54 @@ export function Role({ v }: { v: PlayerView }) {
         {r.joke && <p class="m-note">{r.joke}</p>}
       </div>
     </>
+  );
+}
+
+/**
+ * Сторона свободной роли (§6.4): кнопка «Выбрать сторону» до третьего акта, выбор с подтверждением;
+ * после выбора — «Вы выбрали: …», видно только самому игроку.
+ */
+function SideChoice({ v }: { v: PlayerView }) {
+  const [open, setOpen] = useState(false);
+  if (v.me.role.side !== 'free') return null;
+  const chosen = v.me.player.side && v.public.factions.find(f => f.id === v.me.player.side);
+  if (chosen) {
+    return (
+      <div class="side-line" style={{ '--side': chosen.color }}>
+        <i aria-hidden="true" /><span>Вы выбрали: {chosen.name}</span>
+      </div>
+    );
+  }
+  if (!canChooseSide(v)) return null;
+  // только стороны с алтарём в этой игре: без «Корабля», если его нет
+  const present = new Set(v.altars.map(a => a.side));
+  const options = v.public.factions.filter(f => f.id !== 'free' && present.has(f.id as AltarSide));
+  const choose = (side: AltarSide, name: string) => ask({
+    title: `Выбрать сторону: ${name}?`, text: 'Выбор нельзя изменить', okLabel: 'Выбрать', danger: true,
+    onOk: async () => { const res = await run({ type: 'player.chooseSide', side }); if (res.ok) setOpen(false); },
+  });
+  return (
+    <div class="m-card side-choice">
+      <h5>Сторона</h5>
+      <p class="m-note">Вы пока ни на чьей стороне. Выбрать можно один раз, до третьего акта.</p>
+      <div class="m-btns"><Button kind={open ? 'sec' : 'main'} onClick={() => setOpen(!open)}>{open ? 'Свернуть' : 'Выбрать сторону'}</Button></div>
+      {open && options.map(f => (
+        <div class="side-opt" key={f.id} style={{ '--side': f.color }}>
+          <div class="side-opt-text"><b><i aria-hidden="true" />{f.name}</b><span>{f.motto}</span></div>
+          <Button small onClick={() => choose(f.id as AltarSide, f.name)}>Выбрать</Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Вместо способности после закрытия ярмарки (§6.2). */
+function ClosedCard({ v }: { v: PlayerView }) {
+  return (
+    <div class="m-card">
+      <h5>Способность</h5>
+      <p class="ab-state">{v.phase === 'revealed' ? 'Итоги показаны во вкладке „Итоги“' : 'Ведущий подводит итоги'}</p>
+    </div>
   );
 }
 

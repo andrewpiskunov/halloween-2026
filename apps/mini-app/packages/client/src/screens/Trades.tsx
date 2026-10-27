@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Bundle, ConsentRequestView, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
+import { FrozenNote } from '../components/Frozen';
 import { Portrait } from '../components/Portrait';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
@@ -55,6 +56,7 @@ export function Trades({ v }: { v: PlayerView }) {
   return (
     <>
       <h2 class="scr-h">Сделки {waiting && <small>{waiting}</small>}</h2>
+      <FrozenNote v={v} />
 
       {(reqIn.length > 0 || reqOut.length > 0) && <h5 class="sec-h">Просьбы</h5>}
       {reqIn.map(r => <RequestIn key={r.id} v={v} r={r} />)}

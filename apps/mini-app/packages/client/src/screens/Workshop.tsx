@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Counts, Ingredient, PlayerView, Recipe } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
+import { FrozenNote } from '../components/Frozen';
 import { ItemCard } from '../components/ItemCard';
 import { ResCost } from '../components/ResCost';
 import { INGREDIENTS, SHOP_PRICE, countsText, goldText, ingredientName } from '../labels';
@@ -82,6 +83,7 @@ export function Workshop({ v }: { v: PlayerView }) {
       )}
 
       <h2 class="scr-h">Мастерская <small>по {goldText(SHOP_PRICE)} за штуку</small></h2>
+      <FrozenNote v={v} />
       <div class="item-block">
         <h5>Запас мастерской</h5>
         {INGREDIENTS.map(ing => (

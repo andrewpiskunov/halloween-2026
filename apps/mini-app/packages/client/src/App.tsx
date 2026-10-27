@@ -1,12 +1,14 @@
 import type { GmView, PlayerView } from '@fair/shared';
 import { Confirm } from './components/Confirm';
 import { GmTabs } from './components/GmTabs';
-import { Tabs } from './components/Tabs';
+import { Frozen } from './components/Frozen';
+import { Tabs, effectiveTab } from './components/Tabs';
 import { goldText, mmss, plural, roman } from './labels';
-import { phaseLabel } from './rules';
+import { gameFrozen, phaseLabel } from './rules';
 import { Altars } from './screens/Altars';
 import { Bag } from './screens/Bag';
 import { Events } from './screens/Events';
+import { Results } from './screens/Results';
 import { Console } from './screens/gm/Console';
 import { Roster } from './screens/gm/Roster';
 import { Role } from './screens/Role';
@@ -97,21 +99,23 @@ function PlayerApp({ v }: { v: PlayerView }) {
   const dots: Tab[] = [];
   if (v.me.ability.state === 'available') dots.push('role');
   if (marks && marks !== bagSeenMarks.value && tab.value !== 'bag') dots.push('bag');
+  const revealed = v.phase === 'revealed';
   const screen = (() => {
-    switch (tab.value) {
+    switch (effectiveTab(tab.value, revealed)) {
       case 'bag': return <Bag v={v} />;
       case 'trades': return <Trades v={v} />;
       case 'workshop': return <Workshop v={v} />;
       case 'altars': return <Altars v={v} />;
       case 'events': return <Events v={v} />;
+      case 'results': return <Results v={v} />;
       default: return <Role v={v} />;
     }
   })();
   return (
     <>
       <TopBar v={v} gold={v.me.available.gold} />
-      <main class="cnt">{screen}</main>
-      <Tabs badges={{ trades: incoming }} dots={dots} />
+      <main class="cnt"><Frozen.Provider value={gameFrozen(v)}>{screen}</Frozen.Provider></main>
+      <Tabs badges={{ trades: incoming }} dots={dots} revealed={revealed} />
     </>
   );
 }

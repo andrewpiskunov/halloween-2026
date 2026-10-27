@@ -12,16 +12,29 @@ export const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'events', label: 'События', icon: `☽${T}` },
 ];
 
+/** В revealed «Итоги» встают на место «Событий» (спецификация этапа 5, §6.3). */
+const RESULTS_TAB = { key: 'results' as const, label: 'Итоги', icon: `✶${T}` };
+
+/** Вкладки для фазы: в revealed без «Событий», с «Итогами». */
+export const tabsFor = (revealed: boolean) => revealed ? TABS.map(t => t.key === 'events' ? RESULTS_TAB : t) : TABS;
+
+/** Какую вкладку показать: «Итоги» есть только в revealed, «Событий» там нет. */
+export function effectiveTab(t: Tab, revealed: boolean): Tab {
+  if (revealed) return t === 'events' ? 'results' : t;
+  return t === 'results' ? 'role' : t;
+}
+
 /**
  * Нижняя панель вкладок; badges — число на значке вкладки (входящие сделки и просьбы),
  * dots — точка без числа (способность доступна, новая отметка в сумке).
  */
-export function Tabs({ badges = {}, dots = [] }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[] }) {
+export function Tabs({ badges = {}, dots = [], revealed = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean }) {
+  const current = effectiveTab(tab.value, revealed);
   return (
     <nav class="tabs">
       <div class="tabs-in">
-        {TABS.map(t => (
-          <button type="button" key={t.key} class={tab.value === t.key ? 'on' : ''} aria-current={tab.value === t.key ? 'page' : undefined}
+        {tabsFor(revealed).map(t => (
+          <button type="button" key={t.key} class={current === t.key ? 'on' : ''} aria-current={current === t.key ? 'page' : undefined}
             onClick={() => { tab.value = t.key; }}>
             <i aria-hidden="true">{t.icon}{badges[t.key] ? <em class="badge">{badges[t.key]}</em> : dots.includes(t.key) ? <em class="badge dot-only" aria-label="есть новое" /> : null}</i>
             {t.label}
