@@ -110,7 +110,7 @@ describe('checkCoverage', () => {
 describe('сверка проекций: набор ботов', () => {
   const botOf = (g: Game, key: string): BotConn => ({
     actor: { type: 'player', roleKey: key }, view: () => g.view(key), seq: () => g.s.seq,
-    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, maxViewBytes: () => 0, close: () => {},
+    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, content: () => null, maxViewBytes: () => 0, close: () => {},
   });
 
   test('бот без присутствующей роли или роль без бота — ошибка', () => {

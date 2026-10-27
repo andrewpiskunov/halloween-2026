@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { COMMAND_TYPES, viewFor, type Actor, type Command, type GameState } from '@fair/shared';
+import { COMMAND_TYPES, contentData, viewFor, type Actor, type Command, type GameState } from '@fair/shared';
 import { verifyToken } from './auth';
 import type { ServerDeps } from './http';
 
@@ -93,9 +93,11 @@ export function closeWs(wss: WebSocketServer): Promise<void> {
 /** WebSocket /ws?token=…: проекции состояния и приём команд от имени владельца токена. */
 export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
   const { game, content, config, now } = deps;
-  // Проекция ведущего несёт состояние и содержимое целиком: сжатие заметно уменьшает каждое сообщение.
+  // Проекция ведущего несёт состояние целиком, а первое сообщение — содержимое: сжатие заметно уменьшает их.
   const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024, perMessageDeflate: true });
   const conns = new Set<Conn>();
+  // Содержимое не меняется за время работы сервера: сообщение сериализуется один раз на все подключения.
+  const contentMsg = JSON.stringify({ kind: 'content', version: content.version, data: contentData(content) });
 
   const send = (ws: WebSocket, msg: unknown) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); };
 
@@ -121,6 +123,8 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
     if (!game.actorForToken(auth)) { ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
 
     const conn: Conn = { ws, telegramId: auth.telegramId, alive: true, ...(auth.as !== undefined ? { as: auth.as } : {}) };
+    // Протокол един для ведущего и игроков: сначала содержимое, затем первая проекция.
+    ws.send(contentMsg);
     if (!pushView(conn, game.state())) return;
     conns.add(conn);
 

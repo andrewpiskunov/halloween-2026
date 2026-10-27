@@ -16,7 +16,7 @@ import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
 import { Workshop } from './screens/Workshop';
 import { useEffect } from 'preact/hooks';
-import { backToGm, bagSeenMarks, gmTab, now, playingAs, status, tab, toast, view, viewAt, type Tab } from './store';
+import { backToGm, bagSeenMarks, content, gmTab, now, playingAs, status, tab, toast, view, viewAt, type Tab } from './store';
 
 /** Корень: экран статуса до первой проекции, дальше маршрут по view.kind. */
 export function App() {
@@ -28,7 +28,8 @@ export function App() {
   if (s === 'no_auth') return <Notice icon="✉" text="Откройте приложение из Telegram" />;
   if (s === 'unauthorized') return <Notice icon="✠" text="Вход не удался. Откройте приложение из Telegram заново" />;
   if (s === 'no_role') return <Notice icon="☉" text="Роль не найдена, обратитесь к ведущему" />;
-  if (!v) return <Notice icon="☽" text="Подключение к ярмарке…" />;
+  // Экраны ведущего читают содержимое: до сообщения content ждём так же, как до первой проекции.
+  if (!v || (v.kind === 'gm' && content.value === null)) return <Notice icon="☽" text="Подключение к ярмарке…" />;
   return (
     <div class="app">
       {as && v.kind === 'player' && (

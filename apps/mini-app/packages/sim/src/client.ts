@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
-import type { Actor, Command, GmView, PlayerView } from '@fair/shared';
+import type { Actor, Command, ContentData, GmView, PlayerView } from '@fair/shared';
 
 /** Ответ сервера на команду и время от отправки до ответа. */
 export interface CmdOutcome { ok: boolean; seq?: number; error?: string; detail?: string; ms: number }
@@ -9,6 +9,8 @@ export interface CmdOutcome { ok: boolean; seq?: number; error?: string; detail?
 export interface BotConn {
   readonly actor: Actor;
   view(): PlayerView | GmView;
+  /** Содержимое из сообщения content (сервер шлёт его первым); null — не приходило. */
+  content(): ContentData | null;
   seq(): number;
   send(cmd: Command, timeoutMs?: number): Promise<CmdOutcome>;
   waitSeq(seq: number, timeoutMs?: number): Promise<void>;
@@ -17,6 +19,7 @@ export interface BotConn {
 }
 
 type ServerMsg =
+  | { kind: 'content'; version: string; data: ContentData }
   | { kind: 'view'; seq: number; view: PlayerView | GmView }
   | { kind: 'result'; id: string | null; ok: boolean; seq?: number; error?: string; detail?: string };
 
@@ -48,6 +51,7 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
   const ws = new WebSocket(wsUrl);
 
   let lastView: PlayerView | GmView | undefined;
+  let lastContent: ContentData | null = null;
   let lastSeq = -1;
   let maxBytes = 0;
   let nextId = 0;
@@ -77,6 +81,7 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
       ws.close();
       return;
     }
+    if (msg.kind === 'content') { lastContent = msg.data; return; }
     if (msg.kind === 'view') {
       maxBytes = Math.max(maxBytes, Buffer.byteLength(text));
       lastView = msg.view;
@@ -107,6 +112,7 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
   return {
     actor,
     view: () => lastView!,
+    content: () => lastContent,
     seq: () => lastSeq,
     send(cmd: Command, timeoutMs = SEND_TIMEOUT_MS): Promise<CmdOutcome> {
       if (closed) return Promise.reject(closed);

@@ -1,5 +1,5 @@
 import type { AbilityKind, CopyableKind, TargetMode } from './abilities';
-import type { Clue, Content, ContentData, Faction, Recipe, Resource, Role } from './content';
+import type { Clue, Content, Faction, Recipe, Resource, Role } from './content';
 import type { Actor } from './commands';
 import { available } from './engine';
 import type {
@@ -61,7 +61,8 @@ export interface PlayerView {
 }
 
 export interface GmView {
-  kind: 'gm'; state: GameState; content: ContentData;
+  /** Содержимое приходит отдельным сообщением `content` при подключении; здесь только его версия. */
+  kind: 'gm'; state: GameState; contentVersion: string;
   invites: { roleKey: string; code: string; bound: boolean; present: boolean }[];
   /** state содержит requests и actions целиком; здесь каталог способностей всех ролей. */
   abilities: Record<string, { kind: AbilityKind; hostile: boolean; verbal: boolean; name: string }>;
@@ -95,9 +96,8 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
 export function viewFor(state: GameState, content: Content, actor: Actor, now: number): PlayerView | GmView {
   if (actor.type === 'system') throw new Error('system actor has no view');
   if (actor.type === 'gm') {
-    const { roleByKey: _r, recipeById: _rc, ...data } = content;
     return {
-      kind: 'gm', state, content: data,
+      kind: 'gm', state, contentVersion: content.version,
       invites: state.roster.map(roleKey => ({
         roleKey,
         code: state.invites[roleKey],

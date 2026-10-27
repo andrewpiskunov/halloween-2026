@@ -117,12 +117,14 @@ export class Ctx {
     return s.roster.filter(k => s.players[k]?.present);
   }
 
-  /** Вход ведущего по коду ведущего; содержимое берётся из его проекции. */
+  /** Вход ведущего по коду ведущего; содержимое берётся из сообщения content его подключения. */
   async loginGm(): Promise<void> {
     const codes = await fetchCodes(this.opts.baseUrl);
     this.gm = await this.authed('gm', GM_USER_ID, codes.gm);
     this.everyBot.push(this.gm);
-    this.content = loadContent((this.gm.view() as GmView).content);
+    const data = this.gm.content();
+    if (!data) throw new Error('ведущий не получил содержимое при подключении');
+    this.content = loadContent(data);
   }
 
   /** Вход игрока; успешный вход с ролью засчитывается как player.bind (§2.1). */

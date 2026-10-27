@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { AltarSide, Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
+import type { AltarSide, ContentData, Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
@@ -11,7 +11,7 @@ import { itemImageUrl, resourceImageUrl } from '../../assets';
 import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
 import { correctableItems, remainingMs } from '../../rules';
 import { openExternal } from '../../api';
-import { ask, exportUrl, gmTab, hasOwnToken, now, run, showToast } from '../../store';
+import { ask, exportUrl, gmTab, hasOwnToken, loadedContent, now, run, showToast } from '../../store';
 
 type Field = 'gold' | 'ingredient' | 'itemOwner' | 'side' | 'goal' | MarkField;
 /** Ручная отметка цели: выполнено, не выполнено или снять отметку (считать по журналу). */
@@ -140,7 +140,7 @@ export function Console({ v }: { v: GmView }) {
 }
 
 /** Название вещи по содержимому для пульта: улики и изделия по имени, осколки и реликвии по ref. */
-function gmItemName(it: { kind: string; ref: string }, content: GmView['content']): string {
+function gmItemName(it: { kind: string; ref: string }, content: ContentData): string {
   if (it.kind === 'shard') return `Осколок ${it.ref}`;
   if (it.kind === 'clue') return content.clues.find(c => c.id === it.ref)?.name ?? `Улика ${it.ref}`;
   if (it.kind === 'relic') return it.ref;
@@ -149,7 +149,8 @@ function gmItemName(it: { kind: string; ref: string }, content: GmView['content'
 
 /** Лоты текущей ярмарки: открыть торг, открыть ставки, завершить; счёт ставок и итог. */
 function Lots({ v }: { v: GmView }) {
-  const { state, content } = v;
+  const { state } = v;
+  const content = loadedContent();
   const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
   const clock = { paused: state.clock.pausedAt !== undefined, pausedAt: state.clock.pausedAt };
   const lots = Object.values(state.lots).filter(l => l.status !== 'queued');
@@ -208,7 +209,8 @@ const LOT_STATUS: Record<string, string> = {
 };
 
 function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
-  const { state, content } = v;
+  const { state } = v;
+  const content = loadedContent();
   const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
   const [player, setPlayer] = useState(state.roster[0] ?? '');
   const [field, setField] = useState<Field>('gold');

@@ -8,7 +8,7 @@ import type { Game } from './game';
 export interface Export { exportedAt: number; contentVersion: string; events: Event[]; state: GameState }
 
 /**
- * Убирает личные данные (спек §5): telegramId игроков и ведущего, привязки, код ведущего и коды приглашений.
+ * Убирает личные данные (спек §5): telegramId игроков и ведущего, привязки, код ведущего (и пересданный) и коды приглашений.
  * Необязательные поля удаляются, обязательные (коды, привязки) становятся пустыми. Входы не меняются.
  */
 export function stripPersonal(events: Event[], state: GameState): { events: Event[]; state: GameState } {
@@ -18,7 +18,7 @@ export function stripPersonal(events: Event[], state: GameState): { events: Even
     else if (e.type === 'FairOpened') for (const p of Object.values(e.players)) delete p.telegramId;
     else if (e.type === 'SessionCreated') e.codes = {};
     else if (e.type === 'SessionReset') { e.codes = {}; delete e.gmTelegramId; }
-    else if (e.type === 'InviteRebound') e.code = '';
+    else if (e.type === 'InviteRebound' || e.type === 'GmReissued') e.code = '';
   }
   const outState = structuredClone(state);
   delete outState.gmTelegramId;

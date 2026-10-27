@@ -3,13 +3,14 @@ import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Portrait } from '../../components/Portrait';
 import { lotsPreview } from '../../gm/lots';
-import { ask, botName, playAs, run, showToast } from '../../store';
+import { ask, botName, loadedContent, playAs, run, showToast } from '../../store';
 
 const inviteLink = (code: string) => `https://t.me/${botName.value}?startapp=${code}`;
 
 /** Состав: сколько игроков, кто в составе, кто пришёл, ссылки-приглашения и открытие ярмарки. */
 export function Roster({ v }: { v: GmView }) {
-  const { state, content, invites } = v;
+  const { state, invites } = v;
+  const content = loadedContent();
   const setup = state.phase === 'setup';
   const [n, setN] = useState(String(Math.min(30, Math.max(12, state.roster.length || 12))));
   const [shownLink, setShownLink] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function Roster({ v }: { v: GmView }) {
   };
 
   const open = () => {
-    const lots = lotsPreview(v);
+    const lots = lotsPreview(v, content);
     ask({
       title: 'Открыть ярмарку?',
       text: `Пришли: ${presentCount} из ${state.roster.length}. ` +

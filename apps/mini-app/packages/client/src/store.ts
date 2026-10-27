@@ -1,5 +1,5 @@
 import { computed, signal } from '@preact/signals';
-import type { Command } from '@fair/shared';
+import type { Command, ContentData } from '@fair/shared';
 import { auth, authAs, connect, exportUrlFor, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
 import { collectNotices, noticeToast, type Seen } from './notices';
 import { nextTab } from './rules';
@@ -7,6 +7,8 @@ import { BASE } from './base';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
+/** Содержимое игры из сообщения content; приходит до первой проекции на каждом подключении. */
+export const content = signal<ContentData | null>(null);
 /** Когда пришла проекция (часы клиента): от него идут часы акта. */
 export const viewAt = signal(0);
 export const status = signal<Status>('connecting');
@@ -111,6 +113,21 @@ function onView(v: View): void {
   viewAt.value = Date.now();
 }
 
+/** Содержимое при каждом подключении: версия могла смениться после перезапуска сервера, берётся новое. */
+function onContent(data: ContentData): void {
+  content.value = data;
+}
+
+/**
+ * Содержимое для экранов ведущего. Корень показывает их только после прихода содержимого,
+ * поэтому null здесь — ошибка порядка отрисовки.
+ */
+export function loadedContent(): ContentData {
+  const c = content.value;
+  if (!c) throw new Error('содержимое ещё не пришло');
+  return c;
+}
+
 /** Соединение рвётся или меняется: первая проекция после него только запоминается. */
 function onStatus(s: Status): void {
   if (s !== 'open') seen = null;
@@ -124,7 +141,7 @@ function reconnect(token: string): void {
   seen = null;
   bagSeenMarks.value = null;
   status.value = 'connecting';
-  connection = connect(token, onView, onStatus);
+  connection = connect(token, onView, onStatus, { onContent });
 }
 
 /** Ведущий открывает экраны игрока и действует от его имени. */
@@ -153,7 +170,7 @@ export async function start(): Promise<void> {
     const { token, botName: bot } = await auth();
     botName.value = bot;
     ownToken = token;
-    connection = connect(token, onView, onStatus);
+    connection = connect(token, onView, onStatus, { onContent });
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
     if (msg === 'no_auth') status.value = 'no_auth';

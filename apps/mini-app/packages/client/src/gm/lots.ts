@@ -1,4 +1,4 @@
-import type { GmView } from '@fair/shared';
+import type { ContentData, GmView } from '@fair/shared';
 
 const present = (v: GmView, key: string): boolean =>
   v.state.roster.includes(key) && !!v.state.players[key]?.present;
@@ -10,15 +10,15 @@ const CLUE_OWNERS: { id: string; owner: string }[] = [
 ];
 
 /** Какие вещи уйдут в лоты при открытии ярмарки: осколки и улики без пришедшего владельца, реликвии без владельца, но с желающим. */
-export function lotsPreview(v: GmView): string[] {
+export function lotsPreview(v: GmView, content: Pick<ContentData, 'shards' | 'relics'>): string[] {
   const out: string[] = [];
-  for (const sh of v.content.shards) {
+  for (const sh of content.shards) {
     if (sh.owner && !present(v, sh.owner)) out.push(`Осколок ${sh.id}`);
   }
   for (const c of CLUE_OWNERS) {
     if (!present(v, c.owner)) out.push(`Улика ${c.id}`);
   }
-  for (const r of v.content.relics) {
+  for (const r of content.relics) {
     if (!present(v, r.owner) && r.wants.some(w => v.state.roster.includes(w))) out.push(r.name);
   }
   return out;

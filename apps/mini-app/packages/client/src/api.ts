@@ -1,4 +1,4 @@
-import type { Actor, Command, GmView, PlayerView } from '@fair/shared';
+import type { Actor, Command, ContentData, GmView, PlayerView } from '@fair/shared';
 import { BASE } from './base';
 
 /** Коды ошибок команд, которые присылает сервер. */
@@ -26,6 +26,8 @@ export interface ConnectOptions {
   delays?: number[];
   /** Начало адреса WebSocket, например `wss://example.org`; по умолчанию из `location`. */
   base?: string;
+  /** Содержимое игры: сервер присылает его первым сообщением каждого подключения. */
+  onContent?: (data: ContentData) => void;
 }
 
 interface TelegramWebApp { initData?: string; ready(): void; expand(): void; openLink?(url: string): void }
@@ -97,7 +99,7 @@ export function connect(
   token: string,
   onView: (view: View) => void,
   onStatus: (status: Status) => void,
-  { WebSocketImpl = WebSocket, delays = DEFAULT_DELAYS, base = defaultBase() }: ConnectOptions = {},
+  { WebSocketImpl = WebSocket, delays = DEFAULT_DELAYS, base = defaultBase(), onContent }: ConnectOptions = {},
 ): Connection {
   const pending = new Map<string, { resolve: (r: CmdResult) => void; cmd: Command }>();
   const url = `${base}${BASE}ws?token=${encodeURIComponent(token)}`;
@@ -132,6 +134,7 @@ export function connect(
       let msg: any;
       try { msg = JSON.parse(String(ev.data)); } catch { return; }
       if (msg?.kind === 'view') onView(msg.view as View);
+      else if (msg?.kind === 'content') onContent?.(msg.data as ContentData);
       else if (msg?.kind === 'result' && typeof msg.id === 'string') {
         const entry = pending.get(msg.id);
         if (!entry) return;

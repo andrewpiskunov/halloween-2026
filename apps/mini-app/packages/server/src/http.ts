@@ -1,3 +1,4 @@
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Content } from '@fair/shared';
 import type { Config } from './config';
@@ -37,12 +38,35 @@ function exportToken(header: string | undefined, query: unknown): string | undef
   return typeof q === 'string' && q ? q : undefined;
 }
 
+const sha256 = (s: string) => createHash('sha256').update(s).digest();
+
+/** Секрет администратора совпадает с SESSION_SECRET; сравнение по хэшам постоянно по времени и не зависит от длины. */
+function adminSecretOk(header: unknown, secret: string): boolean {
+  if (typeof header !== 'string' || !header || !secret) return false;
+  return timingSafeEqual(sha256(header), sha256(secret));
+}
+
 /** HTTP API: здоровье, вход, выгрузка журнала и (только в разработке) коды приглашений. */
 export function buildApp(deps: ServerDeps): FastifyInstance {
   const { game, config, now } = deps;
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
 
-  app.get('/api/health', async () => ({ ok: true, seq: game.state().seq }));
+  // Память нужна нагрузочному прогону; в бою не раскрывается.
+  app.get('/api/health', async () => {
+    const health = { ok: true, seq: game.state().seq };
+    if (!config.allowDevAuth) return health;
+    const { rss, heapUsed } = process.memoryUsage();
+    return { ...health, memory: { rss, heapUsed } };
+  });
+
+  // Пересдача кода ведущего (спек этапа 7, §6): с сервера, по SESSION_SECRET. Старые подключения
+  // ведущего закрываются сами: pushView не находит актёра и закрывает сокет кодом 4403.
+  app.post('/api/admin/gm-reissue', async (req, reply) => {
+    if (!adminSecretOk(req.headers['x-admin-secret'], config.sessionSecret)) return reply.code(403).send({ error: 'forbidden' });
+    const r = await game.submit(randomUUID(), { type: 'gm.reissue' }, { type: 'system' });
+    if (!r.ok) return reply.code(500).send({ error: r.error });
+    return { code: game.gmCode() };
+  });
 
   app.post('/api/auth', async (req, reply) => {
     const body = (req.body ?? {}) as AuthBody;

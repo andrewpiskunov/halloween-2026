@@ -24,6 +24,8 @@ class Client {
   private waiters: { pred: (m: Msg) => boolean; resolve: (m: Msg) => void }[] = [];
   readonly opened: Promise<void>;
   readonly closed: Promise<number>;
+  /** Все сообщения по порядку прихода: для проверки, что первым идёт содержимое. */
+  readonly log: Msg[] = [];
 
   constructor(url: string) {
     this.ws = new WebSocket(url);
@@ -31,6 +33,7 @@ class Client {
     this.closed = new Promise(resolve => this.ws.once('close', code => resolve(code)));
     this.ws.on('message', data => {
       const m = JSON.parse(String(data)) as Msg;
+      this.log.push(m);
       const w = this.waiters.find(x => x.pred(m));
       if (w) { this.waiters = this.waiters.filter(x => x !== w); w.resolve(m); } else this.inbox.push(m);
     });
@@ -124,7 +127,7 @@ afterAll(async () => {
 
 test('health отдаёт seq; гость без роли получает токен и actor null', async () => {
   const health = await (await fetch(`${base}/api/health`)).json();
-  expect(health).toEqual({ ok: true, seq: game.state().seq });
+  expect(health).toMatchObject({ ok: true, seq: game.state().seq });
   const guest = await devAuth(5555);
   expect(guest.actor).toBeNull();
   expect(typeof guest.token).toBe('string');
@@ -222,16 +225,30 @@ test('ability.use с мусором в use → invalid, сокет жив, со�
   expect(o6.ws.readyState).toBe(WebSocket.OPEN);
 });
 
-test('ведущий по WS получает GmView', async () => {
+test('ведущий по WS получает GmView: первым сообщение content, затем проекция без содержимого', async () => {
   const { token } = await devAuth(1000);
   const c = connect(token);
   const v = await c.next(m => m.kind === 'view');
-  expect((v.view as { kind: string }).kind).toBe('gm');
+  expect(c.log.map(m => m.kind).slice(0, 2)).toEqual(['content', 'view']);
+  const first = c.log[0] as { kind: string; version: string; data: Record<string, unknown> };
+  expect(first.version).toBe(content.version);
+  expect(Array.isArray(first.data.roles)).toBe(true);
+  expect(first.data).not.toHaveProperty('roleByKey');
+  expect(first.data).not.toHaveProperty('recipeById');
+  const view = v.view as Record<string, unknown>;
+  expect(view.kind).toBe('gm');
+  expect(view).not.toHaveProperty('content');
+  expect(view.contentVersion).toBe(content.version);
   // Проекция ведущего крупная: сжатие договаривается при подключении.
   expect(c.ws.extensions).toContain('permessage-deflate');
-  const sent = (v.view as { content: Record<string, unknown> }).content;
-  expect(sent).not.toHaveProperty('roleByKey');
-  expect(sent).not.toHaveProperty('recipeById');
+});
+
+test('игрок тоже получает content первым сообщением', async () => {
+  const codes = await (await fetch(`${base}/api/dev/codes`)).json() as { roles: Record<string, string> };
+  const c = connect((await devAuth(1002, codes.roles.o2)).token);
+  await c.next(m => m.kind === 'view');
+  expect(c.log.map(m => m.kind).slice(0, 2)).toEqual(['content', 'view']);
+  expect(c.log[0].version).toBe(content.version);
 });
 
 test('невалидный token → закрытие 4401', async () => {

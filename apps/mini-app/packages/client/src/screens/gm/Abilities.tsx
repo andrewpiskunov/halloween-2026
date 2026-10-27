@@ -5,7 +5,7 @@ import { Select } from '../../components/Select';
 import { actionLine, filterActions, requestLine } from '../../gm/actions';
 import { mmss, nameCase } from '../../labels';
 import { remainingMs } from '../../rules';
-import { ask, now, run, showToast } from '../../store';
+import { ask, loadedContent, now, run, showToast } from '../../store';
 
 /** Отметка, которую можно снять исправлением: поле `gm.correct` из §6.7. */
 export type MarkField = 'protection' | 'thorns' | 'curse' | 'discount' | 'abilityUsed' | 'hostileAttempt' | 'guise';
@@ -17,7 +17,8 @@ const JOURNAL_LIMIT = 30;
 
 /** Блок пульта «Способности и вещи» (§7.6): журнал применений, открытые просьбы, отметки игроков. */
 export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => void }) {
-  const { state, content } = v;
+  const { state } = v;
+  const content = loadedContent();
   const name = (k: string) => (k === 'gm' ? 'ведущий' : content.roles.find(r => r.key === k)?.name ?? k);
   const [player, setPlayer] = useState('');
   const [hostileOnly, setHostileOnly] = useState(false);
@@ -70,7 +71,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         : (
           <div class="gm-journal">
             {shown.map(a => (
-              <div key={a.id} class={`gm-act ${a.outcome === 'blocked' ? 'blocked' : ''} ${a.hostile ? 'hostile' : ''}`}>{actionLine(a, v)}</div>
+              <div key={a.id} class={`gm-act ${a.outcome === 'blocked' ? 'blocked' : ''} ${a.hostile ? 'hostile' : ''}`}>{actionLine(a, v, content)}</div>
             ))}
           </div>
         )}
@@ -80,7 +81,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
 
       <h6>Открытые просьбы</h6>
       {requests.length === 0 ? <p class="m-note">Открытых просьб нет.</p> : requests.map(r => {
-        const text = requestLine(r, v);
+        const text = requestLine(r, v, content);
         const waiting = r.approvers.filter(k => !r.approved.includes(k));
         return (
           <div class="gm-req" key={r.id}>

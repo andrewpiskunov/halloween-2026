@@ -38,7 +38,7 @@ function allCodes(store: EventStore): string[] {
   const codes: string[] = [];
   for (const e of store.all()) {
     if (e.type === 'SessionCreated' || e.type === 'SessionReset') codes.push(...Object.values(e.codes));
-    if (e.type === 'InviteRebound') codes.push(e.code);
+    if (e.type === 'InviteRebound' || e.type === 'GmReissued') codes.push(e.code);
   }
   return codes;
 }
@@ -161,6 +161,23 @@ test('stripPersonal не меняет входы, а после сброса ч�
   expect(exp).toMatchObject({ exportedAt: 42, contentVersion: content.version });
   expect(exp.events.length).toBe(events.length);
   expectClean(JSON.stringify(exp), [...allCodes(st), g.gmCode()]);
+  st.close();
+});
+
+test('stripPersonal чистит код из GmReissued: нового кода ведущего нет в выгрузке', async () => {
+  const st = new EventStore(':memory:');
+  const g = Game.open(st, content, opts());
+  await g.bindByCode(g.gmCode(), GM_ID);
+  await must(g, { type: 'session.setN', n: 12 });
+  const r = await g.submit(nextCmd(), { type: 'gm.reissue' }, { type: 'system' });
+  expect(r.ok).toBe(true);
+  const code = g.gmCode();
+  const stripped = stripPersonal(st.all(), g.state());
+  const reissued = stripped.events.find(e => e.type === 'GmReissued');
+  expect(reissued).toMatchObject({ type: 'GmReissued', code: '' });
+  const text = JSON.stringify(buildExport(st, g, content, () => 42));
+  expect(text).not.toContain(code);
+  expectClean(text, [...allCodes(st), code]);
   st.close();
 });
 

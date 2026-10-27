@@ -58,6 +58,19 @@ describe('connect', () => {
     expect(statuses).toContain('open');
   });
 
+  test('сообщение content уходит в onContent, а не в проекции', () => {
+    const contents: unknown[] = [];
+    const views: unknown[] = [];
+    connect('t', v => views.push(v), () => {}, {
+      WebSocketImpl: FakeWebSocket as unknown as typeof WebSocket, base: 'ws://test', onContent: d => contents.push(d),
+    });
+    last().open();
+    last().receive({ kind: 'content', version: '0.2', data: { roles: [] } });
+    last().receive({ kind: 'view', seq: 1, view: { kind: 'gm' } });
+    expect(contents).toEqual([{ roles: [] }]);
+    expect(views).toEqual([{ kind: 'gm' }]);
+  });
+
   test('send возвращает результат с совпадающим id', async () => {
     const { conn } = setup();
     last().open();

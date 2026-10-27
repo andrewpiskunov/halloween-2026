@@ -1,7 +1,7 @@
 import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { OUTCOME_TEXTS, OUTCOME_TITLES, altarChecklist, altarName, altarRows, closeBlock, playerSummary } from '../../gm/closing';
-import { ask, run, showToast } from '../../store';
+import { ask, loadedContent, run, showToast } from '../../store';
 
 /** Текст подтверждения закрытия (спецификация этапа 5, §6.5). */
 const CLOSE_TEXT = 'Сделки и просьбы отменятся, лоты закроются, инвентари заморозятся. Ярмарку нельзя будет открыть снова';
@@ -11,7 +11,8 @@ const CLOSE_TEXT = 'Сделки и просьбы отменятся, лоты 
  * после — алтари, исход с текстом для чтения вслух, предупреждения, «Правда», сводка и показ результатов.
  */
 export function Results({ v }: { v: GmView }) {
-  const { state, content } = v;
+  const { state } = v;
+  const content = loadedContent();
   const c = state.closing;
   if (!c) return <BeforeClose v={v} />;
   const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
@@ -74,7 +75,8 @@ export function Results({ v }: { v: GmView }) {
 
 /** До закрытия: предпросмотр алтарей и кнопка «Закрыть ярмарку» с пояснением, если закрыть нельзя. */
 function BeforeClose({ v }: { v: GmView }) {
-  const { state, content } = v;
+  const { state } = v;
+  const content = loadedContent();
   const block = closeBlock(state);
   const list = altarChecklist(state, content);
   return (
