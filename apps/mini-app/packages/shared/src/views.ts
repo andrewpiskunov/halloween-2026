@@ -6,6 +6,9 @@ import type {
   ActionRecord, AltarSide, Announcement, ConsentStatus, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player,
 } from './types';
 import { abilityView, actionsFor, gmAbilities, requestsFor } from './views-abilities';
+import { closingFor, goalsFor, type ClosingView, type GoalView } from './views-closing';
+
+export type { ClosingView, GoalView } from './views-closing';
 
 export interface AbilityView {
   name: string; text: string;            // из роли: skill, effect
@@ -28,7 +31,11 @@ export interface ConsentRequestView {
 
 export interface PlayerView {
   kind: 'player'; phase: Phase; act: 0 | 1 | 2 | 3; clock: { elapsedMs: number; paused: boolean; pausedAt?: number };
-  me: { role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] }; ability: AbilityView };
+  me: {
+    role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] }; ability: AbilityView;
+    /** Мои цели в порядке role.goals: предпросмотр до закрытия, итог после. */
+    goals: GoalView[];
+  };
   contacts: { role: string | null; name?: string; text: string; absent: boolean }[];
   /** guise: облик присутствующего после Камня, виден всем. */
   others: { roleKey: string; name: string; title: string; emoji: string; guise?: string }[];
@@ -49,6 +56,8 @@ export interface PlayerView {
   requests: ConsentRequestView[];
   /** Записи журнала применений, где я автор или цель (или from/to переноса). */
   actions: ActionRecord[];
+  /** Итоги ярмарки: только в revealed. */
+  closing?: ClosingView;
 }
 
 export interface GmView {
@@ -135,6 +144,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     }
   }
 
+  const closing = closingFor(state, content, key);
+
   return {
     kind: 'player',
     phase: state.phase,
@@ -148,6 +159,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       items: items.filter(i => i.owner.type === 'player' && i.owner.key === key),
       available: available(state, key),
       ability: abilityView(state, content, key),
+      goals: goalsFor(state, content, key),
     },
     contacts: role.contacts.map(c => ({
       role: c.role,
@@ -183,5 +195,6 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     },
     requests: requestsFor(state, key),
     actions: actionsFor(state, key),
+    ...(closing ? { closing } : {}),
   };
 }

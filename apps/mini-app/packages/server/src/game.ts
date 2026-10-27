@@ -113,8 +113,13 @@ export class Game {
     return () => { this.subscribers.delete(fn); };
   }
 
-  /** Закрывает просроченные предложения, запросы согласия и окна ставок; вызывать раз в секунду. На паузе сроки стоят (спек §10). */
+  /**
+   * Закрывает просроченные предложения, запросы согласия и окна ставок; вызывать раз в секунду. На паузе сроки стоят (спек §10).
+   * После закрытия ярмарки (closed, revealed) сроков нет: tick ничего не делает.
+   */
   tick(): void {
+    const { phase } = this.current;
+    if (phase !== 'act1' && phase !== 'act2' && phase !== 'act3') return;
     if (this.current.clock.pausedAt !== undefined) return;
     const now = this.opts.now();
     for (const o of Object.values(this.current.offers)) {

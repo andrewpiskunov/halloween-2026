@@ -296,6 +296,21 @@ test('ведущий получает токен «за игрока» и вид
   expect((await as('мусор', 'o6')).status).toBe(401);
 });
 
+test('закрытие по сокету: session.close от игрока → forbidden; player.chooseSide с неизвестной стороной → not_found; событий нет', async () => {
+  // Привязка Грима по коду — событие; считаем события после неё.
+  const codes = await (await fetch(`${base}/api/dev/codes`)).json() as { roles: Record<string, string> };
+  const grim = connect((await devAuth(1013, codes.roles.o13)).token);
+  await grim.opened;
+  const count = store.all().length;
+  expect(await o6.cmd('close-1', { type: 'session.close' })).toMatchObject({ ok: false, error: 'forbidden' });
+  expect(await o6.cmd('reveal-1', { type: 'session.reveal' })).toMatchObject({ ok: false, error: 'forbidden' });
+  // Грим свободный: сторона 'x' проходит разбор сообщения (короткая строка) и отклоняется движком.
+  expect(await grim.cmd('side-1', { type: 'player.chooseSide', side: 'x' })).toMatchObject({ ok: false, error: 'not_found' });
+  // Нестроковая сторона отсекается на разборе как ключевое поле.
+  expect(await grim.cmd('side-2', { type: 'player.chooseSide', side: 1 })).toMatchObject({ ok: false, error: 'invalid', detail: 'bad message' });
+  expect(store.all().length).toBe(count);
+});
+
 // Последний тест файла: после сброса состояние общей игры начальное.
 test('session.reset от ведущего: игроки теряют роль и соединение, ведущий получает проекцию setup, коды новые', async () => {
   const gmAuth = await devAuth(1000);

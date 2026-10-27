@@ -1,8 +1,9 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { viewFor, type GmView, type PlayerView } from '../views';
 import type { AbilityUse, Actor, Command } from '../commands';
 import type { GameState } from '../types';
-import { allBut, content, gm, makeGame, player, run, system } from './helpers';
+import { OUTCOME_TEXTS, OUTCOME_TITLES } from '../closing-texts';
+import { Fair, allBut, content, gm, makeGame, player, run, system, wakeReady } from './helpers';
 
 const pv = (v: unknown) => v as PlayerView;
 
@@ -283,4 +284,74 @@ test('GmView.abilities: все роли содержимого с видом, в
   expect(Object.keys(v.abilities).sort()).toEqual(content.roles.map(r => r.key).sort());
   expect(v.abilities.o8).toEqual({ kind: 'stealGold', hostile: true, verbal: false, name: content.roleByKey.o8.skill });
   expect(v.abilities.r5).toMatchObject({ kind: 'askYesNo', verbal: true, hostile: false });
+});
+
+describe('цели и итоги закрытия', () => {
+  /** Состав 12 в третьем акте с готовым алтарём wake. */
+  function readyFair(): Fair {
+    const f = new Fair(makeGame(12));
+    wakeReady(f);
+    f.nextAct();
+    f.nextAct();
+    expect(f.s.phase).toBe('act3');
+    return f;
+  }
+
+  test('me.goals: предпросмотр у Грима в act1, золото +6 выполняет первую цель', () => {
+    const f = new Fair(makeGame(12));
+    expect(f.s.phase).toBe('act1');
+    const goals = () => pv(viewFor(f.s, content, player('o13'), 0)).me.goals;
+    expect(goals()).toEqual(content.roleByKey.o13.goals.map(text => ({ text, done: false, byGm: false })));
+    expect(goals()).toHaveLength(2);
+    f.addGold('o13', 6);
+    expect(goals().map(g => g.done)).toEqual([true, false]);
+  });
+
+  test('me.goals: ручная отметка ведущего — byGm и done из отметки', () => {
+    const f = new Fair(makeGame(12));
+    const s = { ...f.s, players: { ...f.s.players, o13: { ...f.s.players.o13, goalOverrides: [null, true] as [null, boolean] } } };
+    expect(pv(viewFor(s, content, player('o13'), 0)).me.goals.map(g => [g.done, g.byGm])).toEqual([[false, false], [true, true]]);
+  });
+
+  test('closing: нет до reveal, в closed цели из state.closing; в revealed исход, тексты и моя сторона', () => {
+    const f = readyFair();
+    f.run({ type: 'session.close' }, gm);
+    expect(f.s.phase).toBe('closed');
+    const closed = pv(viewFor(f.s, content, player('o1'), 0));
+    expect(closed).not.toHaveProperty('closing');
+    expect(closed.me.ability.state).toBe('closed');
+    // в closed цели берутся из итогов, а не пересчитываются
+    const fixed = { ...f.s, closing: { ...f.s.closing!, players: { ...f.s.closing!.players, o1: { ...f.s.closing!.players.o1, goals: [true, true] as [boolean, boolean] } } } };
+    expect(pv(viewFor(fixed, content, player('o1'), 0)).me.goals.map(g => g.done)).toEqual([true, true]);
+
+    f.run({ type: 'session.reveal' }, gm);
+    const v = pv(viewFor(f.s, content, player('o1'), 0));
+    expect(v.me.ability.state).toBe('closed');
+    expect(v.closing).toEqual({
+      outcome: 'wake', title: OUTCOME_TITLES.wake, text: OUTCOME_TEXTS.wake,
+      truthTold: f.s.closing!.truthHolder !== undefined,
+      me: { outcome: true, truth: f.s.closing!.players.o1.truth, side: 'wake' },
+    });
+    expect(pv(viewFor(f.s, content, player('o13'), 0)).closing?.me).toEqual({ outcome: false, truth: false, side: 'free' });
+  });
+
+  test('revealed: чужие цели, truthHolder и чужие итоги не попадают в проекцию игрока; ведущий видит state.closing', () => {
+    const f = readyFair();
+    f.run({ type: 'session.close' }, gm);
+    f.run({ type: 'session.reveal' }, gm);
+    const s = { ...f.s, closing: { ...f.s.closing!, truthHolder: 'o11', players: { ...f.s.closing!.players, o11: { ...f.s.closing!.players.o11, truth: true } } } };
+    const v = pv(viewFor(s, content, player('o1'), 0));
+    expect(v.closing?.truthTold).toBe(true);
+    expect(v.closing?.me.truth).toBe(false);
+    expect(pv(viewFor(s, content, player('o11'), 0)).closing?.me.truth).toBe(true);
+    const json = JSON.stringify(v);
+    expect(json).not.toContain('truthHolder');
+    expect(json).not.toContain('"players":{');
+    for (const key of s.roster.filter(k => k !== 'o1')) {
+      for (const g of content.roleByKey[key].goals) expect(json).not.toContain(g);
+    }
+    const g = viewFor(s, content, gm, 0) as GmView;
+    expect(g.state.closing).toEqual(s.closing);
+    expect(g.state).toBe(s);
+  });
 });

@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, expect, test } from 'vitest';
-import { defaultRoster, type Command } from '@fair/shared';
+import { afterEach, expect, test, vi } from 'vitest';
+import { defaultRoster, viewFor, type Command, type GameState, type PlayerView } from '@fair/shared';
 import { EventStore } from '../store';
 import { Game } from '../game';
 import { content, empty, gm, memoryGame, openFair, testOpts } from './fixtures';
@@ -286,4 +286,53 @@ test('повтор cmdId для ability.use не применяет способ
   expect(game.state().players.o8.gold).toBe(before.o8 + 1);
   expect(game.state().players.o2.gold).toBe(before.o2 - 1);
   expect(game.state().actions).toHaveLength(1);
+});
+
+/** Ярмарка на 12 в третьем акте. */
+async function act3(game: Game): Promise<void> {
+  await openFair(game);
+  for (let i = 0; i < 2; i++) expect((await game.submit(`act3-${i}`, { type: 'act.next' }, gm)).ok).toBe(true);
+  expect(game.state().phase).toBe('act3');
+}
+
+test('после session.close tick ничего не отправляет даже при просроченных сроках; так же в revealed', async () => {
+  const { game, opts } = memoryGame();
+  await act3(game);
+  expect((await game.submit('close', { type: 'session.close' }, gm)).ok).toBe(true);
+  expect(game.state().phase).toBe('closed');
+
+  // Подкладываем просроченное предложение и окно ставок: в акте tick отправил бы expire и lot.close.
+  const base = game.state();
+  const [from, to] = base.roster;
+  const lot = Object.values(base.lots)[0];
+  const stale: GameState = {
+    ...base,
+    offers: { stale: { id: 'stale', from, to, give: empty(), get: empty(), status: 'pending', createdAt: 0, expiresAt: 1 } as GameState['offers'][string] },
+    lots: { ...base.lots, [lot.id]: { ...lot, status: 'sealedBidding', sealedUntil: 1 } },
+  };
+  (game as unknown as { current: GameState }).current = stale;
+  const submit = vi.spyOn(game, 'submit');
+  opts.clock.now += 3_600_000;
+  game.tick();
+  expect(submit).not.toHaveBeenCalled();
+  (game as unknown as { current: GameState }).current = { ...stale, phase: 'revealed' };
+  game.tick();
+  expect(submit).not.toHaveBeenCalled();
+});
+
+test('после FairClosed подписчики получают состояние: проекция игрока closed без итогов, после Revealed — с итогами', async () => {
+  const { game } = memoryGame();
+  await act3(game);
+  const states: GameState[] = [];
+  game.subscribe(st => states.push(st));
+  expect((await game.submit('close', { type: 'session.close' }, gm)).ok).toBe(true);
+  const closed = viewFor(states.at(-1)!, content, { type: 'player', roleKey: 'o1' }, 0) as PlayerView;
+  expect(closed.phase).toBe('closed');
+  expect(closed.me.goals).toHaveLength(2);
+  expect(closed).not.toHaveProperty('closing');
+
+  expect((await game.submit('reveal', { type: 'session.reveal' }, gm)).ok).toBe(true);
+  const revealed = viewFor(states.at(-1)!, content, { type: 'player', roleKey: 'o1' }, 0) as PlayerView;
+  expect(revealed.phase).toBe('revealed');
+  expect(revealed.closing?.outcome).toBe('sleep');
 });

@@ -182,7 +182,7 @@ export function goalDone(state: GameState, _content: Content, roleKey: string, c
 }
 
 /** Сторона, по которой считается исход: у свободных — выбранная, иначе 'free'. */
-function sideOf(state: GameState, content: Content, key: string): Side {
+export function sideOf(state: GameState, content: Content, key: string): Side {
   const side = content.roleByKey[key]?.side ?? 'free';
   return side === 'free' ? state.players[key].side ?? 'free' : side;
 }
