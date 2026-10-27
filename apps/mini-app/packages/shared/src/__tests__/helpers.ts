@@ -52,3 +52,24 @@ export function makeGame(n: number, opts: { present?: string[] } = {}): GameStat
 export function allBut(n: number, absent: string[]): string[] {
   return must(newGame(), { type: 'session.setN', n }, gm).roster.filter(k => !absent.includes(k));
 }
+
+/**
+ * Инварианты запросов согласия (§6.8, минимально): резерв есть ровно у pending-запросов.
+ * Каждый pending-запрос держит свой резерв; abilityPending и reservedFor не указывают на закрытые запросы.
+ */
+export function checkInvariants(state: GameState): void {
+  const fail = (msg: string) => { throw new Error(`инвариант: ${msg}`); };
+  for (const r of Object.values(state.requests)) {
+    if (r.status !== 'pending') continue;
+    if (r.approvers.length === 0) fail(`запрос ${r.id} без одобряющих`);
+    if (r.action.type === 'ability' && state.players[r.author]?.abilityPending !== r.id) fail(`у автора ${r.author} нет abilityPending ${r.id}`);
+    if (r.action.type === 'item' && state.items[r.action.itemId]?.reservedFor !== r.id) fail(`вещь ${r.action.itemId} не в резерве ${r.id}`);
+  }
+  for (const [key, p] of Object.entries(state.players)) {
+    if (p.abilityPending !== undefined && state.requests[p.abilityPending]?.status !== 'pending') fail(`abilityPending ${key} → закрытый запрос`);
+  }
+  for (const it of Object.values(state.items)) {
+    const r = it.reservedFor !== undefined ? state.requests[it.reservedFor] : undefined;
+    if (r && r.status !== 'pending') fail(`вещь ${it.id} в резерве закрытого запроса ${r.id}`);
+  }
+}

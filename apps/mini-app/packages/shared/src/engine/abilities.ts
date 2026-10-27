@@ -1,11 +1,13 @@
-import { ABILITY_BY_ROLE, COPY_SOURCES, type AbilityKind } from '../abilities';
+import { ABILITY_BY_ROLE, COPY_SOURCES, type AbilityKind, type CopyableKind } from '../abilities';
 import type { AbilityUse, Ctx } from '../commands';
 import type { Content } from '../content';
 import type { AbilityUsed, Event } from '../events';
 import type { Effect, GameState, Ingredient, Item, ItemKind } from '../types';
 import { INGREDIENTS, available } from './bundles';
+import { acceptRequest, needsConsent, requestConsent } from './consent';
+import { consentedKind } from './consented-kinds';
 import { actOf, applyEffects, recordAction } from './effects';
-import { isActPhase, participant } from './guards';
+import { isActPhase, otherTarget, participant } from './guards';
 import { buildIntel, isObservation, type ObservationUse } from './intel';
 import { KIND_BY_RECIPE, craftQuote, type CraftModifier } from './shop';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
@@ -27,7 +29,7 @@ const isIngredient = (x: unknown): x is Ingredient => INGREDIENTS.includes(x as 
 const isKey = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= MAX_KEY;
 const isPair = (x: unknown) => Array.isArray(x) && x.length === 2 && x.every(isIngredient);
 
-/** Форма параметров (§5.3 шаг 5) для мастерской, защиты, враждебных и наблюдения; прочие виды проверяют себя сами. */
+/** Форма параметров (§5.3 шаг 5); у копии — форма копируемого вида. */
 function validForm(use: AbilityUse): boolean {
   switch (use.kind) {
     case 'payAshWithGold': return isKey(use.recipeId);
@@ -42,11 +44,13 @@ function validForm(use: AbilityUse): boolean {
     case 'sellToBank': return isKey(use.itemId);
     case 'protectSelf': return true;
     case 'protectOther': case 'stealGold': case 'thorns': return isKey(use.target);
+    case 'cleanseOther': case 'discountOther': return isKey(use.target);
+    case 'transferProtection': return isKey(use.from) && isKey(use.to);
+    case 'copyAbility': return validForm(use.copy);
     case 'stealIngredient': return isKey(use.target) && isIngredient(use.ingredient);
     case 'inspectInventory': case 'knowGold': case 'askSide': return isKey(use.target);
     case 'sniffIngredient': return isIngredient(use.ingredient);
     case 'askYesNo': return isKey(use.target) && (use.question === undefined || typeof use.question === 'string');
-    default: return true;
   }
 }
 
@@ -56,7 +60,7 @@ export function checkCommon(state: GameState, ctx: Ctx, use: AbilityUse): { auth
   const author = participant(state, ctx.actor);
   if (!author) return fail('forbidden');
   if (typeof use !== 'object' || use === null || ABILITY_BY_ROLE[author] !== use.kind) return fail('forbidden', 'это не способность вашей роли');
-  if (use.kind === 'copyAbility' && !(typeof use.copy === 'object' && use.copy !== null && use.copy.kind in COPY_SOURCES)) {
+  if (use.kind === 'copyAbility' && !(typeof use.copy === 'object' && use.copy !== null && Object.hasOwn(COPY_SOURCES, use.copy.kind))) {
     return fail('forbidden', 'этот вид нельзя скопировать');
   }
   const p = state.players[author];
@@ -113,13 +117,6 @@ function countPair(take: [Ingredient, Ingredient]): Partial<Record<Ingredient, n
 /** Хватает ли в запасе мастерской пары ингредиентов. */
 const stockHas = (state: GameState, take: [Ingredient, Ingredient]) =>
   Object.entries(countPair(take)).every(([k, n]) => state.workshop[k as Ingredient] >= (n ?? 0));
-
-/** Цель способности «на другого» (§5.3 шаг 6): в составе и присутствует, не сам автор. */
-function otherTarget(state: GameState, author: string, target: string): Result | undefined {
-  if (!state.roster.includes(target) || !state.players[target]?.present) return fail('not_found', target);
-  if (target === author) return fail('invalid', 'цель должна быть другим игроком');
-  return undefined;
-}
 
 /**
  * Враждебная попытка (§5.3 шаги 7–8): лимит цели за акт, затем защита цели.
@@ -291,16 +288,35 @@ export function performAbility(
       return ok({ ...used(author, use.kind, eff, ctx, requestId), target: use.target, hostile: true });
     }
 
-    default:
-      return fail('invalid', 'вид ещё не реализован');
+    case 'copyAbility':
+      return asCopy(performAbility(state, content, author, use.copy, ctx, requestId), use.copy.kind);
+
+    default: {
+      const f = consentedKind(state, author, use);
+      return 'ok' in f ? f : ok({ ...used(author, use.kind, f.effects, ctx, requestId), ...f });
+    }
   }
+}
+
+/** Копия Астры: события копируемого вида от имени copyAbility, с отметкой исполненного вида. */
+function asCopy(r: Result, copied: CopyableKind): Result {
+  if (!r.ok) return r;
+  return ok(...r.events.map((e): Event => {
+    if (e.type === 'AbilityUsed') return { ...e, ability: 'copyAbility', copied };
+    if (e.type === 'ItemCrafted') return { ...e, viaAbility: 'copyAbility' };
+    return e;
+  }));
 }
 
 export const abilityCommands: CommandHandlers = {
   'ability.use': (state, content, cmd, ctx) => {
     const c = checkCommon(state, ctx, cmd.use);
     if ('ok' in c) return c;
-    return performAbility(state, content, c.author, cmd.use, ctx);
+    const r = performAbility(state, content, c.author, cmd.use, ctx);
+    const approvers = needsConsent(state, c.author, cmd.use);
+    // Нужно согласие: проверки пройдены пробным исполнением, событий исполнения пока нет.
+    if (!r.ok || approvers.length === 0) return r;
+    return requestConsent(c.author, { type: 'ability', use: cmd.use }, approvers, ctx);
   },
 };
 
@@ -310,6 +326,6 @@ export const abilityReducers: EventReducers = {
     const players = { ...s.players, [e.author]: { ...s.players[e.author], abilityUsedInAct: true } };
     // Враждебная попытка, исполненная или отражённая, расходует лимит цели на акт.
     if (e.hostile && e.target !== undefined) players[e.target] = { ...players[e.target], hostileAttemptsAgainstInAct: 1 };
-    return recordAction({ ...s, players }, e, actOf(state));
+    return acceptRequest(recordAction({ ...s, players }, e, actOf(state)), e.requestId);
   },
 };

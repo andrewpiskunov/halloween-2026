@@ -1,5 +1,6 @@
 import type { Actor } from '../commands';
 import type { GameState } from '../types';
+import { fail, type Result } from './result';
 
 /** Идут ли сейчас акты 1–3. */
 export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
@@ -8,4 +9,15 @@ export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'a
 export function participant(state: GameState, a: Actor): string | undefined {
   const key = a.type === 'player' ? a.roleKey : undefined;
   return key !== undefined && state.roster.includes(key) && state.players[key]?.present ? key : undefined;
+}
+
+/** Роль в составе и пришла: годится целью способности или вещи. */
+export const presentPlayer = (state: GameState, key: string) =>
+  typeof key === 'string' && state.roster.includes(key) && state.players[key]?.present === true;
+
+/** Цель способности «на другого» (§5.3 шаг 6): в составе и присутствует, не сам автор. */
+export function otherTarget(state: GameState, author: string, target: string): Result | undefined {
+  if (!presentPlayer(state, target)) return fail('not_found', target);
+  if (target === author) return fail('invalid', 'цель должна быть другим игроком');
+  return undefined;
 }

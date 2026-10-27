@@ -227,12 +227,12 @@ describe('ability.use: общие проверки', () => {
     refused(withPlayer(s, 'n19', { abilityPending: 'req1' }), 'n19', { kind: 'buyFromBank', ingredient: 'ash' }, 'limit');
   });
 
-  test('ведущий → forbidden; неверный ингредиент → invalid; нет рецепта → not_found; вид не реализован → invalid', () => {
+  test('ведущий → forbidden; неверный ингредиент → invalid; нет рецепта → not_found; неизвестный вид → forbidden', () => {
     const s = makeGame(30);
     const byGm = run(s, { type: 'ability.use', use: { kind: 'buyFromBank', ingredient: 'ash' } }, gm);
     expect(byGm.ok ? 'ok' : byGm.error).toBe('forbidden');
     refused(s, 'n19', { kind: 'buyFromBank', ingredient: 'gold' as 'ash' }, 'invalid');
     refused(s, 'o1', { kind: 'payAshWithGold', recipeId: 'nope' }, 'not_found');
-    refused(s, 'o10', { kind: 'cleanseOther', target: 'o2' }, 'invalid');
+    refused(s, 'o10', { kind: 'cleanse' } as unknown as AbilityUse, 'forbidden');
   });
 });
