@@ -66,8 +66,15 @@ test('ведущий входит по коду, команда возвраща
   expect(JSON.stringify(o1.view())).not.toContain('telegramId');
 });
 
+/** Ведущий со своим соединением: тесты не делят ботов. */
+async function gmBot(): Promise<BotConn> {
+  const bot = await openBot(base, 100, (await fetchCodes(base)).gm);
+  bots.push(bot);
+  return bot;
+}
+
 test('ошибка команды приходит с кодом, ожидание без проекции завершается по таймауту', async () => {
-  const bot = bots[0];
+  const bot = await gmBot();
   const r = await bot.send({ type: 'session.setN', n: 7 });
   expect(r.ok).toBe(false);
   expect(typeof r.error).toBe('string');
@@ -76,4 +83,22 @@ test('ошибка команды приходит с кодом, ожидани
 
 test('вход с неверным кодом отклоняется понятной ошибкой', async () => {
   await expect(openBot(base, 2000, 'нет-такого-кода')).rejects.toThrow(/роль/);
+});
+
+test('close() сразу отклоняет ожидания и последующие команды, повторный close безопасен', async () => {
+  const bot = await gmBot();
+  const waiting = bot.waitSeq(bot.seq() + 100);
+  bot.close();
+  await expect(waiting).rejects.toThrow(/закрыто/);
+  await expect(bot.send({ type: 'clock.pause' })).rejects.toThrow(/закрыто/);
+  expect(() => bot.close()).not.toThrow();
+});
+
+// Последний тест: сервер рвёт все соединения.
+test('сервер закрывает соединение: ожидающий waitSeq и последующий send отклоняются', async () => {
+  const bot = await gmBot();
+  const waiting = bot.waitSeq(bot.seq() + 100);
+  for (const c of wss.clients) c.terminate();
+  await expect(waiting).rejects.toThrow(/закрыто/);
+  await expect(bot.send({ type: 'clock.pause' })).rejects.toThrow(/закрыто/);
 });

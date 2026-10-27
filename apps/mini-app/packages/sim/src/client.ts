@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
 import type { Actor, Command, GmView, PlayerView } from '@fair/shared';
 
@@ -9,7 +10,7 @@ export interface BotConn {
   readonly actor: Actor;
   view(): PlayerView | GmView;
   seq(): number;
-  send(cmd: Command): Promise<CmdOutcome>;
+  send(cmd: Command, timeoutMs?: number): Promise<CmdOutcome>;
   waitSeq(seq: number, timeoutMs?: number): Promise<void>;
   maxViewBytes(): number;
   close(): void;
@@ -26,9 +27,12 @@ export async function fetchCodes(baseUrl: string): Promise<{ gm: string; roles: 
   return res.json() as Promise<{ gm: string; roles: Record<string, string> }>;
 }
 
+const FIRST_VIEW_TIMEOUT_MS = 10_000;
+const SEND_TIMEOUT_MS = 10_000;
+
 /**
  * Dev-вход POST /api/auth с кодом приглашения, затем WebSocket /ws?token=.
- * Возвращается, когда пришла первая проекция.
+ * Возвращается, когда пришла первая проекция; без неё за 10 с — ошибка.
  */
 export async function openBot(baseUrl: string, userId: number, code: string): Promise<BotConn> {
   const res = await fetch(`${baseUrl}/api/auth`, {
@@ -47,6 +51,9 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
   let lastSeq = -1;
   let maxBytes = 0;
   let nextId = 0;
+  // Сервер помнит результаты по аккаунту и id команды: без префикса соединения повторный вход
+  // того же аккаунта получил бы чужой старый результат вместо выполнения команды.
+  const idPrefix = randomUUID();
   let closed: Error | undefined;
   const pending = new Map<string, { started: number; resolve: (o: CmdOutcome) => void; reject: (e: Error) => void }>();
   let seqWaiters: { seq: number; resolve: () => void; reject: (e: Error) => void }[] = [];
@@ -64,7 +71,12 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
 
   ws.on('message', data => {
     const text = String(data);
-    const msg = JSON.parse(text) as ServerMsg;
+    let msg: ServerMsg;
+    try { msg = JSON.parse(text) as ServerMsg; } catch (err) {
+      fail(new Error(`бот ${userId}: некорректное сообщение сервера: ${(err as Error).message}`));
+      ws.close();
+      return;
+    }
     if (msg.kind === 'view') {
       maxBytes = Math.max(maxBytes, Buffer.byteLength(text));
       lastView = msg.view;
@@ -86,18 +98,29 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
   ws.on('close', (code, reason) => fail(new Error(`соединение ${userId} закрыто: ${code} ${String(reason)}`)));
   ws.on('error', err => fail(err));
 
-  await firstView;
-  first = undefined;
+  const firstTimer = setTimeout(() => {
+    fail(new Error(`бот ${userId}: нет первой проекции за ${FIRST_VIEW_TIMEOUT_MS} мс`));
+    ws.terminate();
+  }, FIRST_VIEW_TIMEOUT_MS);
+  try { await firstView; } finally { clearTimeout(firstTimer); first = undefined; }
 
   return {
     actor,
     view: () => lastView!,
     seq: () => lastSeq,
-    send(cmd: Command): Promise<CmdOutcome> {
+    send(cmd: Command, timeoutMs = SEND_TIMEOUT_MS): Promise<CmdOutcome> {
       if (closed) return Promise.reject(closed);
-      const id = String(++nextId);
+      const id = `${idPrefix}:${++nextId}`;
       return new Promise((resolve, reject) => {
-        pending.set(id, { started: performance.now(), resolve, reject });
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`бот ${userId}: нет ответа на ${cmd.type} за ${timeoutMs} мс`));
+        }, timeoutMs);
+        pending.set(id, {
+          started: performance.now(),
+          resolve: o => { clearTimeout(timer); resolve(o); },
+          reject: e => { clearTimeout(timer); reject(e); },
+        });
         ws.send(JSON.stringify({ kind: 'cmd', id, cmd }));
       });
     },
@@ -118,6 +141,10 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
       });
     },
     maxViewBytes: () => maxBytes,
-    close: () => { ws.close(); },
+    // Все ожидания отклоняются сразу, не дожидаясь события close; повторный вызов ничего не делает.
+    close: () => {
+      fail(new Error(`бот ${userId}: соединение закрыто`));
+      if (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN) ws.close();
+    },
   };
 }
