@@ -369,7 +369,7 @@ test('проекция игрока не несёт telegramId, проекция
   expect(JSON.stringify(viewFor(s, content, gm, 0))).toContain('"telegramId":777001');
 });
 
-test('закрытые сделки прошлого акта пропадают из проекций ведущего и игрока; ожидающие и закрытые в этом акте остаются', () => {
+describe('проекции ограниченного размера: закрытые сделки не копятся', () => {
   const at = (st: GameState, cmd: Command, actor: Actor, now: number) => {
     const r = run(st, cmd, actor, now);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
@@ -378,34 +378,47 @@ test('закрытые сделки прошлого акта пропадают
   const none = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
   const coin = { ...none, gold: 1 };
   const lastOffer = (st: GameState) => Object.values(st.offers).sort((a, b) => a.createdAt - b.createdAt).at(-1)!.id;
-  let s = makeGame(12);
-  // Акт I: o2 предлагает o4 и отменяет, o2 предлагает o4 и тот принимает (обмен), o2 оставляет третье висеть.
-  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 1000);
-  const cancelledOld = lastOffer(s);
-  s = at(s, { type: 'offer.cancel', id: cancelledOld }, player('o2'), 2000);
-  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 3000);
-  const acceptedOld = lastOffer(s);
-  s = at(s, { type: 'offer.accept', id: acceptedOld }, player('o4'), 4000);
-  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 600_000);
-  const pendingOld = lastOffer(s);
-  expect(s.trades).toHaveLength(1);
 
-  s = at(s, { type: 'act.next' }, gm, 700_000);
-  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 701_000);
-  const cancelledNow = lastOffer(s);
-  s = at(s, { type: 'offer.cancel', id: cancelledNow }, player('o2'), 702_000);
+  test('ведущий: закрытое предложение пропадает сразу после закрытия, ожидающее есть', () => {
+    let s = at(makeGame(12), { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 1000);
+    const closed = lastOffer(s);
+    s = at(s, { type: 'offer.cancel', id: closed }, player('o2'), 2000);
+    s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 3000);
+    const pending = lastOffer(s);
+    expect(Object.keys((viewFor(s, content, gm, 4000) as GmView).state.offers)).toEqual([pending]);
+    // Игрок своё закрытое видит (история), полное состояние не тронуто.
+    expect(pv(viewFor(s, content, player('o2'), 4000)).offers.map(o => o.id).sort()).toEqual([closed, pending].sort());
+    expect(Object.keys(s.offers)).toHaveLength(2);
+  });
 
-  const g = (viewFor(s, content, gm, 703_000) as GmView).state;
-  expect(Object.keys(g.offers).sort()).toEqual([pendingOld, cancelledNow].sort());
-  expect(g.trades).toEqual([]);
-  // Полное состояние не тронуто.
-  expect(Object.keys(s.offers)).toHaveLength(4);
-  for (const k of ['o2', 'o4']) {
-    expect(pv(viewFor(s, content, player(k), 703_000)).offers.map(o => o.id).sort(), k).toEqual([pendingOld, cancelledNow].sort());
-  }
-  // Обмен текущего акта виден ведущему.
-  s = at(s, { type: 'offer.accept', id: pendingOld }, player('o4'), 704_000);
-  expect((viewFor(s, content, gm, 705_000) as GmView).state.trades).toHaveLength(1);
+  test('игрок: из 25 закрытых остаются 20 самых новых и все ожидающие', () => {
+    let s = makeGame(12);
+    const closed: string[] = [];
+    for (let i = 0; i < 25; i++) {
+      s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 1000 + i * 1000);
+      closed.push(lastOffer(s));
+      s = at(s, { type: 'offer.cancel', id: closed[i] }, player('o2'), 1500 + i * 1000);
+    }
+    s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 100_000);
+    const pending = lastOffer(s);
+    const expected = [...closed.slice(5), pending].sort();
+    for (const k of ['o2', 'o4']) {
+      expect(pv(viewFor(s, content, player(k), 101_000)).offers.map(o => o.id).sort(), k).toEqual(expected);
+    }
+    expect(pv(viewFor(s, content, player('o1'), 101_000)).offers).toEqual([]);
+  });
+
+  test('ведущий: обмены обрезаются до 100 последних по времени', () => {
+    const s0 = makeGame(12);
+    const side = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
+    const trades = Array.from({ length: 105 }, (_, i) => ({ id: `t${String(i).padStart(3, '0')}`, at: 1000 + i, from: 'o2', to: 'o4', service: false, give: side, get: side }));
+    const s: GameState = { ...s0, trades };
+    const g = (viewFor(s, content, gm, 0) as GmView).state.trades;
+    expect(g).toHaveLength(100);
+    expect(g[0].id).toBe('t005');
+    expect(g.at(-1)!.id).toBe('t104');
+    expect(s.trades).toHaveLength(105);
+  });
 });
 
 test('просьбы в проекции ведущего: закрытая сменой акта видна следующий акт, потом пропадает', () => {

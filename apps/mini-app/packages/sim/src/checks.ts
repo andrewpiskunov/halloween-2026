@@ -260,7 +260,7 @@ function diffKeys(a: Record<string, unknown>, b: Record<string, unknown>): strin
 /**
  * §3.4: состояние из журнала базы совпадает с последней проекцией ведущего; без replay — пропуск.
  * replayed — уже в виде проекции ведущего (gmStateView). replayedFull и accumulated — полное состояние
- * из журнала и накопленное симулятором: просьбы и обмены за весь вечер обязаны совпасть.
+ * из журнала и накопленное симулятором: предложения, просьбы и обмены за весь вечер обязаны совпасть.
  */
 export function checkReplay(final: GameState, replayed?: GameState, accumulated?: GameState, replayedFull?: GameState): CheckResult {
   if (!replayed) return { name: 'replay', ok: true, details: ['пропущено: воспроизведение журнала не передано'] };
@@ -269,10 +269,10 @@ export function checkReplay(final: GameState, replayed?: GameState, accumulated?
   const b = JSON.parse(JSON.stringify(final)) as Record<string, unknown>;
   if (!isDeepStrictEqual(a, b)) bad.push(`состояние из журнала расходится с проекцией ведущего: ${diffKeys(a, b).join(', ')}`);
   if (accumulated && replayedFull) {
-    const pick = (x: GameState) => JSON.parse(JSON.stringify({ requests: x.requests, trades: x.trades })) as Record<string, unknown>;
+    const pick = (x: GameState) => JSON.parse(JSON.stringify({ offers: x.offers, requests: x.requests, trades: x.trades })) as Record<string, unknown>;
     const full = pick(replayedFull);
     const acc = pick(accumulated);
-    if (!isDeepStrictEqual(full, acc)) bad.push(`накопленные за вечер просьбы и обмены расходятся с журналом: ${diffKeys(full, acc).join(', ')}`);
+    if (!isDeepStrictEqual(full, acc)) bad.push(`накопленные за вечер предложения, просьбы и обмены расходятся с журналом: ${diffKeys(full, acc).join(', ')}`);
   }
   return result('replay', bad);
 }

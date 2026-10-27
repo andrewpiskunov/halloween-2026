@@ -53,3 +53,14 @@ test('сделку отменил уход участника: уведомле�
   expect(r.texts).toEqual(['Сделка отменена: участник ушёл']);
   expect(collectNotices(r.seen, pv([], [], { offers: [offer('cancelled', 'left')] } as unknown as Partial<PlayerView>)).texts).toEqual([]);
 });
+
+test('закрытое предложение выпало из списка (лимит закрытых в проекции): повторных уведомлений нет', () => {
+  const offer = (id: string, status: string, reason?: string) => ({ id, from: 'o2', to: 'o8', status, ...(reason ? { reason } : {}) });
+  const with2 = { offers: [offer('f1', 'cancelled', 'left'), offer('f2', 'pending')] } as unknown as Partial<PlayerView>;
+  const s1 = collectNotices(null, pv([], [], with2)).seen;
+  // f1 выпал из списка: ничего не показывается.
+  const r1 = collectNotices(s1, pv([], [], { offers: [offer('f2', 'pending')] } as unknown as Partial<PlayerView>));
+  expect(r1.texts).toEqual([]);
+  // Список снова без f1 и с f2: тоже тихо.
+  expect(collectNotices(r1.seen, pv([], [], { offers: [offer('f2', 'pending')] } as unknown as Partial<PlayerView>)).texts).toEqual([]);
+});

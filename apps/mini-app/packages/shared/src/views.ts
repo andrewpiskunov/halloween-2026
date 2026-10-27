@@ -93,26 +93,42 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
 }
 
 /** Проекция состояния для актора. Чистая функция: `now` передаётся снаружи. */
-/**
- * Предложение видно в проекциях, пока ожидает или могло закрыться в текущем акте (этап 7, раунд 1 ревью):
- * у предложения нет времени закрытия, но закрыто оно не позже срока, поэтому срок до начала акта —
- * значит, закрыто в прошлом акте. Иначе проекции растут весь вечер.
- */
-export const offerInAct = (state: GameState, o: Offer): boolean =>
-  o.status === 'pending' || o.expiresAt >= state.clock.actStartedAt;
+/** Лимиты проекций (этап 7, раунд 2 ревью): закрытые сделки не копятся весь вечер. */
+export const PLAYER_CLOSED_OFFERS = 20;
+export const GM_TRADES = 100;
 
 /**
- * Состояние для проекции ведущего: предложения по offerInAct, просьбы ожидающие и закрытые в текущем акте
- * (как requestsFor), обмены текущего акта. Журнал действий, вещи, игроки и итоги — целиком.
+ * Предложения игрока: ожидающие с его участием и не больше PLAYER_CLOSED_OFFERS последних закрытых
+ * (по createdAt убыв., при равенстве по id). Порядок как в состоянии.
+ */
+export function offersFor(state: GameState, key: string): Offer[] {
+  const mine = Object.values(state.offers).filter(o => o.from === key || o.to === key);
+  const closed = new Set(mine.filter(o => o.status !== 'pending')
+    .sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .slice(0, PLAYER_CLOSED_OFFERS)
+    .map(o => o.id));
+  return mine.filter(o => o.status === 'pending' || closed.has(o.id));
+}
+
+/**
+ * Состояние для проекции ведущего: предложения только ожидающие (закрытые пульт не читает), просьбы
+ * ожидающие и закрытые в текущем акте (как requestsFor), обмены — последние GM_TRADES по времени
+ * (при равенстве по id) в порядке состояния. Журнал действий, вещи, игроки и итоги — целиком.
  */
 export function gmStateView(state: GameState): GameState {
   const since = state.clock.actStartedAt;
+  // Выбор по (at, id), порядок как в состоянии: накопление по проекциям совпадает с журналом.
+  const keep = new Set([...state.trades]
+    .sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .slice(-GM_TRADES)
+    .map(t => t.id));
+  const trades = state.trades.length <= GM_TRADES ? state.trades : state.trades.filter(t => keep.has(t.id));
   return {
     ...state,
-    offers: Object.fromEntries(Object.entries(state.offers).filter(([, o]) => offerInAct(state, o))),
+    offers: Object.fromEntries(Object.entries(state.offers).filter(([, o]) => o.status === 'pending')),
     requests: Object.fromEntries(Object.entries(state.requests)
       .filter(([, r]) => r.status === 'pending' || Math.max(r.createdAt, r.closedAt ?? r.createdAt) >= since)),
-    trades: state.trades.filter(t => t.at >= since),
+    trades,
   };
 }
 
@@ -158,7 +174,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     }];
   });
 
-  const offers = Object.values(state.offers).filter(o => (o.from === key || o.to === key) && offerInAct(state, o));
+  const offers = offersFor(state, key);
   const offerItems: PlayerView['offerItems'] = {};
   for (const o of offers) {
     for (const id of [...o.give.items, ...o.get.items]) {

@@ -1,6 +1,6 @@
 // Оркестратор прогона вечера (спецификация этапа 6, §2): боты, строгая очередь ходов, журнал прогона, проверки.
 import {
-  gmStateView, loadContent, type Command, type ConsentRequest, type Content, type Event, type GameState, type GmView, type Phase, type PlayerView,
+  gmStateView, loadContent, type Command, type ConsentRequest, type Offer, type Content, type Event, type GameState, type GmView, type Phase, type PlayerView,
   type TradeRecord,
 } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn, type CmdOutcome } from './client';
@@ -103,9 +103,13 @@ export class Ctx {
   /** Все соединения за вечер, включая закрытые после gm.rebind: для размера проекций. */
   private readonly everyBot: BotConn[] = [];
   private lastSeq = 0;
-  /** Просьбы и обмены из всех проекций ведущего: последняя увиденная версия по id, порядок первого появления. */
+  /**
+   * Просьбы и обмены из всех проекций ведущего, предложения из проекций ведущего (ожидающие) и игроков
+   * (свои закрытые): последняя увиденная версия по id, порядок первого появления.
+   */
   private readonly seenRequests = new Map<string, ConsentRequest>();
   private readonly seenTrades = new Map<string, TradeRecord>();
+  private readonly seenOffers = new Map<string, Offer>();
   turnNo = 0;
   act: Act = 1;
 
@@ -194,19 +198,31 @@ export class Ctx {
   }
 
   /**
-   * Запоминает просьбы и обмены текущей проекции ведущего. Закрытая просьба видна до конца следующего акта,
-   * обмен — до конца своего, а waitAll идёт после каждого хода, поэтому ни одно закрытие не теряется.
+   * Запоминает просьбы, обмены и предложения текущих проекций. Проекции ограничены (этап 7, раунд 2 ревью):
+   * у ведущего закрытая просьба видна до конца следующего акта, последние 100 обменов, только ожидающие
+   * предложения; у игрока его 20 последних закрытых предложений. waitAll идёт после каждого хода, а за ход
+   * столько не закрывается, поэтому ни одно закрытие не теряется. Закрытое предложение не перезаписывается
+   * ожидающей версией из отставшей проекции.
    */
   private absorb(): void {
     const s = this.gmState();
     for (const r of Object.values(s.requests)) this.seenRequests.set(r.id, r);
     for (const t of s.trades) this.seenTrades.set(t.id, t);
+    const views = Object.values(this.bots).map(b => (b.view() as PlayerView).offers);
+    for (const o of [...Object.values(s.offers), ...views.flat()]) {
+      const before = this.seenOffers.get(o.id)?.status;
+      if (o.status === 'pending' && before !== undefined && before !== 'pending') continue;
+      this.seenOffers.set(o.id, o);
+    }
   }
 
-  /** Текущее состояние ведущего с просьбами и обменами за весь вечер. */
+  /** Текущее состояние ведущего с предложениями, просьбами и обменами за весь вечер. */
   fullState(): GameState {
     this.absorb();
-    return { ...this.gmState(), requests: Object.fromEntries(this.seenRequests), trades: [...this.seenTrades.values()] };
+    return {
+      ...this.gmState(),
+      offers: Object.fromEntries(this.seenOffers), requests: Object.fromEntries(this.seenRequests), trades: [...this.seenTrades.values()],
+    };
   }
 
   /** Ход ведущего: команды по порядку, затем ожидание проекций. */
