@@ -23,6 +23,10 @@ test('отчёт: семь разделов по порядку, строка и
   expect(o1).toMatch(/^\| [^|]+ \| 6 \| \d+ \| \d+ \| [^|]+ \| [012] из 2 \| (да|нет) \| (да|—) \|$/);
   expect(md).toContain('- **coverage**: ок');
   expect(md).not.toContain('Воспроизведение журнала: пропущено');
+  // Раздел 1 называет исход алтаря и держателя «Правды».
+  const s1 = md.slice(md.indexOf('## 1.'), md.indexOf('## 2.'));
+  const holder = result.finalState.closing!.truthHolder!;
+  expect(s1).toContain(`- Исход: Пробудить (wake), «Правда»: ${content.roleByKey[holder].name} (${holder}).`);
 });
 
 test('отчёт без воспроизведения журнала говорит об этом', () => {

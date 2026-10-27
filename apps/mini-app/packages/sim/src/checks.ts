@@ -1,8 +1,8 @@
 // Проверки прогона вечера (спецификация этапа 6, §3): ответы, инварианты, проекции, воспроизведение, покрытие.
 import { isDeepStrictEqual } from 'node:util';
 import {
-  ABILITY_BY_ROLE, COMMAND_TYPES, checkActStart, checkGold, checkInvariants,
-  type AbilityKind, type Content, type Event, type GameState, type PlayerView,
+  ABILITY_BY_ROLE, COMMAND_TYPES, checkActStart, checkGold, checkInvariants, computeClosing,
+  type AbilityKind, type AltarSide, type Content, type Event, type GameState, type PlayerView,
 } from '@fair/shared';
 import type { BotConn } from './client';
 import type { CheckResult, CommandLog } from './evening';
@@ -129,6 +129,21 @@ export function checkViews(bots: Record<string, BotConn>, gmState: GameState, co
     }
   }
   return result('views', bad);
+}
+
+/**
+ * Итоги после показа: closing в состоянии ведущего совпадает с computeClosing на том же состоянии.
+ * expect.outcome — исход, которого ждёт сценарий (после сбора алтаря); expect.truth — держатель «Правды».
+ */
+export function checkClosing(state: GameState, content: Content, expect: { outcome?: AltarSide; truth?: string } = {}): CheckResult {
+  const c = state.closing;
+  if (!c) return result('closing', [`нет итогов в фазе ${state.phase}`]);
+  const bad: string[] = [];
+  const recomputed = JSON.parse(JSON.stringify(computeClosing(state, content, c.closedAt))) as unknown;
+  if (!isDeepStrictEqual(JSON.parse(JSON.stringify(c)), recomputed)) bad.push('итоги в состоянии расходятся с computeClosing');
+  if (expect.outcome !== undefined && c.outcome !== expect.outcome) bad.push(`исход ${c.outcome}, ожидался ${expect.outcome} (алтари: ${JSON.stringify(c.altars)})`);
+  if (expect.truth !== undefined && c.truthHolder !== expect.truth) bad.push(`«Правда» у ${c.truthHolder ?? 'никого'}, ожидалась у ${expect.truth}`);
+  return result('closing', bad);
 }
 
 /** Подготовка (§2.3): у каждого стартовые золото, ингредиенты и вещи по содержимому. */

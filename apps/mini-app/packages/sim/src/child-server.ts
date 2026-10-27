@@ -25,8 +25,8 @@ export function freePort(): Promise<number> {
 }
 
 /**
- * Запускает сервер на базе dbPath. Окружение задаётся явно: сервер читает apps/mini-app/.env, и без пустого
- * BOT_TOKEN и BOT_POLLING=0 дочерний сервер мог бы начать опрашивать настоящего бота.
+ * Запускает сервер на базе dbPath. Окружение задаётся явно: сервер читает apps/mini-app/.env. От опроса
+ * настоящего бота защищает только BOT_POLLING=0: пустая переменная не перекрывает .env (config.ts считает её незаданной).
  * Вывод сервера копится в памяти и печатается только при ошибке запуска.
  */
 /** bin — для тестов: другой исполняемый файл вместо tsx. */
@@ -38,7 +38,7 @@ export async function startChildServer(opts: { dbPath: string; port?: number; bi
     cwd: SERVER_DIR,
     env: {
       ...process.env,
-      DB_PATH: opts.dbPath, ALLOW_DEV_AUTH: '1', SESSION_SECRET: 'sim', BOT_POLLING: '0', BOT_TOKEN: '', PORT: String(port),
+      DB_PATH: opts.dbPath, ALLOW_DEV_AUTH: '1', SESSION_SECRET: 'sim', BOT_POLLING: '0', PORT: String(port),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

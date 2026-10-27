@@ -9,3 +9,6 @@ apps/mini-app/test-results
 apps/mini-app/.env
 apps/mini-app/.env.*
 !apps/mini-app/.env.production.example
+# Отчёты и базы прогонов симулятора, выгрузки журнала
+apps/mini-app/packages/sim/sim-out
+apps/mini-app/**/exports

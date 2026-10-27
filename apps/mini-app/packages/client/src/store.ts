@@ -60,12 +60,12 @@ let connection: Connection | null = null;
 let ownToken = '';
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** Адрес выгрузки журнала с собственным токеном ведущего (не токеном «за игрока»). */
-/** Есть ли собственный токен ведущего: без него выгрузку не скачать. */
+/** Есть ли собственный токен аккаунта: без входа ведущего выгрузку не скачать, кнопка неактивна. */
 export function hasOwnToken(): boolean {
   return ownToken !== '';
 }
 
+/** Адрес выгрузки журнала с собственным токеном ведущего (не токеном «за игрока»). */
 export function exportUrl(): string {
   return exportUrlFor(location.origin, BASE, ownToken);
 }

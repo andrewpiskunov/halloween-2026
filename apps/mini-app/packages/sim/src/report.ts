@@ -93,6 +93,13 @@ function actsSection(result: EveningResult, content: Content): string[] {
   ];
 }
 
+/** Исход и «Правда» одной строкой: для раздела 1 отчёта и выжимки в stdout. */
+export function outcomeLine(result: EveningResult, content: Content): string {
+  const c = result.finalState.closing;
+  if (!c) return 'итогов нет';
+  return `${sideTitle(c.outcome)}, «Правда»: ${c.truthHolder ? roleName(content, c.truthHolder) : 'никто'}`;
+}
+
 /** Раздел 3: алтари, исход, «Правда», предупреждения закрытия. */
 function closingSection(state: GameState, content: Content): string[] {
   const c = state.closing;
@@ -195,6 +202,7 @@ export function renderReport(result: EveningResult, meta: ReportMeta, content: C
     `- Зерно: ${meta.seed}.`,
     `- Сервер: ${meta.baseUrl}.`,
     `- Длительность: ${seconds(meta.durationMs)}.`,
+    `- Исход: ${outcomeLine(result, content)}.`,
     '',
     ...actsSection(result, content),
     '',

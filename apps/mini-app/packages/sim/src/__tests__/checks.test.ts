@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import type { Command, GameState } from '@fair/shared';
 import {
-  ALLOWED_FAIL_PREFIXES, ALLOWED_FAIL_REASONS, abilityWorked, actNextLabel, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay,
+  ALLOWED_FAIL_PREFIXES, ALLOWED_FAIL_REASONS, abilityWorked, actNextLabel, checkClosing, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay,
   checkResponses, checkStart, checkViews,
 } from '../checks';
 import type { BotConn } from '../client';
@@ -146,5 +146,31 @@ describe('снимки, воспроизведение, золото', () => {
     const r = checkReplay(g.s, { ...g.s, seq: g.s.seq + 1 });
     expect(r.ok).toBe(false);
     expect(r.details[0]).toContain('seq');
+  });
+});
+
+describe('checkClosing', () => {
+  const closed = () => {
+    const g = new Game(12);
+    g.must({ type: 'act.next' }, 'gm');
+    g.must({ type: 'act.next' }, 'gm');
+    g.must({ type: 'session.close' }, 'gm');
+    return g.s;
+  };
+
+  test('итоги совпадают с computeClosing; ожидания исхода и «Правды» сверяются', () => {
+    const s = closed();
+    expect(checkClosing(s, content)).toEqual({ name: 'closing', ok: true, details: [] });
+    const r = checkClosing(s, content, { outcome: 'wake', truth: 'o10' });
+    expect(r.ok).toBe(false);
+    expect(r.details.join('\n')).toMatch(/исход sleep, ожидался wake/);
+    expect(r.details.join('\n')).toMatch(/«Правда» у никого, ожидалась у o10/);
+  });
+
+  test('подменённые итоги и отсутствие итогов падают', () => {
+    const s = closed();
+    const forged: GameState = { ...s, closing: { ...s.closing!, outcome: 'wake' } };
+    expect(checkClosing(forged, content).details).toEqual(['итоги в состоянии расходятся с computeClosing']);
+    expect(checkClosing({ ...s, closing: undefined }, content).ok).toBe(false);
   });
 });

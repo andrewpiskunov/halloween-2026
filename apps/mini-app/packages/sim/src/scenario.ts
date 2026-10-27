@@ -1,5 +1,7 @@
 // Сценарий вечера (спецификация этапа 6, §2.3): подготовка, три акта по шесть кругов, закрытие и показ итогов.
-import { ABILITY_BY_ROLE, type AbilityKind, type AltarSide, type Command, type Ingredient, type Item, type PlayerView } from '@fair/shared';
+import {
+  ABILITY_BY_ROLE, type AbilityKind, type AltarSide, type Command, type GameState, type Ingredient, type Item, type PlayerView,
+} from '@fair/shared';
 import { actNextLabel } from './checks';
 import { fetchCodes } from './client';
 import { PLAYER_USER_BASE, REBIND_USER_BASE, type Ctx } from './evening';
@@ -47,9 +49,10 @@ async function prepare(ctx: Ctx): Promise<void> {
   await ctx.verifyStart();
 }
 
-/** Конец акта: круг ответов, снимок и сверка проекций; затем act.next с парой снимков. */
-async function endAct(ctx: Ctx, act: Act): Promise<void> {
+/** Конец акта: круг ответов, шаги сценария после него, снимок и сверка проекций; затем act.next с парой снимков. */
+async function endAct(ctx: Ctx, act: Act, afterAnswers?: () => Promise<void>): Promise<void> {
   await ctx.answersRound();
+  await afterAnswers?.();
   ctx.snapshot(`act${act}`);
   await ctx.verifyViews(`act${act}`);
   if (act === 3) return;
@@ -253,7 +256,151 @@ async function act3(ctx: Ctx): Promise<void> {
       });
     }
   }
-  await endAct(ctx, 3);
+  // После круга ответов: дальше до закрытия никто не ходит, и собранное не уйдёт по сделке.
+  await endAct(ctx, 3, async () => {
+    await assembleAltarOnce(ctx);
+    await tellTruthOnce(ctx);
+  });
+}
+
+/** Алтарь, который собирает сценарий, и пороги готовности (копия READY из engine/closing.ts). */
+const ALTAR_SIDE: AltarSide = 'wake';
+const READY = { shards: 3, focuses: 2, gold: 6, donors: 3 };
+/** Золото от каждого из трёх вкладчиков: 3 × 2 = 6. */
+const GOLD_EACH = 2;
+const ALTAR_REASON = 'проверка готовности алтаря';
+const TRUTH_REASON = 'проверка «Правды»';
+
+const correctOwner = (playerKey: string, itemId: string, reason: string): Command =>
+  ({ type: 'gm.correct', playerKey, change: { field: 'itemOwner', itemId, owner: { type: 'player', key: playerKey } }, reason });
+
+/** Присутствующие на стороне алтаря: роли этой фракции и свободные, выбравшие её. */
+function sideMembers(ctx: Ctx, side: AltarSide): string[] {
+  const s = ctx.gmState();
+  return ctx.present().filter(k => {
+    const own = ctx.content.roleByKey[k]?.side;
+    return own === side || (own === 'free' && s.players[k].side === side);
+  });
+}
+
+/** Вещи на алтаре стороны. */
+const onAltar = (s: GameState, side: AltarSide) =>
+  Object.values(s.items).filter(i => i.owner.type === 'altar' && i.owner.side === side);
+
+/**
+ * Вещь, которую ведущий может передать: у игрока или на другом алтаре, не в лоте, не скрыта и не в резерве.
+ * Порядок стабильный (ref, автор изделия), серверный id не участвует.
+ */
+function movable(s: GameState, side: AltarSide, kind: Item['kind']): Item[] {
+  return Object.values(s.items)
+    .filter(i => i.kind === kind && i.reservedFor === undefined && i.hiddenUntilAct === undefined
+      && (i.owner.type === 'player' ? s.players[i.owner.key]?.present === true : i.owner.type === 'altar' && i.owner.side !== side))
+    .sort((a, b) => a.ref.localeCompare(b.ref) || (a.createdBy ?? '').localeCompare(b.createdBy ?? ''));
+}
+
+/** Вкладчик вещи на алтарь: игрок отдаёт вещь своим ходом, отказ виден в журнале и в проверке итогов. */
+async function contribute(ctx: Ctx, role: string, itemId: string): Promise<void> {
+  await ctx.send(role, { type: 'altar.contribute', side: ALTAR_SIDE, itemId });
+}
+
+/**
+ * Сбор алтаря пробуждения (§2.3, акт III, после последнего круга), один за вечер. Случайная игра ботов
+ * не доводит ни один алтарь до готовности, и ветки итогов с исходом алтаря иначе не проверялись бы.
+ * Ведущий исправлением «вещь у игрока» отдаёт трём участникам стороны недостающие разные осколки и Фокусы,
+ * они кладут их на алтарь и вносят по 2 золота (недостающее золото добавляет ведущий). Если Фокусов в игре
+ * не хватает, ведущий выдаёт Пепел, Пыль и золото, и участник изготавливает Фокус сам. Без случайности.
+ */
+export async function assembleAltarOnce(ctx: Ctx): Promise<void> {
+  if (ctx.altarAssembled) return;
+  const members = sideMembers(ctx, ALTAR_SIDE).slice(0, READY.donors);
+  if (members.length < READY.donors) {
+    ctx.stepSkips.push(`сбор алтаря: на стороне ${ALTAR_SIDE} ${members.length} присутствующих, нужно ${READY.donors}`);
+    return;
+  }
+  const holder = (i: number) => members[i % members.length];
+  let s = ctx.gmState();
+
+  // Осколки: недостающие разные ref, по одному предмету на ref.
+  const haveShards = new Set(onAltar(s, ALTAR_SIDE).filter(i => i.kind === 'shard').map(i => i.ref));
+  const shards: Item[] = [];
+  for (const it of movable(s, ALTAR_SIDE, 'shard')) {
+    if (haveShards.size + shards.length >= READY.shards) break;
+    if (!haveShards.has(it.ref) && !shards.some(x => x.ref === it.ref)) shards.push(it);
+  }
+  if (haveShards.size + shards.length < READY.shards) {
+    ctx.stepSkips.push(`сбор алтаря: в игре ${haveShards.size + shards.length} разных осколков вне лотов, нужно ${READY.shards}`);
+    return;
+  }
+  const focusNeed = Math.max(0, READY.focuses - onAltar(s, ALTAR_SIDE).filter(i => i.kind === 'focus').length);
+  const focuses = movable(s, ALTAR_SIDE, 'focus').slice(0, focusNeed);
+  const toCraft = focusNeed - focuses.length;
+
+  const moves: { item: Item; to: string }[] = [...shards, ...focuses].map((item, i) => ({ item, to: holder(i) }));
+  const cmds: Command[] = moves
+    .filter(m => !(m.item.owner.type === 'player' && m.item.owner.key === m.to))
+    .map(m => correctOwner(m.to, m.item.id, ALTAR_REASON));
+  // Фокус своими руками: ингредиенты по рецепту и золото на работу (с запасом на шипы).
+  const crafters = Array.from({ length: toCraft }, (_, i) => holder(moves.length + i));
+  for (const c of crafters) {
+    cmds.push(
+      { type: 'gm.correct', playerKey: c, change: { field: 'ingredient', ingredient: 'ash', delta: 1 }, reason: ALTAR_REASON },
+      { type: 'gm.correct', playerKey: c, change: { field: 'ingredient', ingredient: 'moon', delta: 1 }, reason: ALTAR_REASON },
+      { type: 'gm.correct', playerKey: c, change: { field: 'gold', delta: 2 }, reason: ALTAR_REASON },
+    );
+  }
+  // Золото: каждому из трёх вкладчиков до 2 свободных золотых сверх уже внесённого.
+  const goldNeed = members.map(m => {
+    const given = (s.altars[ALTAR_SIDE]?.contributions ?? []).filter(c => c.player === m).reduce((n, c) => n + (c.gold ?? 0), 0);
+    return Math.max(0, GOLD_EACH - given);
+  });
+  members.forEach((m, i) => {
+    const p = s.players[m];
+    // Изготовителю ведущий дал 2 золота на работу, а она стоит не больше 2: свободное золото не уменьшится.
+    const spare = p.gold - p.reservedGold;
+    if (goldNeed[i] > spare) cmds.push({ type: 'gm.correct', playerKey: m, change: { field: 'gold', delta: goldNeed[i] - Math.max(0, spare) }, reason: ALTAR_REASON });
+  });
+
+  ctx.altarAssembled = true;
+  if (cmds.length > 0) await ctx.gmTurn(cmds);
+  ctx.turnNo++;
+  for (const m of moves) await contribute(ctx, m.to, m.item.id);
+  for (const c of crafters) {
+    const before = new Set(Object.keys(ctx.gmState().items));
+    await ctx.send(c, { type: 'shop.craft', recipeId: RECIPE_BY_KIND.focus! });
+    await ctx.waitAll();
+    s = ctx.gmState();
+    const made = Object.values(s.items).find(i => !before.has(i.id) && i.kind === 'focus' && i.owner.type === 'player' && i.owner.key === c);
+    if (made) await contribute(ctx, c, made.id);
+  }
+  for (const [i, m] of members.entries()) {
+    if (goldNeed[i] > 0) await ctx.send(m, { type: 'altar.contribute', side: ALTAR_SIDE, gold: goldNeed[i] });
+  }
+  await ctx.waitAll();
+}
+
+/**
+ * «Правда» (§2.3, акт III, после сбора алтаря), один раз за вечер: ведущий исправлением отдаёт одному
+ * присутствующему все три улики. Держатель — тот, у кого улик больше (при равенстве первый по составу).
+ * Улика в лоте (не продана) или вне игры — шаг пропускается с пометкой.
+ */
+export async function tellTruthOnce(ctx: Ctx): Promise<void> {
+  if (ctx.truthFor !== undefined) return;
+  const s = ctx.gmState();
+  const present = ctx.present();
+  const refs = ctx.content.clues.map(c => c.id);
+  const clues = refs.map(ref => ({ ref, item: Object.values(s.items).find(i => i.kind === 'clue' && i.ref === ref) }));
+  const lost = clues.filter(c => !c.item || c.item.owner.type !== 'player' || !present.includes(c.item.owner.key) || c.item.reservedFor !== undefined);
+  if (lost.length > 0) {
+    ctx.stepSkips.push(`«Правда»: ${lost.map(c => `улика ${c.ref} ${!c.item ? 'не в игре' : c.item.owner.type === 'lot' ? 'в непроданном лоте' : 'недоступна'}`).join(', ')}`);
+    return;
+  }
+  const count = (k: string) => clues.filter(c => c.item!.owner.type === 'player' && c.item!.owner.key === k).length;
+  const holder = [...present].sort((a, b) => count(b) - count(a) || present.indexOf(a) - present.indexOf(b))[0];
+  const cmds = clues
+    .filter(c => !(c.item!.owner.type === 'player' && c.item!.owner.key === holder))
+    .map(c => correctOwner(holder, c.item!.id, TRUTH_REASON));
+  ctx.truthFor = holder;
+  if (cmds.length > 0) await ctx.gmTurn(cmds);
 }
 
 /**
@@ -308,6 +455,7 @@ async function closing(ctx: Ctx): Promise<void> {
   await ctx.gmTurn([{ type: 'session.reveal' }]);
   ctx.snapshot('revealed');
   await ctx.verifyViews('revealed');
+  ctx.verifyClosing();
   await ctx.gmTurn([{ type: 'gm.announce', text: 'Итоги показаны. Спасибо за вечер!' }]);
 }
 

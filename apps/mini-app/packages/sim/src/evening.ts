@@ -4,7 +4,7 @@ import {
 } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn, type CmdOutcome } from './client';
 import {
-  checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay, checkResponses, checkStart, checkViews, coverageOf,
+  checkClosing, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay, checkResponses, checkStart, checkViews, coverageOf,
 } from './checks';
 import { answerIncoming, playerAction, type Act, type TurnMemory } from './policy';
 import { Rng } from './rng';
@@ -83,6 +83,12 @@ export class Ctx {
   readonly itemKinds: Record<string, string> = {};
   /** Роли, которым оркестратор уже изготовил изделие для способности (ensureCraftedOnce). */
   readonly craftedFor = new Set<string>();
+  /** Сбор алтаря пробуждения сделан (assembleAltarOnce): при показе итогов исход обязан быть wake. */
+  altarAssembled = false;
+  /** Кому сценарий отдал три улики (tellTruthOnce): при показе итогов он держатель «Правды». */
+  truthFor: string | undefined;
+  /** Шаги сценария, невозможные при этом составе: в result.skipped. */
+  readonly stepSkips: string[] = [];
   /** Лоты, выкуп которых уже пробовали (buyoutOnce): один лот — одна попытка. */
   readonly buyoutTried = new Set<string>();
   /** Роли, чья способность в прошлом ходу получила отказ: в следующем ходу способность пропускается. */
@@ -267,6 +273,11 @@ export class Ctx {
     this.viewChecks.push({ ...r, name: `views:${label}` });
   }
 
+  /** Итоги в revealed: совпадают с computeClosing; после сбора алтаря исход wake, после передачи улик есть «Правда». */
+  verifyClosing(): void {
+    this.viewChecks.push(checkClosing(this.gmState(), this.content, { outcome: this.altarAssembled ? 'wake' : undefined, truth: this.truthFor }));
+  }
+
   async verifyStart(): Promise<void> {
     await this.settle();
     this.viewChecks.push(checkStart(this.bots, this.gmState(), this.content));
@@ -317,7 +328,10 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
     const warnings: string[] = [];
     if (timing.p95 > P95_LIMIT_MS) warnings.push(`p95 ${timing.p95} мс выше ${P95_LIMIT_MS} мс`);
     if (sizes.player > PLAYER_VIEW_LIMIT) warnings.push(`проекция игрока ${sizes.player} байт больше ${PLAYER_VIEW_LIMIT}`);
-    const skipped = checks.flatMap(c => c.details.filter(d => d.startsWith('пропущено')).map(d => `${c.name}: ${d}`));
+    const skipped = [
+      ...checks.flatMap(c => c.details.filter(d => d.startsWith('пропущено')).map(d => `${c.name}: ${d}`)),
+      ...ctx.stepSkips.map(s => `сценарий: ${s}`),
+    ];
 
     return {
       ok: checks.every(c => c.ok),

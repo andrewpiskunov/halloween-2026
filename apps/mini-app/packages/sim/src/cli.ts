@@ -3,14 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { loadContent, type GmView } from '@fair/shared';
+import { loadContent, type Content, type GmView } from '@fair/shared';
 import { defaultContentPath } from '@fair/shared/node';
 import { EventStore } from '@fair/server/src/store';
 import { Game } from '@fair/server/src/game';
 import { startChildServer, type ChildServer } from './child-server';
 import { fetchCodes, openBot } from './client';
 import { GM_USER_ID, runEvening, type EveningOptions, type EveningResult } from './evening';
-import { renderReport } from './report';
+import { outcomeLine, renderReport } from './report';
 
 interface CliArgs { players: 12 | 30; seed: number; url?: string; out: string; keep: boolean }
 
@@ -55,12 +55,13 @@ async function checkForeignServer(baseUrl: string): Promise<void> {
 }
 
 /** Выжимка в stdout. */
-function summary(result: EveningResult, durationMs: number, reportPath: string): string {
+function summary(result: EveningResult, durationMs: number, reportPath: string, content: Content): string {
   const c = result.coverage;
   const missing = [...c.missingCommands, ...c.missingAbilities, ...c.missingItems];
   return [
     `Прогон: ${result.ok ? 'ок' : 'ошибка'}`,
     ...result.checks.filter(x => !x.ok).map(x => `  ${x.name}: ${x.details.join('; ')}`),
+    `Исход: ${outcomeLine(result, content)}`,
     `Длительность: ${(durationMs / 1000).toFixed(1)} с, команд ${result.commands.length}`,
     `Время ответа: p50 ${result.timing.p50} мс, p95 ${result.timing.p95} мс, максимум ${result.timing.max} мс`,
     `Проекции: игрок ${(result.sizes.player / 1024).toFixed(1)} КБ, ведущий ${(result.sizes.gm / 1024).toFixed(1)} КБ`,
@@ -112,8 +113,12 @@ async function main(): Promise<number> {
   }
   const durationMs = Math.round(performance.now() - started);
   writeFileSync(reportPath, renderReport(result, { players: args.players, seed: args.seed, baseUrl, durationMs, replaySkipped: !!args.url }, content));
-  if (!args.keep && !args.url) for (const suffix of ['', '-wal', '-shm']) if (existsSync(dbPath + suffix)) rmSync(dbPath + suffix);
-  console.log(summary(result, durationMs, reportPath));
+  if (!args.keep && !args.url) {
+    for (const suffix of ['', '-wal', '-shm']) if (existsSync(dbPath + suffix)) rmSync(dbPath + suffix);
+    // Автозапись выгрузки дочернего сервера: папка exports рядом с базой (server/src/index.ts).
+    rmSync(resolve(args.out, 'exports'), { recursive: true, force: true });
+  }
+  console.log(summary(result, durationMs, reportPath, content));
   return result.ok ? 0 : 1;
 }
 

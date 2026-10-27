@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, expect, test } from 'vitest';
+import { afterAll, beforeAll, expect, test, vi } from 'vitest';
+import WebSocket from 'ws';
 import type { GmView } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn } from '../client';
 import { startServer, type TestServer } from './server-fixture';
@@ -68,6 +69,30 @@ test('close() сразу отклоняет ожидания и последую
   await expect(waiting).rejects.toThrow(/закрыто/);
   await expect(bot.send({ type: 'clock.pause' })).rejects.toThrow(/закрыто/);
   expect(() => bot.close()).not.toThrow();
+});
+
+test('два соединения одного аккаунта дают разные id команд при одинаковом локальном номере', async () => {
+  const first = await gmBot();
+  const second = await gmBot();
+  const sent = vi.spyOn(WebSocket.prototype, 'send');
+  try {
+    // У обоих это первая команда соединения. Без префикса id совпали бы, и сервер вернул бы второму
+    // запомненный отказ первого вместо выполнения.
+    const refused = await first.send({ type: 'session.setN', n: 7 });
+    const done = await second.send({ type: 'gm.announce', text: 'Проверка id команд.' });
+    expect(refused.ok).toBe(false);
+    expect(done.ok).toBe(true);
+    // Шпион видит и отправки сервера в том же процессе: берутся только команды ботов.
+    const ids = sent.mock.calls
+      .map(([data]) => JSON.parse(String(data)) as { kind: string; id: string })
+      .filter(m => m.kind === 'cmd')
+      .map(m => m.id);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(ids.map(id => id.split(':').at(-1))).toEqual(['1', '1']);
+  } finally {
+    sent.mockRestore();
+  }
 });
 
 // Последний тест: сервер рвёт все соединения.

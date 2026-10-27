@@ -33,3 +33,25 @@ test('вечер на 12: сценарий проходит, проверки з
   expect(result.checks.find(c => c.name === 'replay')?.details.join(' ')).not.toMatch(/пропущ/);
   expect(result.checks.find(c => c.name === 'gold')?.details.join(' ')).not.toMatch(/пропущ/);
 });
+
+test('вечер на 12: сбор алтаря даёт исход wake, три улики дают «Правду»', () => {
+  const closing = result.finalState.closing!;
+  expect(closing.outcome).toBe('wake');
+  expect(closing.warnings).toEqual([]);
+  const wake = closing.altars.find(a => a.side === 'wake')!;
+  expect(wake.ready).toBe(true);
+  expect(wake.shards).toBeGreaterThanOrEqual(3);
+  expect(wake.focuses).toBeGreaterThanOrEqual(2);
+  expect(wake.gold).toBeGreaterThanOrEqual(6);
+  expect(wake.donors).toBeGreaterThanOrEqual(3);
+  expect(closing.altars.filter(a => a.ready).map(a => a.side)).toEqual(['wake']);
+  expect(closing.truthHolder).toBeDefined();
+  expect(closing.players[closing.truthHolder!].truth).toBe(true);
+  // Участники стороны wake получили исход, остальные нет.
+  for (const [key, p] of Object.entries(closing.players)) expect(p.outcome, key).toBe(p.side === 'wake');
+  expect(result.checks.find(c => c.name === 'closing')).toMatchObject({ ok: true });
+  // Шаг идёт через исправления ведущего с причиной и вклады участников.
+  const reasons = result.commands.filter(e => e.cmd.type === 'gm.correct' && e.outcome.ok).map(e => (e.cmd as { reason: string }).reason);
+  expect(reasons).toContain('проверка готовности алтаря');
+  expect(reasons).toContain('проверка «Правды»');
+});
