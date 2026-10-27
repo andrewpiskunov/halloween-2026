@@ -4,7 +4,7 @@ import type { Config } from './config';
 import type { Game } from './game';
 import type { EventStore } from './store';
 import { issueToken, verifyInitData, verifyToken } from './auth';
-import { buildExport } from './export';
+import { buildExport, exportDownloadName } from './export';
 
 export interface ServerDeps { game: Game; store: EventStore; content: Content; config: Config; now: () => number }
 
@@ -75,10 +75,12 @@ export function buildApp(deps: ServerDeps): FastifyInstance {
     if (auth.as !== undefined || game.actorForToken({ telegramId: auth.telegramId })?.type !== 'gm') {
       return reply.code(403).send({ error: 'forbidden' });
     }
-    const date = new Date(now()).toISOString().slice(0, 10);
+    // Токен бывает в адресе: не кэшировать ответ и не отдавать адрес в Referer.
     return reply
       .header('content-type', 'application/json; charset=utf-8')
-      .header('content-disposition', `attachment; filename="evening-${date}.json"`)
+      .header('content-disposition', `attachment; filename="${exportDownloadName(now())}"`)
+      .header('cache-control', 'no-store')
+      .header('referrer-policy', 'no-referrer')
       .send(JSON.stringify(buildExport(deps.store, game, deps.content, now)));
   });
 

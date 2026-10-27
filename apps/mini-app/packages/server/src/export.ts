@@ -39,6 +39,14 @@ export function exportFileName(closedAt: number): string {
   return `evening-${closedAt}.json`;
 }
 
+// Дата вечера по Москве: игра идёт там, и ночная выгрузка не должна получить вчерашнюю дату UTC.
+const MOSCOW_DATE = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** Имя скачиваемого файла: evening-YYYY-MM-DD.json по московской дате момента выгрузки. */
+export function exportDownloadName(now: number): string {
+  return `evening-${MOSCOW_DATE.format(now)}.json`;
+}
+
 /**
  * Автозапись выгрузки после закрытия ярмарки: файл появляется при закрытии и перезаписывается
  * на каждом следующем событии (показ итогов, исправления ведущего). dir null — не писать (база в памяти).

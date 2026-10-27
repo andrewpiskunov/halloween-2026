@@ -61,6 +61,11 @@ let ownToken = '';
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Адрес выгрузки журнала с собственным токеном ведущего (не токеном «за игрока»). */
+/** Есть ли собственный токен ведущего: без него выгрузку не скачать. */
+export function hasOwnToken(): boolean {
+  return ownToken !== '';
+}
+
 export function exportUrl(): string {
   return exportUrlFor(location.origin, BASE, ownToken);
 }

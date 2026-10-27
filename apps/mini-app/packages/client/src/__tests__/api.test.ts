@@ -46,7 +46,7 @@ function setup() {
 }
 
 beforeEach(() => { FakeWebSocket.instances = []; vi.useFakeTimers(); });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('connect', () => {
   test('открывает /ws с токеном и передаёт проекции', () => {
@@ -174,6 +174,5 @@ describe('выгрузка журнала', () => {
     vi.stubGlobal('window', { Telegram: { WebApp: { initData: '' } }, open });
     openExternal('https://x/b');
     expect(open).toHaveBeenCalledWith('https://x/b', '_blank');
-    vi.unstubAllGlobals();
   });
 });

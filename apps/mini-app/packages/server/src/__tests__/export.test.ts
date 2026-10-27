@@ -10,7 +10,7 @@ import type { Config } from '../config';
 import { EventStore } from '../store';
 import { Game, type GameOpts } from '../game';
 import { buildApp } from '../http';
-import { buildExport, exportFileName, stripPersonal, writeExportOnClose, type Export } from '../export';
+import { buildExport, exportDownloadName, exportFileName, stripPersonal, writeExportOnClose, type Export } from '../export';
 import { content, gm, nextCmd } from './fixtures';
 
 const config: Config = {
@@ -119,14 +119,15 @@ test('выгрузка: без токена 401, с неверным 401, игр
 });
 
 test('выгрузка ведущему: 200, вложение с датой, журнал целиком и без личных данных', async () => {
-  const date = new Date(o.now()).toISOString().slice(0, 10);
   for (const res of [
     await fetch(exportUrl(), { headers: { authorization: `Bearer ${gmToken}` } }),
     await fetch(exportUrl(`?token=${encodeURIComponent(gmToken)}`)),
   ]) {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/^application\/json/);
-    expect(res.headers.get('content-disposition')).toBe(`attachment; filename="evening-${date}.json"`);
+    expect(res.headers.get('content-disposition')).toBe(`attachment; filename="${exportDownloadName(o.now())}"`);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(res.headers.get('referrer-policy')).toBe('no-referrer');
     const text = await res.text();
     const body = JSON.parse(text) as Export;
     expect(body.contentVersion).toBe(content.version);
@@ -163,8 +164,11 @@ test('stripPersonal не меняет входы, а после сброса ч�
   st.close();
 });
 
-test('имя файла автозаписи', () => {
+test('имя файла автозаписи и скачиваемого файла (дата по Москве)', () => {
   expect(exportFileName(1234)).toBe('evening-1234.json');
+  expect(exportDownloadName(Date.parse('2026-10-31T22:30:00Z'))).toBe('evening-2026-11-01.json');
+  expect(exportDownloadName(Date.parse('2026-10-31T20:30:00Z'))).toBe('evening-2026-10-31.json');
+  expect(exportDownloadName(1_000_000)).toBe('evening-1970-01-01.json');
 });
 
 // Автозапись: база во временной папке, игра доводится до закрытия.
