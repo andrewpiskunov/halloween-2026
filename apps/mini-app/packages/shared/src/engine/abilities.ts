@@ -6,6 +6,7 @@ import type { Effect, GameState, Ingredient, Item, ItemKind } from '../types';
 import { INGREDIENTS, available } from './bundles';
 import { actOf, applyEffects, recordAction } from './effects';
 import { isActPhase, participant } from './guards';
+import { buildIntel, isObservation, type ObservationUse } from './intel';
 import { KIND_BY_RECIPE, craftQuote, type CraftModifier } from './shop';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
 
@@ -26,7 +27,7 @@ const isIngredient = (x: unknown): x is Ingredient => INGREDIENTS.includes(x as 
 const isKey = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= MAX_KEY;
 const isPair = (x: unknown) => Array.isArray(x) && x.length === 2 && x.every(isIngredient);
 
-/** Форма параметров (§5.3 шаг 5) для мастерской, защиты и враждебных; прочие виды проверяют себя сами. */
+/** Форма параметров (§5.3 шаг 5) для мастерской, защиты, враждебных и наблюдения; прочие виды проверяют себя сами. */
 function validForm(use: AbilityUse): boolean {
   switch (use.kind) {
     case 'payAshWithGold': return isKey(use.recipeId);
@@ -42,6 +43,9 @@ function validForm(use: AbilityUse): boolean {
     case 'protectSelf': return true;
     case 'protectOther': case 'stealGold': case 'thorns': return isKey(use.target);
     case 'stealIngredient': return isKey(use.target) && isIngredient(use.ingredient);
+    case 'inspectInventory': case 'knowGold': case 'askSide': return isKey(use.target);
+    case 'sniffIngredient': return isIngredient(use.ingredient);
+    case 'askYesNo': return isKey(use.target) && (use.question === undefined || typeof use.question === 'string');
     default: return true;
   }
 }
@@ -158,6 +162,18 @@ function protect(state: GameState, author: string, target: string): Effect[] | R
 
 const isEffects = (x: Effect[] | Result): x is Effect[] => Array.isArray(x);
 
+/** Наблюдение (§5.2): без эффектов, не враждебно, лимит попыток и защиту цели не трогает. */
+function observe(
+  state: GameState, content: Content, author: string, use: ObservationUse, ctx: Ctx, requestId?: string,
+): Result {
+  if (use.kind !== 'sniffIngredient') {
+    const stop = otherTarget(state, author, use.target);
+    if (stop) return stop;
+  }
+  const intel = buildIntel(state, content, use, author);
+  return ok({ ...used(author, use.kind, [], ctx, requestId), ...('target' in use ? { target: use.target } : {}), intel });
+}
+
 /**
  * Исполнение способности после общих проверок: проверки вида и события.
  * Вызывается и из ability.use, и после согласия (requestId).
@@ -169,6 +185,8 @@ export function performAbility(
   const done = (effects: Effect[], ...rest: Event[]) => ok(used(author, use.kind, effects, ctx, requestId), ...rest);
   const bought = (ingredient: Ingredient, count: number, paidGold: number, fromBank?: true): Event =>
     ({ type: 'IngredientBought', at: ctx.now, player: author, ingredient, count, paidGold, ...(fromBank ? { fromBank } : {}) });
+
+  if (isObservation(use)) return observe(state, content, author, use, ctx, requestId);
 
   switch (use.kind) {
     case 'payAshWithGold':
