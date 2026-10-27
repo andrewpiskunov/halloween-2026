@@ -1,0 +1,230 @@
+import { ABILITY_BY_ROLE, COPY_SOURCES, type AbilityKind } from '../abilities';
+import type { AbilityUse, Ctx } from '../commands';
+import type { Content } from '../content';
+import type { AbilityUsed, Event } from '../events';
+import type { Effect, GameState, Ingredient, Item, ItemKind } from '../types';
+import { INGREDIENTS, available } from './bundles';
+import { applyEffects, recordAction } from './effects';
+import { isActPhase, participant } from './guards';
+import { KIND_BY_RECIPE, craftQuote, type CraftModifier } from './shop';
+import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
+
+/** Изделия мастерской; реликвии, осколки и улики способностями не превращаются. */
+const CRAFTED: ItemKind[] = ['potion', 'ward', 'focus', 'shape'];
+/** Перековка: только вещи по 1 золоту, Камень облика не участвует. */
+const REFORGEABLE: ItemKind[] = ['potion', 'ward', 'focus'];
+const REFORGE_INTO = ['cleanse', 'ward', 'focus'];
+const REFORGE_PRICE = 1;
+const SELL_PRICE = 2;
+const BANK_PRICE = 2;
+const CHEAP_PRICE = 1;
+/** Оптовая цена двух ингредиентов, разложенная по событиям: 2 + 1. */
+const BULK_PRICES = [2, 1];
+const MAX_KEY = 64;
+
+const isIngredient = (x: unknown): x is Ingredient => INGREDIENTS.includes(x as Ingredient);
+const isKey = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= MAX_KEY;
+const isPair = (x: unknown) => Array.isArray(x) && x.length === 2 && x.every(isIngredient);
+
+/** Форма параметров видов мастерской (§5.3 шаг 5); прочие виды проверяют себя сами. */
+function validForm(use: AbilityUse): boolean {
+  switch (use.kind) {
+    case 'payAshWithGold': return isKey(use.recipeId);
+    case 'focusFree': return true;
+    case 'substituteIngredient': return isKey(use.recipeId) && isIngredient(use.from) && isIngredient(use.to);
+    case 'buyCheap': case 'buyFromBank': return isIngredient(use.ingredient);
+    case 'buyBulk': return isPair(use.take);
+    case 'grow': return isIngredient(use.give);
+    case 'swapIngredient': return isIngredient(use.give) && isIngredient(use.take);
+    case 'disassemble': return isKey(use.itemId) && isPair(use.take);
+    case 'reforge': return isKey(use.itemId) && REFORGE_INTO.includes(use.into);
+    case 'sellToBank': return isKey(use.itemId);
+    default: return true;
+  }
+}
+
+/** Общие проверки §5.3 шаги 1–5: фаза, участник, вид роли, лимит акта, форма параметров. */
+export function checkCommon(state: GameState, ctx: Ctx, use: AbilityUse): { author: string } | Result {
+  if (!isActPhase(state)) return fail('phase');
+  const author = participant(state, ctx.actor);
+  if (!author) return fail('forbidden');
+  if (typeof use !== 'object' || use === null || ABILITY_BY_ROLE[author] !== use.kind) return fail('forbidden', 'это не способность вашей роли');
+  if (use.kind === 'copyAbility' && !(typeof use.copy === 'object' && use.copy !== null && use.copy.kind in COPY_SOURCES)) {
+    return fail('forbidden', 'этот вид нельзя скопировать');
+  }
+  const p = state.players[author];
+  if (p.abilityUsedInAct) return fail('limit', 'способность в этом акте уже применена');
+  if (p.abilityPending !== undefined) return fail('limit', 'способность ждёт ответа');
+  if (!validForm(use)) return fail('invalid', 'неверные параметры способности');
+  return { author };
+}
+
+/** AbilityUsed невраждебной исполненной способности. */
+function used(author: string, kind: AbilityKind, effects: Effect[], ctx: Ctx, requestId?: string): AbilityUsed {
+  return {
+    type: 'AbilityUsed', at: ctx.now, author, ability: kind, outcome: 'done', hostile: false, effects,
+    ...(requestId !== undefined ? { requestId } : {}),
+  };
+}
+
+/** Своё свободное изделие нужного вида: вещь или отказ. */
+function ownFreeItem(state: GameState, author: string, itemId: string, kinds: ItemKind[]): Item | Result {
+  const it = state.items[itemId];
+  if (!it) return fail('not_found', itemId);
+  if (it.owner.type !== 'player' || it.owner.key !== author) return fail('not_owner');
+  if (it.reservedFor !== undefined) return fail('reserved', 'вещь в резерве сделки');
+  if (!kinds.includes(it.kind)) return fail('invalid', 'эта вещь не подходит');
+  return it;
+}
+
+const isResult = (x: Item | Result): x is Result => 'ok' in x;
+
+/** Изготовление со способностью: AbilityUsed без эффектов, затем ItemCrafted с viaAbility. */
+function craftWith(
+  state: GameState, content: Content, author: string, kind: AbilityKind, recipeId: string,
+  mod: CraftModifier, ctx: Ctx, requestId?: string,
+): Result {
+  const recipe = content.recipeById[recipeId];
+  const itemKind = KIND_BY_RECIPE[recipeId];
+  if (!recipe || !itemKind) return fail('not_found', recipeId);
+  const q = craftQuote(state, author, recipe, mod);
+  if ('error' in q) return fail(q.error, q.detail);
+  const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, createdBy: author };
+  return ok(
+    used(author, kind, [], ctx, requestId),
+    { type: 'ItemCrafted', at: ctx.now, player: author, item, ...q, viaAbility: kind },
+  );
+}
+
+/** Сколько каждого ингредиента в паре: для одинаковых — 2. */
+function countPair(take: [Ingredient, Ingredient]): Partial<Record<Ingredient, number>> {
+  const n: Partial<Record<Ingredient, number>> = {};
+  for (const k of take) n[k] = (n[k] ?? 0) + 1;
+  return n;
+}
+
+/** Хватает ли в запасе мастерской пары ингредиентов. */
+const stockHas = (state: GameState, take: [Ingredient, Ingredient]) =>
+  Object.entries(countPair(take)).every(([k, n]) => state.workshop[k as Ingredient] >= (n ?? 0));
+
+/**
+ * Исполнение способности после общих проверок: проверки вида и события.
+ * Вызывается и из ability.use, и после согласия (requestId).
+ */
+export function performAbility(
+  state: GameState, content: Content, author: string, use: AbilityUse, ctx: Ctx, requestId?: string,
+): Result {
+  const a = available(state, author);
+  const done = (effects: Effect[], ...rest: Event[]) => ok(used(author, use.kind, effects, ctx, requestId), ...rest);
+  const bought = (ingredient: Ingredient, count: number, paidGold: number, fromBank?: true): Event =>
+    ({ type: 'IngredientBought', at: ctx.now, player: author, ingredient, count, paidGold, ...(fromBank ? { fromBank } : {}) });
+
+  switch (use.kind) {
+    case 'payAshWithGold':
+      return craftWith(state, content, author, use.kind, use.recipeId, { ashByGold: true }, ctx, requestId);
+    case 'focusFree':
+      return craftWith(state, content, author, use.kind, 'focus', { freeWork: true }, ctx, requestId);
+    case 'substituteIngredient':
+      return craftWith(state, content, author, use.kind, use.recipeId, { substitute: { from: use.from, to: use.to } }, ctx, requestId);
+
+    case 'buyCheap':
+      if (state.workshop[use.ingredient] < 1) return fail('insufficient', `в мастерской нет: ${use.ingredient}`);
+      if (a.gold < CHEAP_PRICE) return fail('insufficient', 'не хватает золота');
+      return done([], bought(use.ingredient, 1, CHEAP_PRICE));
+
+    case 'buyBulk': {
+      if (!stockHas(state, use.take)) return fail('insufficient', 'в мастерской не хватает ингредиентов');
+      const total = BULK_PRICES[0] + BULK_PRICES[1];
+      if (a.gold < total) return fail('insufficient', 'не хватает золота');
+      const [x, y] = use.take;
+      return x === y
+        ? done([], bought(x, 2, total))
+        : done([], bought(x, 1, BULK_PRICES[0]), bought(y, 1, BULK_PRICES[1]));
+    }
+
+    case 'buyFromBank':
+      if (a.gold < BANK_PRICE) return fail('insufficient', 'не хватает золота');
+      return done([], bought(use.ingredient, 1, BANK_PRICE, true));
+
+    case 'grow':
+      if (a.ingredients[use.give] < 1) return fail('insufficient', `нет ингредиента: ${use.give}`);
+      // Роса, которую отдаёт сам автор, до обмена не считается.
+      if (state.workshop.dew < 2) return fail('insufficient', 'в мастерской меньше двух Рос');
+      return done([
+        { type: 'ingredient', player: author, ingredient: use.give, delta: -1 },
+        { type: 'workshop', ingredient: use.give, delta: 1 },
+        { type: 'workshop', ingredient: 'dew', delta: -2 },
+        { type: 'ingredient', player: author, ingredient: 'dew', delta: 2 },
+      ]);
+
+    case 'swapIngredient':
+      if (use.take === use.give) return fail('invalid', 'менять ингредиент на такой же нельзя');
+      if (a.ingredients[use.give] < 1) return fail('insufficient', `нет ингредиента: ${use.give}`);
+      if (state.workshop[use.take] < 1) return fail('insufficient', `в мастерской нет: ${use.take}`);
+      return done([
+        { type: 'ingredient', player: author, ingredient: use.give, delta: -1 },
+        { type: 'workshop', ingredient: use.give, delta: 1 },
+        { type: 'workshop', ingredient: use.take, delta: -1 },
+        { type: 'ingredient', player: author, ingredient: use.take, delta: 1 },
+      ]);
+
+    case 'disassemble': {
+      const it = ownFreeItem(state, author, use.itemId, CRAFTED);
+      if (isResult(it)) return it;
+      if (!stockHas(state, use.take)) return fail('insufficient', 'в мастерской не хватает ингредиентов');
+      return done([
+        { type: 'itemRemoved', itemId: it.id },
+        ...use.take.flatMap((ingredient): Effect[] => [
+          { type: 'workshop', ingredient, delta: -1 },
+          { type: 'ingredient', player: author, ingredient, delta: 1 },
+        ]),
+      ]);
+    }
+
+    case 'reforge': {
+      const it = ownFreeItem(state, author, use.itemId, REFORGEABLE);
+      if (isResult(it)) return it;
+      const kind = KIND_BY_RECIPE[use.into];
+      if (kind === it.kind) return fail('invalid', 'новая вещь должна быть другого вида');
+      if (a.gold < REFORGE_PRICE) return fail('insufficient', 'не хватает золота');
+      const item: Item = { id: ctx.newId(), kind, ref: use.into, owner: { type: 'player', key: author }, createdBy: author };
+      return done([
+        { type: 'itemRemoved', itemId: it.id },
+        { type: 'itemCreated', item },
+        { type: 'gold', player: author, delta: -REFORGE_PRICE },
+      ]);
+    }
+
+    case 'sellToBank': {
+      const it = ownFreeItem(state, author, use.itemId, CRAFTED);
+      if (isResult(it)) return it;
+      return done([
+        { type: 'itemRemoved', itemId: it.id },
+        { type: 'gold', player: author, delta: SELL_PRICE },
+      ]);
+    }
+
+    default:
+      return fail('invalid', 'вид ещё не реализован');
+  }
+}
+
+export const abilityCommands: CommandHandlers = {
+  'ability.use': (state, content, cmd, ctx) => {
+    const c = checkCommon(state, ctx, cmd.use);
+    if ('ok' in c) return c;
+    return performAbility(state, content, c.author, cmd.use, ctx);
+  },
+};
+
+const ACT_OF_PHASE = { act1: 1, act2: 2, act3: 3 } as const;
+
+export const abilityReducers: EventReducers = {
+  AbilityUsed: (state, _c, e) => {
+    const act = ACT_OF_PHASE[state.phase as keyof typeof ACT_OF_PHASE];
+    const s = applyEffects(state, e.effects);
+    const p = s.players[e.author];
+    const marked = { ...s, players: { ...s.players, [e.author]: { ...p, abilityUsedInAct: true } } };
+    return recordAction(marked, e, act);
+  },
+};

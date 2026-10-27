@@ -1,10 +1,47 @@
-import type { Item, ItemKind, Player } from '../types';
+import type { Recipe } from '../content';
+import type { Counts, GameState, Ingredient, Item, ItemKind, Player } from '../types';
 import { INGREDIENTS, available } from './bundles';
 import { isActPhase, participant } from './guards';
-import { fail, ok, type CommandHandlers, type EventReducers } from './result';
+import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers } from './result';
 
 const BUY_PRICE = 2;
-const KIND_BY_RECIPE: Record<string, ItemKind> = { cleanse: 'potion', ward: 'ward', focus: 'focus', shape: 'shape' };
+export const KIND_BY_RECIPE: Record<string, ItemKind> = { cleanse: 'potion', ward: 'ward', focus: 'focus', shape: 'shape' };
+
+/** Поправки способностей к изготовлению: Пепел золотом, работа бесплатно, замена ингредиента. */
+export interface CraftModifier { ashByGold?: boolean; freeWork?: boolean; substitute?: { from: Ingredient; to: Ingredient } }
+export type CraftQuote =
+  | { paidGold: number; paidIngredients: Partial<Counts>; clearedThorns: boolean; clearedDiscount: boolean }
+  | { error: ErrorCode; detail: string };
+
+/**
+ * Цена изготовления по рецепту для игрока: база с поправкой способности, плюс шипы, минус скидка, не ниже нуля.
+ * Скидка тратится, только если цена до неё больше нуля; шипы тратятся всегда.
+ */
+export function craftQuote(state: GameState, key: string, recipe: Recipe, mod: CraftModifier = {}): CraftQuote {
+  const cost: Partial<Counts> = { ...recipe.cost };
+  if (mod.ashByGold) {
+    if (!cost.ash) return { error: 'invalid', detail: 'в рецепте нет Пепла' };
+    cost.ash -= 1;
+  }
+  if (mod.substitute) {
+    const { from, to } = mod.substitute;
+    if (!INGREDIENTS.includes(from) || !INGREDIENTS.includes(to)) return { error: 'invalid', detail: 'неизвестный ингредиент' };
+    if (!cost[from]) return { error: 'invalid', detail: `в рецепте нет ингредиента: ${from}` };
+    if (to === from) return { error: 'invalid', detail: 'заменять ингредиент на тот же нельзя' };
+    cost[from] -= 1;
+    cost[to] = (cost[to] ?? 0) + 1;
+  }
+  for (const k of INGREDIENTS) if (cost[k] === 0) delete cost[k];
+  const a = available(state, key);
+  const lacking = INGREDIENTS.find(k => (cost[k] ?? 0) > a.ingredients[k]);
+  if (lacking) return { error: 'insufficient', detail: `не хватает ингредиента: ${lacking}` };
+  const p = state.players[key];
+  const base = recipe.gold + (mod.ashByGold ? 1 : 0) - (mod.freeWork ? 1 : 0);
+  const beforeDiscount = base + (p.thorns ? 1 : 0);
+  const paidGold = Math.max(0, beforeDiscount - (p.discount ? 1 : 0));
+  if (a.gold < paidGold) return { error: 'insufficient', detail: 'не хватает золота' };
+  return { paidGold, paidIngredients: cost, clearedThorns: p.thorns, clearedDiscount: p.discount && beforeDiscount > 0 };
+}
 
 export const shopCommands: CommandHandlers = {
   'shop.buy': (state, _content, cmd, ctx) => {
@@ -27,17 +64,10 @@ export const shopCommands: CommandHandlers = {
     const recipe = content.recipeById[cmd.recipeId];
     const kind = KIND_BY_RECIPE[cmd.recipeId];
     if (!recipe || !kind) return fail('not_found', cmd.recipeId);
-    const a = available(state, key);
-    const lacking = INGREDIENTS.find(k => (recipe.cost[k] ?? 0) > a.ingredients[k]);
-    if (lacking) return fail('insufficient', `не хватает ингредиента: ${lacking}`);
-    const p = state.players[key];
-    const paidGold = Math.max(0, recipe.gold + (p.thorns ? 1 : 0) - (p.discount ? 1 : 0));
-    if (a.gold < paidGold) return fail('insufficient', 'не хватает золота');
+    const q = craftQuote(state, key, recipe);
+    if ('error' in q) return fail(q.error, q.detail);
     const item: Item = { id: ctx.newId(), kind, ref: cmd.recipeId, owner: { type: 'player', key }, createdBy: key };
-    return ok({
-      type: 'ItemCrafted', at: ctx.now, player: key, item, paidGold, paidIngredients: { ...recipe.cost },
-      clearedThorns: p.thorns, clearedDiscount: p.discount,
-    });
+    return ok({ type: 'ItemCrafted', at: ctx.now, player: key, item, ...q });
   },
 };
 
