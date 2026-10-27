@@ -1,8 +1,8 @@
 import type { PlayerView } from '@fair/shared';
 import { actionText, nameCase, plainName, requestOutcomeText } from './labels';
 
-/** Что клиент уже видел: id записей журнала и статусы просьб. Живёт в памяти, не в хранилище. */
-export interface Seen { actions: Set<string>; requests: Map<string, string> }
+/** Что клиент уже видел: id записей журнала, статусы просьб и число объявлений. Живёт в памяти, не в хранилище. */
+export interface Seen { actions: Set<string>; requests: Map<string, string>; announcements: number }
 
 /**
  * Уведомления по новой проекции (§7.5). Первая проекция (seen = null) только запоминается:
@@ -10,7 +10,11 @@ export interface Seen { actions: Set<string>; requests: Map<string, string> }
  */
 export function collectNotices(seen: Seen | null, v: PlayerView): { texts: string[]; seen: Seen } {
   const me = v.me.role.key;
-  const next: Seen = { actions: new Set(v.actions.map(a => a.id)), requests: new Map(v.requests.map(r => [r.id, r.status])) };
+  const next: Seen = {
+    actions: new Set(v.actions.map(a => a.id)),
+    requests: new Map(v.requests.map(r => [r.id, r.status])),
+    announcements: v.announcements.length,
+  };
   if (!seen) return { texts: [], seen: next };
   const texts: string[] = [];
   for (const a of v.actions) {
@@ -28,6 +32,10 @@ export function collectNotices(seen: Seen | null, v: PlayerView): { texts: strin
     } else if (before === undefined && r.status === 'pending' && r.approvers.includes(me)) {
       texts.push(`Новая просьба от ${nameCase(plainName(r.author, v), 'gen')}`);
     }
+  }
+  // После показа итогов вкладки «События» нет: новое объявление ведущего приходит уведомлением.
+  if (v.phase === 'revealed') {
+    for (const a of v.announcements.slice(seen.announcements)) texts.push(`Объявление: ${a.title}`);
   }
   return { texts, seen: next };
 }

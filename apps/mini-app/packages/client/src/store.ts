@@ -2,6 +2,7 @@ import { computed, signal } from '@preact/signals';
 import type { Command } from '@fair/shared';
 import { auth, authAs, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
 import { collectNotices, noticeToast, type Seen } from './notices';
+import { nextTab } from './rules';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
@@ -18,8 +19,11 @@ export const now = signal(Date.now());
 
 export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events' | 'results';
 export const tab = signal<Tab>('role');
-/** Вкладка «Итоги» уже открывалась сама при первой проекции в revealed: дальше игрок ходит по вкладкам свободно. */
-export const resultsShown = signal(false);
+/**
+ * Закрытие (closing.closedAt), для которого «Итоги» уже открывались сами: дальше игрок ходит по вкладкам свободно.
+ * Переподключение его не сбрасывает; сбрасывается вне revealed (после сброса игры).
+ */
+export const resultsShownFor = signal<number | null>(null);
 export type GmTab = 'roster' | 'console' | 'results';
 export const gmTab = signal<GmTab>('roster');
 /** Имя бота для ссылок-приглашений; приходит из /api/auth. */
@@ -87,10 +91,10 @@ function onView(v: View): void {
     seen = r.seen;
     const text = noticeToast(r.texts);
     if (text) showToast(text);
-    // итоги объявлены: один раз открыть «Итоги» (и сразу, если приложение открыли уже после объявления)
-    if (v.phase === 'revealed' && !resultsShown.value) { resultsShown.value = true; tab.value = 'results'; }
-    // после сброса игры итоги второй игры снова откроются сами
-    if (v.phase !== 'revealed') resultsShown.value = false;
+    // итоги объявлены: один раз на закрытие открыть «Итоги» (и сразу, если приложение открыли уже после объявления)
+    const next = nextTab(v.phase, resultsShownFor.value, tab.value, v.closing?.closedAt ?? null);
+    resultsShownFor.value = next.shownFor;
+    tab.value = next.tab;
   }
   view.value = v;
   viewAt.value = Date.now();
@@ -108,7 +112,6 @@ function reconnect(token: string): void {
   view.value = null;
   seen = null;
   bagSeenMarks.value = null;
-  resultsShown.value = false;
   status.value = 'connecting';
   connection = connect(token, onView, onStatus);
 }

@@ -65,8 +65,7 @@ describe('computeClosing: алтари и исход', () => {
     const c = computeClosing(s, content, 0);
     expect(c.outcome).toBe('sleep');
     expect(c.warnings).toHaveLength(1);
-    expect(c.warnings[0]).toContain('wake');
-    expect(c.warnings[0]).toContain('bind');
+    expect(c.warnings[0]).toBe('два готовых алтаря: Алтарь пробуждения, Алтарь подчинения');
     expect(Object.values(c.players).some(p => p.outcome)).toBe(false);
   });
 

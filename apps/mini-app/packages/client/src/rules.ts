@@ -1,11 +1,23 @@
 import type { Bundle, GameState, Item, Phase, PlayerView, TargetMode, Want } from '@fair/shared';
 import { roleName } from './labels';
+import type { Tab } from './store';
 
 const PHASE_LABEL: Record<Phase, string> = {
   setup: 'Подготовка', act1: 'Акт 1', act2: 'Акт 2', act3: 'Акт 3', closed: 'Закрыто', revealed: 'Итоги',
 };
 /** Фаза по-русски для верхней полосы. */
 export const phaseLabel = (phase: Phase) => PHASE_LABEL[phase];
+
+/**
+ * Вкладка игрока по новой проекции: «Итоги» открываются сами один раз на каждое закрытие
+ * (closedKey — closing.closedAt). shownFor — закрытие, для которого это уже сделано;
+ * переподключение его не сбрасывает, выход из revealed (сброс игры) — сбрасывает.
+ */
+export function nextTab(phase: Phase, shownFor: number | null, current: Tab, closedKey: number | null): { tab: Tab; shownFor: number | null } {
+  if (phase !== 'revealed') return { tab: current, shownFor: null };
+  if (closedKey !== null && closedKey !== shownFor) return { tab: 'results', shownFor: closedKey };
+  return { tab: current, shownFor };
+}
 
 /** Ярмарка закрыта: вкладки читаются, действия выключены (спецификация этапа 5, §6.2). */
 export const gameFrozen = (v: PlayerView) => v.phase === 'closed' || v.phase === 'revealed';

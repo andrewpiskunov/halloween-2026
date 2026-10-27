@@ -10,10 +10,11 @@ const req = (id: string, over: Partial<ConsentRequestView> = {}): ConsentRequest
   id, author: 'o10', approvers: ['o2'], approved: [], status: 'pending', createdAt: 0, expiresAt: 300_000,
   action: { type: 'ability', ability: 'cleanseOther', target: 'o2' }, ...over,
 });
-const pv = (actions: ActionRecord[], requests: ConsentRequestView[]) => ({
+const pv = (actions: ActionRecord[], requests: ConsentRequestView[], over: Partial<PlayerView> = {}) => ({
+  phase: 'act1', announcements: [],
   me: { role: { key: 'o2', name: 'Брам' }, player: {} },
   others: [{ roleKey: 'o8', name: 'Никс' }, { roleKey: 'o10', name: 'Ада' }, { roleKey: 'o9', name: 'Эльмар' }],
-  contacts: [], actions, requests,
+  contacts: [], actions, requests, ...over,
 }) as unknown as PlayerView;
 
 test('первая проекция ничего не показывает, новые записи — показывают', () => {
@@ -31,4 +32,16 @@ test('автору: итог своей просьбы; своё исполне�
   expect(r.texts).toEqual(['Эльмар согласился: проклятие снято']);
   const declined = collectNotices(s1, pv([], [{ ...mine, status: 'declined' }]));
   expect(declined.texts).toEqual(['Эльмар отказался']);
+});
+
+test('после показа итогов новое объявление ведущего приходит уведомлением', () => {
+  const a1 = { at: 1, title: 'Итоги', text: 'Сердце спит' };
+  const a2 = { at: 2, title: 'Танцы у костра', text: 'Все к костру' };
+  const s1 = collectNotices(null, pv([], [], { phase: 'revealed', announcements: [a1] })).seen;
+  expect(collectNotices(s1, pv([], [], { phase: 'revealed', announcements: [a1] })).texts).toEqual([]);
+  const r = collectNotices(s1, pv([], [], { phase: 'revealed', announcements: [a1, a2] }));
+  expect(r.texts).toEqual(['Объявление: Танцы у костра']);
+  // до итогов объявления читают во вкладке «События», уведомления нет
+  const s2 = collectNotices(null, pv([], [], { announcements: [a1] })).seen;
+  expect(collectNotices(s2, pv([], [], { announcements: [a1, a2] })).texts).toEqual([]);
 });

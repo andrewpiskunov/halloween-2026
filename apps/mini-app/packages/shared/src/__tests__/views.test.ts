@@ -328,7 +328,7 @@ describe('цели и итоги закрытия', () => {
     const v = pv(viewFor(f.s, content, player('o1'), 0));
     expect(v.me.ability.state).toBe('closed');
     expect(v.closing).toEqual({
-      outcome: 'wake', title: OUTCOME_TITLES.wake, text: OUTCOME_TEXTS.wake,
+      outcome: 'wake', title: OUTCOME_TITLES.wake, text: OUTCOME_TEXTS.wake, closedAt: f.s.closing!.closedAt,
       truthTold: f.s.closing!.truthHolder !== undefined,
       me: { outcome: true, truth: f.s.closing!.players.o1.truth, side: 'wake' },
     });

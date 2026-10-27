@@ -195,7 +195,9 @@ export function computeClosing(state: GameState, content: Content, closedAt: num
   const altars = altarResults(state);
   const ready = altars.filter(a => a.ready).map(a => a.side);
   const outcome: Closing['outcome'] = ready.length === 1 ? ready[0] : 'sleep';
-  const warnings = ready.length >= 2 ? [`два готовых алтаря: ${ready.join(', ')}`] : [];
+  // названия алтарей как в проекции (views.ts): «Алтарь пробуждения», «Алтарь подчинения»
+  const altarName = (side: AltarSide) => content.factions.find(f => f.id === side)?.altar ?? side;
+  const warnings = ready.length >= 2 ? [`два готовых алтаря: ${ready.map(altarName).join(', ')}`] : [];
   const present = state.roster.filter(k => state.players[k]?.present === true);
   const truthHolder = present.find(k => holdClues(state, k, { type: 'holdClues', count: 3 }));
 

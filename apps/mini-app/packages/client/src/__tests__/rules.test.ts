@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import type { GameState, Item, Offer, PlayerView } from '@fair/shared';
-import { GUISE_MAX, abilityTargets, canChooseSide, canOffer, canPutOnAltar, canUseItem, correctableItems, gameFrozen, phaseLabel, remainingMs } from '../rules';
+import { effectiveTab, tabsFor } from '../components/Tabs';
+import { GUISE_MAX, abilityTargets, nextTab, canChooseSide, canOffer, canPutOnAltar, canUseItem, correctableItems, gameFrozen, phaseLabel, remainingMs } from '../rules';
 
 const item = (over: Partial<Item>): Item => ({ id: 'i1', kind: 'shard', ref: 'I', owner: { type: 'player', key: 'o1' }, ...over });
 const view = (act: 0 | 1 | 2 | 3, free: string[]) => ({ act, me: { available: { items: free } } }) as unknown as PlayerView;
@@ -118,4 +119,25 @@ test('после закрытия ярмарки игра заморожена',
   expect(gameFrozen(sidePv('revealed', 'wake'))).toBe(true);
   expect(gameFrozen(sidePv('act3', 'wake'))).toBe(false);
   expect(gameFrozen(sidePv('setup', 'wake'))).toBe(false);
+});
+
+test('«Итоги» открываются сами один раз на каждое закрытие', () => {
+  // первая проекция в revealed: открыть «Итоги» и запомнить закрытие
+  expect(nextTab('revealed', null, 'bag', 5000)).toEqual({ tab: 'results', shownFor: 5000 });
+  // следующие проекции (и переподключение) того же закрытия: вкладку не трогать
+  expect(nextTab('revealed', 5000, 'trades', 5000)).toEqual({ tab: 'trades', shownFor: 5000 });
+  // после сброса игры ключ забывается, итоги следующей игры снова откроются сами
+  expect(nextTab('act1', 5000, 'role', null)).toEqual({ tab: 'role', shownFor: null });
+  expect(nextTab('revealed', null, 'role', 9000)).toEqual({ tab: 'results', shownFor: 9000 });
+  // новое закрытие при запомненном старом ключе
+  expect(nextTab('revealed', 5000, 'role', 9000)).toEqual({ tab: 'results', shownFor: 9000 });
+});
+
+test('вкладки: в revealed «Итоги» вместо «Событий», вне его — наоборот', () => {
+  expect(effectiveTab('events', true)).toBe('results');
+  expect(effectiveTab('bag', true)).toBe('bag');
+  expect(effectiveTab('results', false)).toBe('role');
+  expect(effectiveTab('events', false)).toBe('events');
+  expect(tabsFor(true).map(t => t.key)).toEqual(['role', 'bag', 'trades', 'workshop', 'altars', 'results']);
+  expect(tabsFor(false).map(t => t.key)).toEqual(['role', 'bag', 'trades', 'workshop', 'altars', 'events']);
 });
