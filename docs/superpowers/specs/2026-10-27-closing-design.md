@@ -1,6 +1,6 @@
 # Этап 5: закрытие ярмарки, исход, «Правда», цели
 
-Статус: проект, решения владельца не запрашивались (он выбрал продолжать без вопросов). Все спорные места решены по умолчанию и помечены «решение здесь»; список в разделе 9.
+Статус: реализовано (ветка `closing`). Решения владельца не запрашивались (он выбрал продолжать без вопросов). Все спорные места решены по умолчанию и помечены «решение здесь»; список в разделе 9.
 
 Источники: проект 0.2 (`docs/design/magic-fair-v0.2.md`, разделы 7, 10, 12, 16.4), спецификация Mini App (`docs/design/mini-app-spec.md`, разделы 6.3, 7, 8), данные `docs/design/game-data-v0.2.json` (цели ролей, улики, стороны, тексты «Правды»).
 
@@ -203,15 +203,16 @@ export type GoalCondition =
 В состояние добавляются два журнала, которые пишут редьюсеры уже существующих событий:
 
 ```ts
+export interface TradeSide { gold: number; ingredients: Counts; items: { kind: ItemKind; ref: string; createdBy?: string }[] }
 export interface TradeRecord {
-  id: string; at: number; from: string; to: string; service: boolean; exchanged: boolean;
-  give: { gold: number; items: { kind: ItemKind; ref: string; createdBy?: string }[] };   // что отдал from
-  get:  { gold: number; items: { kind: ItemKind; ref: string; createdBy?: string }[] };   // что отдал to
+  id: string; at: number; from: string; to: string; service: boolean;
+  give: TradeSide;   // что отдал from
+  get:  TradeSide;   // что отдал to
 }
-export interface CraftRecord { at: number; player: string; kind: ItemKind }
+export interface CraftRecord { at: number; player: string; kind: ItemKind; itemId: string }
 ```
 
-`state.trades: TradeRecord[]` пополняется в редьюсере `OfferAccepted` (вещи берутся из `state.items` до перемещения, поэтому `createdBy` сохраняется; `give`/`get` записи включают и ингредиенты: `ingredients: Counts`). `state.crafts: CraftRecord[]` пополняется в `ItemCrafted` и в `AbilityUsed` для `reforge` (новая вещь перековки имеет `createdBy` автора, и для Хельги перековка в талисман — основной путь к цели). Перековка считается изготовлением везде: в `craftedKinds`, `gaveKind`, `holdCraftedKinds` (решение здесь).
+`state.trades: TradeRecord[]` пополняется в редьюсере `OfferAccepted` (вещи берутся из `state.items` до перемещения, поэтому `createdBy` сохраняется; `give`/`get` записи включают и ингредиенты: `ingredients: Counts`). Отдельного поля «обмен» в записи нет: условие `exchanges` выводит его из `give` и `get` при проверке (обе стороны отдали золото, ингредиент или вещь). `state.crafts: CraftRecord[]` пополняется в `ItemCrafted` и в `AbilityUsed` для `reforge` (новая вещь перековки имеет `createdBy` автора, и для Хельги перековка в талисман — основной путь к цели). Перековка считается изготовлением везде: в `craftedKinds`, `gaveKind`, `holdCraftedKinds` (решение здесь).
 
 Старые журналы: при проигрывании событий до этой версии журналы заполняются теми же редьюсерами, поэтому миграции нет. `emptyState()` даёт пустые массивы.
 
@@ -219,7 +220,7 @@ export interface CraftRecord { at: number; player: string; kind: ItemKind }
 
 ### 6.1. Игрок, вкладка «Роль», до закрытия
 
-Под каждой целью строка состояния: «выполнено» или «пока нет», по тому же `computeClosing` на текущем состоянии (предпросмотр). Для условий «при закрытии» (`hold*`, `goldAtLeast`) предпросмотр честный; для журнальных тоже. Текст подсказки: «считается при закрытии ярмарки». Проекция: `PlayerView.me.goals: { text: string; done: boolean }[]`.
+Под каждой целью строка состояния: «выполнено» или «пока нет», по тому же `computeClosing` на текущем состоянии (предпросмотр). Для условий «при закрытии» (`hold*`, `goldAtLeast`) предпросмотр честный; для журнальных тоже. Текст подсказки: «считается при закрытии ярмарки». Проекция: `PlayerView.me.goals: { text: string; done: boolean; byGm: boolean }[]` (`byGm` — цель отмечена ведущим).
 
 ### 6.2. Игрок после `close`
 
@@ -234,7 +235,7 @@ export interface CraftRecord { at: number; player: string; kind: ItemKind }
 - моя сторона (для свободных: выбранная или «не выбрана»);
 - если «Правду» держит кто-то: «Правду расскажет ведущий» без имени.
 
-Проекция: `PlayerView.closing?: { outcome; outcomeText; me: { goals: [...], outcome: boolean, truth: boolean }; truthTold: boolean }`, только в `revealed`.
+Проекция: `PlayerView.closing?: { outcome; title; text; truthTold: boolean; me: { outcome: boolean; truth: boolean; side } }`, только в `revealed`. Цели в `closing` не дублируются: они в `PlayerView.me.goals: { text: string; done: boolean; byGm: boolean }[]`, после закрытия там итог из `state.closing`.
 
 ### 6.4. Выбор стороны у свободных
 

@@ -49,8 +49,8 @@ export function missingWants(get: Bundle, v: PlayerView): Want[] {
 const ALTAR_KINDS: Item['kind'][] = ['shard', 'focus'];
 export const canPutOnAltar = (item: Item, v: PlayerView) => canOffer(item, v) && ALTAR_KINDS.includes(item.kind);
 
-/** Вещи, которые ведущий может передать исправлением: только находящиеся у игроков. */
-export const correctableItems = (state: GameState) => Object.values(state.items).filter(it => it.owner.type === 'player');
+/** Вещи, которые ведущий может передать исправлением: у игроков и на алтарях (вклад снимется); из лота нельзя. */
+export const correctableItems = (state: GameState) => Object.values(state.items).filter(it => it.owner.type !== 'lot');
 
 /** Длина облика Камня: копия MAX_GUISE из engine/items.ts. */
 export const GUISE_MAX = 40;

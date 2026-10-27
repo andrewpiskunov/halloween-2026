@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
+import type { AltarSide, Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
 import { Abilities, type FixPreset, type MarkField } from './Abilities';
 import { actPlan } from '../../gm/clock';
+import { ALTAR_PLACE } from '../../gm/closing';
 import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
 import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
 import { correctableItems, remainingMs } from '../../rules';
-import { ask, now, run, showToast } from '../../store';
+import { ask, gmTab, now, run, showToast } from '../../store';
 
-type Field = 'gold' | 'ingredient' | 'itemOwner' | MarkField;
+type Field = 'gold' | 'ingredient' | 'itemOwner' | 'side' | 'goal' | MarkField;
+/** Ручная отметка цели: выполнено, не выполнено или снять отметку (считать по журналу). */
+type GoalMark = 'done' | 'failed' | 'clear';
+const GOAL_MARK: Record<GoalMark, string> = { done: 'выполнено', failed: 'не выполнено', clear: 'снять отметку' };
 
 /** Подписи отметок для формы исправления и подтверждения. */
 const MARK_LABEL: Record<MarkField, string> = {
@@ -90,8 +94,10 @@ export function Console({ v }: { v: GmView }) {
           }}>{nextAct ? `Начать акт ${nextAct.act}` : 'Начать акт II'}</Button>
         </span>
         <span class="wide">
-          <Button kind="sec" disabled>Закрыть ярмарку</Button>
-          <p class="m-note" style={{ textAlign: 'center' }}>Закрытие — в следующей версии</p>
+          {/* одна кнопка закрытия: ведёт на «Итоги», где чек-лист и подтверждение (§6.5) */}
+          {state.closing
+            ? <Button kind="sec" onClick={() => { gmTab.value = 'results'; }}>К итогам</Button>
+            : <Button kind="sec" disabled={state.phase !== 'act3'} onClick={() => { gmTab.value = 'results'; }}>Закрыть ярмарку</Button>}
         </span>
       </div>
 
@@ -211,6 +217,9 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
   const [reason, setReason] = useState('');
   const [on, setOn] = useState(true);
   const [guise, setGuise] = useState('');
+  const [side, setSide] = useState('');
+  const [goalIndex, setGoalIndex] = useState<0 | 1>(0);
+  const [goalMark, setGoalMark] = useState<GoalMark>('done');
   const card = useRef<HTMLDivElement>(null);
 
   // «Снять» из таблицы отметок: игрок и поле уже выбраны, остаётся причина.
@@ -221,16 +230,28 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
   }, [preset]);
 
   const ownerLabel = (o: (typeof items)[number]['owner']) =>
-    o.type === 'player' ? name(o.key) : o.type === 'altar' ? `алтарь ${o.side}` : 'лот';
+    o.type === 'player' ? name(o.key) : o.type === 'altar' ? ALTAR_PLACE[o.side] : 'лот';
   const itemIcon = (kind: string) => kind === 'shard' ? '💠' : kind === 'clue' ? '🔍' : kind === 'relic' ? '🏺' : '⚗️';
   const roleOption = (k: string) => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji, avatar: k });
   const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${it.ref}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
+  const itemLabel = (it: (typeof items)[number]) => it.owner.type === 'altar' ? `${itemName(it)} (${ALTAR_PLACE[it.owner.side]})` : itemName(it);
 
   const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';
   const curOwner = newOwner || state.roster[0] || '';
   const p = player || state.roster[0] || '';
+  const role = content.roles.find(r => r.key === p);
+  // сторону ведущий правит только у свободных ролей; варианты — алтари этой игры
+  const free = role?.side === 'free';
+  const sides = (Object.keys(state.altars) as AltarSide[]).filter(s => state.altars[s]);
+  const sideName = (s: string) => content.factions.find(f => f.id === s)?.name ?? s;
+  const chosen = state.players[p]?.side;
+  // 'none' — снять выбор; по умолчанию первый алтарь игры
+  const curSide = side === 'none' || sides.includes(side as AltarSide) ? side : sides[0] ?? 'none';
+  const fromAltar = items.find(i => i.id === curItem)?.owner.type === 'altar';
   const ready = reason.trim() !== '' && p !== '' && (
     field === 'itemOwner' ? curItem !== '' && curOwner !== ''
+      : field === 'side' ? free && (curSide !== 'none' || chosen !== undefined)
+      : field === 'goal' ? true
       : field === 'guise' ? !on || guise.trim() !== ''
         : isMark(field) ? true : delta !== 0);
 
@@ -238,11 +259,15 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
     const change: CorrectionChange = field === 'gold' ? { field: 'gold', delta }
       : field === 'ingredient' ? { field: 'ingredient', ingredient, delta }
         : field === 'itemOwner' ? { field: 'itemOwner', itemId: curItem, owner: { type: 'player', key: curOwner } }
+          : field === 'side' ? { field: 'side', side: curSide === 'none' ? null : curSide as AltarSide }
+          : field === 'goal' ? { field: 'goal', index: goalIndex, value: goalMark === 'clear' ? null : goalMark === 'done' }
           : field === 'guise' ? { field: 'guise', name: on ? guise.trim() : null }
             : { field, value: on };
     const what = field === 'gold' ? `золото ${delta > 0 ? '+' : ''}${delta}`
       : field === 'ingredient' ? `${INGREDIENTS.find(i => i.key === ingredient)?.short} ${delta > 0 ? '+' : ''}${delta}`
-        : field === 'itemOwner' ? `вещь отдать: ${name(curOwner)}`
+        : field === 'itemOwner' ? `${fromAltar ? 'вещь с алтаря' : 'вещь'} отдать: ${name(curOwner)}`
+          : field === 'side' ? (curSide === 'none' ? 'сторона: снять выбор' : `сторона: ${sideName(curSide)}`)
+          : field === 'goal' ? `цель ${goalIndex + 1}: ${GOAL_MARK[goalMark]}`
           : field === 'guise' && on ? `облик «${guise.trim()}»`
             : `${MARK_LABEL[field]}: ${on ? 'поставить' : 'снять'}`;
     ask({
@@ -263,6 +288,8 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
           { value: 'gold', label: 'Золото', icon: '🪙', image: resourceImageUrl('gold') },
           { value: 'ingredient', label: 'Ингредиент', icon: '🔥', image: resourceImageUrl('ash') },
           { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
+          ...(free ? [{ value: 'side', label: 'Сторона', icon: '⚑' }] : []),
+          { value: 'goal', label: 'Личная цель', icon: '✓' },
           ...(Object.keys(MARK_LABEL) as MarkField[]).map(f => ({ value: f, label: MARK_LABEL[f], icon: MARK_ICON[f] })),
         ]} />
       </div>
@@ -271,7 +298,33 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
           <Select label="Ингредиент" value={ingredient} onChange={s => setIngredient(s as Ingredient)} options={INGREDIENTS.map(i => ({ value: i.key, label: i.name, icon: i.emoji, image: resourceImageUrl(i.key) }))} />
         </div>
       )}
-      {isMark(field) ? (
+      {field === 'side' ? (
+        free ? (
+          <>
+            <div class="field"><span>Сторона</span>
+              <Select label="Сторона" value={curSide} onChange={setSide} options={[
+                ...sides.map(s => ({ value: s, label: sideName(s), icon: '⚑' })),
+                { value: 'none', label: 'Снять выбор', icon: '✗' },
+              ]} />
+            </div>
+            <p class="m-note">Сейчас: {chosen && chosen !== 'free' ? sideName(chosen) : 'не выбрана'}. После закрытия итоги пересчитаются.</p>
+          </>
+        ) : <p class="m-note">Сторону выбирают только свободные роли.</p>
+      ) : field === 'goal' ? (
+        <>
+          <div class="field"><span>Цель</span>
+            <Select label="Цель" value={String(goalIndex)} onChange={s => setGoalIndex(s === '1' ? 1 : 0)} options={[0, 1].map(i => ({
+              value: String(i), label: `Цель ${i + 1}`, hint: role?.goals[i],
+            }))} />
+          </div>
+          <div class="m-btns" role="group" aria-label="Отметка цели">
+            {(Object.keys(GOAL_MARK) as GoalMark[]).map(m => (
+              <Button key={m} kind={goalMark === m ? 'main' : 'sec'} small onClick={() => setGoalMark(m)}>{GOAL_MARK[m]}</Button>
+            ))}
+          </div>
+          <p class="m-note">Отметка ведущего важнее расчёта; «снять отметку» вернёт расчёт по журналу. На «Итогах» такая цель помечена «отмечено ведущим».</p>
+        </>
+      ) : isMark(field) ? (
         <>
           <div class="m-btns two" role="group" aria-label="Поставить или снять">
             <Button kind={on ? 'main' : 'sec'} small onClick={() => setOn(true)}>Поставить</Button>
@@ -289,7 +342,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
       ) : (
         <>
           <div class="field"><span>Вещь</span>
-            <Select label="Вещь" value={curItem} onChange={setItemId} placeholder="Нет вещей у игроков" options={items.map(it => ({ value: it.id, label: itemName(it), hint: ownerLabel(it.owner), icon: itemIcon(it.kind), image: itemImageUrl(it) }))} />
+            <Select label="Вещь" value={curItem} onChange={setItemId} placeholder="Нет вещей у игроков и на алтарях" options={items.map(it => ({ value: it.id, label: itemLabel(it), hint: ownerLabel(it.owner), icon: itemIcon(it.kind), image: itemImageUrl(it) }))} />
           </div>
           <div class="field"><span>Новый владелец</span>
             <Select label="Новый владелец" value={curOwner} onChange={setNewOwner} options={state.roster.map(roleOption)} />

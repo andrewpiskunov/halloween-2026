@@ -3,6 +3,7 @@ import { gmTab, type GmTab } from '../store';
 const TABS: { key: GmTab; label: string; icon: string }[] = [
   { key: 'roster', label: 'Состав', icon: '☿︎' },
   { key: 'console', label: 'Пульт', icon: '⧗' },
+  { key: 'results', label: 'Итоги', icon: '✶︎' },
 ];
 
 /** Нижняя панель вкладок ведущего. */

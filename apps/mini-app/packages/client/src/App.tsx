@@ -10,6 +10,7 @@ import { Bag } from './screens/Bag';
 import { Events } from './screens/Events';
 import { Results } from './screens/Results';
 import { Console } from './screens/gm/Console';
+import { Results as GmResults } from './screens/gm/Results';
 import { Roster } from './screens/gm/Roster';
 import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
@@ -124,7 +125,7 @@ function GmApp({ v }: { v: GmView }) {
   return (
     <>
       <TopBar v={v} />
-      <main class="cnt">{gmTab.value === 'console' ? <Console v={v} /> : <Roster v={v} />}</main>
+      <main class="cnt">{gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? <GmResults v={v} /> : <Roster v={v} />}</main>
       <GmTabs />
     </>
   );

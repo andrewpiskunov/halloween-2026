@@ -168,6 +168,28 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     const fix = gm.locator('.m-card', { has: gm.getByRole('heading', { name: 'Исправление', exact: true }) });
     await expect(fix.getByRole('combobox', { name: 'Игрок' })).toHaveText(/Грета/);
     await expect(fix.getByRole('combobox', { name: 'Что исправить' })).toHaveText(/Защита/);
+
+    // 10. Акт III и закрытие: ведущий на «Итогах» видит чек-лист (на алтаре пробуждения 2 золота Серафины из шага 5),
+    //     закрывает ярмарку, видит «Сердце спит» и сводку, показывает результаты; у Серафины открываются «Итоги».
+    await gm.getByRole('button', { name: 'Начать акт III' }).click();
+    await gm.getByRole('dialog').getByRole('button', { name: 'Акт III' }).click();
+    await gm.locator('nav.tabs').getByRole('button', { name: 'Итоги' }).click();
+    const wakeCheck = gm.locator('.gm-altar', { hasText: 'Алтарь пробуждения' });
+    await expect(wakeCheck).toContainText('золота 2 из 6');
+    await expect(wakeCheck).toContainText('дарителей золота 1 из 3');
+    await expect(wakeCheck).toContainText('не готов');
+    await gm.getByRole('button', { name: 'Закрыть ярмарку', exact: true }).click();
+    await expect(gm.getByRole('dialog')).toContainText('Ярмарку нельзя будет открыть снова');
+    await gm.getByRole('dialog').getByRole('button', { name: 'Закрыть', exact: true }).click();
+    await expect(gm.locator('.m-card.outcome h4')).toHaveText('Сердце спит');
+    await expect(gm.locator('.gm-summary', { hasText: /^Серафина: цели [0-2]\/2/ })).toBeVisible();
+    await gm.getByRole('button', { name: 'Показать результаты' }).click();
+    await gm.getByRole('dialog').getByRole('button', { name: 'Показать' }).click();
+    await expect(gm.locator('p.m-note', { hasText: 'Результаты показаны' })).toBeVisible();
+
+    await expect(serafina.locator('nav.tabs').getByRole('button', { name: 'Итоги' })).toHaveAttribute('aria-current', 'page');
+    await expect(serafina.locator('.m-card.outcome h4')).toHaveText('Сердце спит');
+    await expect(serafina.locator('.achv')).toHaveCount(2);
   } finally {
     await Promise.all([gmCtx.close(), gretaCtx.close(), serafinaCtx.close()]);
   }

@@ -38,7 +38,7 @@ test('реликвии и улики на алтарь не предлагают
   expect(canOffer(item({ id: 'x' }), v1)).toBe(false);
 });
 
-test('в форме исправления только вещи у игроков', () => {
+test('в форме исправления вещи у игроков и на алтарях, но не в лотах', () => {
   const state = {
     items: {
       a: item({ id: 'a' }),
@@ -46,7 +46,7 @@ test('в форме исправления только вещи у игроко
       c: item({ id: 'c', owner: { type: 'lot', id: 'l1' } }),
     },
   } as unknown as GameState;
-  expect(correctableItems(state).map(i => i.id)).toEqual(['a']);
+  expect(correctableItems(state).map(i => i.id)).toEqual(['a', 'b']);
 });
 
 /** Проекция игрока Сива (o15) в первом акте; остальное — по необходимости. */

@@ -509,3 +509,11 @@ button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: po
 .achv.ok b { color: #3f6b2a; }
 .achv.no b { color: var(--cinnabar); }
 .results-side { justify-content: flex-start; margin-top: 10px; color: var(--fg); }
+
+/* Итоги на пульте: алтари с отметкой готовности и сводка по игрокам */
+.gm-altar .m-row { border-bottom: 0; min-height: 36px; }
+.gm-altar .m-row b { color: #3f6b2a; }
+.gm-altar .m-row small { font-style: italic; color: var(--note); }
+.gm-altar .altar-need { padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.gm-altar:last-of-type .altar-need { border-bottom: 0; }
+.gm-summary { min-height: 36px; font-size: 15px; }

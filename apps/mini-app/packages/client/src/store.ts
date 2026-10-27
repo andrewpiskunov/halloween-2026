@@ -20,7 +20,7 @@ export type Tab = 'role' | 'bag' | 'trades' | 'workshop' | 'altars' | 'events' |
 export const tab = signal<Tab>('role');
 /** Вкладка «Итоги» уже открывалась сама при первой проекции в revealed: дальше игрок ходит по вкладкам свободно. */
 export const resultsShown = signal(false);
-export type GmTab = 'roster' | 'console';
+export type GmTab = 'roster' | 'console' | 'results';
 export const gmTab = signal<GmTab>('roster');
 /** Имя бота для ссылок-приглашений; приходит из /api/auth. */
 export const botName = signal('');
@@ -89,6 +89,8 @@ function onView(v: View): void {
     if (text) showToast(text);
     // итоги объявлены: один раз открыть «Итоги» (и сразу, если приложение открыли уже после объявления)
     if (v.phase === 'revealed' && !resultsShown.value) { resultsShown.value = true; tab.value = 'results'; }
+    // после сброса игры итоги второй игры снова откроются сами
+    if (v.phase !== 'revealed') resultsShown.value = false;
   }
   view.value = v;
   viewAt.value = Date.now();
