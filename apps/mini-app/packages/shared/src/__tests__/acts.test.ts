@@ -318,8 +318,11 @@ describe('исправления ведущего: отметки способн
 
     const pending = run(s, { type: 'ability.use', use: { kind: 'cleanseOther', target: 'o9' } }, player('o10'));
     if (!pending.ok) throw new Error(pending.error);
-    expect(err(pending.state, 'o10', { field: 'abilityUsed', value: false })).toBe('invalid');
-    expect(err(pending.state, 'o10', { field: 'abilityUsed', value: true })).toBe('invalid');
+    // Пока запрос ждёт ответа, ведущему подсказывают сначала отменить его, а не «отметки нет».
+    for (const value of [false, true]) {
+      const r = correct(pending.state, 'o10', { field: 'abilityUsed', value });
+      expect(r).toMatchObject({ ok: false, error: 'invalid', detail: 'способность ждёт ответа: сначала отмените запрос' });
+    }
   });
 
   test('hostileAttempt: снимается и ставится, повтор → invalid', () => {

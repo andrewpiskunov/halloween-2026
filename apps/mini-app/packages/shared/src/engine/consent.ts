@@ -7,7 +7,7 @@ import { performAbility } from './abilities';
 import { isConsentedKind, kindApprovers } from './consented-kinds';
 import { isActPhase, participant, presentPlayer } from './guards';
 import { performItemConsented } from './items';
-import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
+import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
 
 /** Срок ответа на запрос, как у предложений (§4.2). */
 export const CONSENT_TTL_MS = 300000;
@@ -45,7 +45,24 @@ export function performConsented(state: GameState, content: Content, req: Consen
   const r = req.action.type === 'ability'
     ? recheckAbility(state, content, req, req.action.use, ctx)
     : performItemConsented(state, req, req.action, ctx);
-  return r.ok ? r : closed(req.id, 'failed', ctx, r.detail ?? r.error);
+  return r.ok ? r : closed(req.id, 'failed', ctx, failReason(r));
+}
+
+/** Русские причины отказа по коду: игрок видит их в «Просьбах» вместо ключей и кодов. */
+const FAIL_REASONS: Record<ErrorCode, string> = {
+  insufficient: 'не хватает ресурсов',
+  limit: 'уже есть',
+  invalid: 'условия изменились',
+  not_found: 'участника нет на ярмарке',
+  forbidden: 'нельзя',
+  not_owner: 'вещи у автора уже нет',
+  reserved: 'вещь занята',
+  phase: 'сейчас нельзя',
+};
+
+/** Причина для ConsentClosed failed: detail, если он написан по-русски, иначе текст по коду. */
+function failReason(r: Extract<Result, { ok: false }>): string {
+  return r.detail !== undefined && /[а-яё]/i.test(r.detail) ? r.detail : FAIL_REASONS[r.error];
 }
 
 /** Повтор §5.3 для автора, чья способность ждёт этого запроса. */
@@ -56,9 +73,13 @@ function recheckAbility(state: GameState, content: Content, req: ConsentRequest,
   return performAbility(state, content, req.author, use, ctx, req.id);
 }
 
-/** Открытый запрос или отказ: фаза акта без паузы, запрос есть и ждёт ответа. */
-function pendingRequest(state: GameState, id: string): ConsentRequest | Result {
-  if (!isActPhase(state) || state.clock.pausedAt !== undefined) return fail('phase');
+/**
+ * Открытый запрос или отказ: фаза акта, запрос есть и ждёт ответа.
+ * Пауза останавливает всех, кроме ведущего: он может отменить просьбу и на паузе.
+ */
+function pendingRequest(state: GameState, id: string, ctx: Ctx): ConsentRequest | Result {
+  if (!isActPhase(state)) return fail('phase');
+  if (state.clock.pausedAt !== undefined && ctx.actor.type !== 'gm') return fail('phase', 'часы на паузе');
   const r = state.requests[id];
   if (!r) return fail('not_found', id);
   if (r.status !== 'pending') return fail('invalid', 'запрос уже закрыт');
@@ -68,7 +89,7 @@ const isResult = (x: ConsentRequest | Result): x is Result => 'ok' in x;
 
 export const consentCommands: CommandHandlers = {
   'consent.accept': (state, content, cmd, ctx) => {
-    const r = pendingRequest(state, cmd.id);
+    const r = pendingRequest(state, cmd.id, ctx);
     if (isResult(r)) return r;
     const by = participant(state, ctx.actor);
     if (by === undefined || !r.approvers.includes(by)) return fail('forbidden');
@@ -81,7 +102,7 @@ export const consentCommands: CommandHandlers = {
   },
 
   'consent.decline': (state, _content, cmd, ctx) => {
-    const r = pendingRequest(state, cmd.id);
+    const r = pendingRequest(state, cmd.id, ctx);
     if (isResult(r)) return r;
     const by = participant(state, ctx.actor);
     if (by === undefined || !r.approvers.includes(by)) return fail('forbidden');
@@ -89,7 +110,7 @@ export const consentCommands: CommandHandlers = {
   },
 
   'consent.cancel': (state, _content, cmd, ctx) => {
-    const r = pendingRequest(state, cmd.id);
+    const r = pendingRequest(state, cmd.id, ctx);
     if (isResult(r)) return r;
     if (ctx.actor.type === 'gm') return closed(r.id, 'cancelled', ctx, 'gm');
     if (participant(state, ctx.actor) !== r.author) return fail('forbidden');
@@ -98,7 +119,7 @@ export const consentCommands: CommandHandlers = {
 
   'consent.expire': (state, _content, cmd, ctx) => {
     if (ctx.actor.type !== 'system') return fail('forbidden');
-    const r = pendingRequest(state, cmd.id);
+    const r = pendingRequest(state, cmd.id, ctx);
     if (isResult(r)) return r;
     if (ctx.now < r.expiresAt) return fail('invalid', 'срок ещё не истёк');
     return closed(r.id, 'expired', ctx, 'timeout');
@@ -113,7 +134,7 @@ function release(state: GameState, req: ConsentRequest): GameState {
     const { abilityPending: _a, ...rest } = p;
     s = { ...s, players: { ...s.players, [req.author]: rest } };
   }
-  const it = req.action.type === 'item' ? s.items[req.action.itemId] : undefined;
+  const it = req.action.type === 'item' && Object.hasOwn(s.items, req.action.itemId) ? s.items[req.action.itemId] : undefined;
   if (it?.reservedFor === req.id) {
     const { reservedFor: _r, ...rest } = it;
     s = { ...s, items: { ...s.items, [it.id]: rest } };
@@ -148,6 +169,6 @@ export const consentReducers: EventReducers = {
   },
   ConsentClosed: (state, _c, e) => {
     const r = state.requests[e.id];
-    return setRequest(release(state, r), { ...r, status: e.status, ...(e.reason !== undefined ? { reason: e.reason } : {}) });
+    return setRequest(release(state, r), { ...r, status: e.status, closedAt: e.at, ...(e.reason !== undefined ? { reason: e.reason } : {}) });
   },
 };

@@ -41,7 +41,16 @@ const focus: ActionRecord = {
 };
 
 test('строка кражи: акт, время, автор → цель, способность и суть', () => {
-  expect(actionLine(steal, view([guard, steal]))).toBe('Акт II, 12:40. Никс → Брам: Ловкая рука, 1 золото');
+  expect(actionLine(steal, view([guard, steal]))).toBe('Акт II, 12:40. Никс → Брам: Ловкая рука, 1 золотой');
+});
+
+test('золото в журнале согласуется с числом', () => {
+  const two: ActionRecord = { ...steal, id: '11', effects: [{ type: 'goldMove', from: 'o2', to: 'o8', amount: 2 }] };
+  expect(actionLine(two, view([two]))).toBe('Акт II, 12:40. Никс → Брам: Ловкая рука, 2 золотых');
+  const sold: ActionRecord = { ...focus, id: '13', effects: [{ type: 'gold', player: 'o1', delta: 2 }] };
+  expect(actionLine(sold, view([sold]))).toBe('Акт II, 12:05. Серафина: Дыхание крови, +2 золотых');
+  const paid: ActionRecord = { ...focus, id: '14', effects: [{ type: 'gold', player: 'o1', delta: -1 }] };
+  expect(actionLine(paid, view([paid]))).toBe('Акт II, 12:05. Серафина: Дыхание крови, -1 золотой');
 });
 
 test('блокировка называет того, кто дал защиту', () => {

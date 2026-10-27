@@ -80,7 +80,8 @@ function used(author: string, kind: AbilityKind, effects: Effect[], ctx: Ctx, re
 
 /** Своё свободное изделие нужного вида: вещь или отказ. */
 function ownFreeItem(state: GameState, author: string, itemId: string, kinds: ItemKind[]): Item | Result {
-  const it = state.items[itemId];
+  // Только собственные ключи: «constructor» и подобные из прототипа — не вещи.
+  const it = typeof itemId === 'string' && Object.hasOwn(state.items, itemId) ? state.items[itemId] : undefined;
   if (!it) return fail('not_found', itemId);
   if (it.owner.type !== 'player' || it.owner.key !== author) return fail('not_owner');
   if (it.reservedFor !== undefined) return fail('reserved', 'вещь в резерве сделки');

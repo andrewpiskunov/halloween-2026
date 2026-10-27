@@ -146,6 +146,10 @@ describe('согласие: отказ, отмена, истечение, пау
     expect(refusal(paused, decline(req.id), player('o9'), 3000)).toBe('phase');
     expect(refusal(paused, cancel(req.id), player('o10'), 3000)).toBe('phase');
     expect(refusal(paused, expire(req.id), system, req.expiresAt + 1)).toBe('phase');
+    // Ведущий отменяет просьбу и на паузе.
+    const byGm = step(paused, cancel(req.id), gm, 3000);
+    expect(byGm.events).toEqual([{ type: 'ConsentClosed', at: 3000, id: req.id, status: 'cancelled', reason: 'gm' }]);
+    released(byGm.state, 'o10', req.id, 'cancelled');
     const resumed = step(paused, { type: 'clock.resume' }, gm, 62000).state;
     expect(resumed.requests[req.id].expiresAt).toBe(req.expiresAt + 60000);
     expect(refusal(resumed, expire(req.id), system, req.expiresAt + 1)).toBe('invalid');
@@ -192,6 +196,20 @@ describe('согласие: повторная проверка → failed', () 
     released(r.state, 'o16', req.id, 'failed');
     expect(r.state.players.o9.protection).toEqual({ by: 'o9', source: 'ward' });
     expect(r.state.players.o1.protection).toEqual({ by: 't3', source: 'ability' });
+  });
+
+  test('получатель ушёл с ярмарки до ответа → failed с русской причиной без ключа роли', () => {
+    const s = withPlayer(makeGame(30), 'o9', { protection: { by: 'o9', source: 'ward' } });
+    const { state: s1, req } = request(s, 'o16', { kind: 'transferProtection', from: 'o9', to: 'o1' });
+    // Прямая правка состояния: в акте присутствие командой не меняется.
+    const s2 = withPlayer(s1, 'o1', { present: false });
+    const r = step(s2, accept(req.id), player('o9'));
+    const closed = r.events[1];
+    if (closed.type !== 'ConsentClosed') throw new Error(`ожидался ConsentClosed, пришло ${closed.type}`);
+    expect(closed.status).toBe('failed');
+    expect(closed.reason).not.toContain('o1');
+    expect(closed.reason).toMatch(/^[а-яё ,.-]+$/i);
+    released(r.state, 'o16', req.id, 'failed');
   });
 });
 

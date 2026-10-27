@@ -167,6 +167,32 @@ describe('item.use: Очищающее зелье', () => {
     expect(r.events[1]).toMatchObject({ type: 'ConsentClosed', status: 'failed' });
     expect(r.state.items.p1.reservedFor).toBeUndefined();
   });
+
+  test('запрос указывает на прототипный ключ вещи → failed, а не падение', () => {
+    const s = give(makeGame(30), 'o2', 'p1', 'potion');
+    const { state: s1, req } = requested(useItem(s, 'o2', 'p1', 'o9'));
+    const { reservedFor: _r, ...free } = s1.items.p1;
+    const broken = {
+      ...s1, items: { ...s1.items, p1: free },
+      requests: { ...s1.requests, [req.id]: { ...req, action: { ...req.action, itemId: 'constructor' } } },
+    };
+    const r = ok(run(broken, { type: 'consent.accept', id: req.id }, player('o9')));
+    expect(r.events[1]).toMatchObject({ type: 'ConsentClosed', status: 'failed', reason: 'вещи больше нет у автора' });
+  });
+});
+
+describe('прототипные ключи вещей', () => {
+  test('item.use и способности с itemId constructor/__proto__/toString → not_found', () => {
+    const s = makeGame(30);
+    for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      expect(errorOf(useItem(s, 'o2', id))).toBe('not_found');
+      for (const [key, kind] of [['t1', 'sellToBank'], ['o13', 'disassemble']] as const) {
+        const use = kind === 'sellToBank' ? { kind, itemId: id } : { kind, itemId: id, take: ['ash', 'moon'] as ['ash', 'moon'] };
+        const r = run(s, { type: 'ability.use', use }, player(key));
+        expect(r.ok ? 'ok' : r.error).toBe('not_found');
+      }
+    }
+  });
 });
 
 describe('item.use: Камень облика', () => {

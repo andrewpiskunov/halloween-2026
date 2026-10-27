@@ -17,12 +17,12 @@ function shiftPending<T extends { status: string; expiresAt: number }>(records: 
 }
 
 /** Закрывает pending-запросы согласия при смене акта и снимает резерв с их вещей. */
-function expireRequests(state: GameState): Pick<GameState, 'requests' | 'items'> {
+function expireRequests(state: GameState, at: number): Pick<GameState, 'requests' | 'items'> {
   const requests = { ...state.requests };
   const items = { ...state.items };
   for (const r of Object.values(state.requests)) {
     if (r.status !== 'pending') continue;
-    requests[r.id] = { ...r, status: 'expired', reason: 'act' };
+    requests[r.id] = { ...r, status: 'expired', reason: 'act', closedAt: at };
     for (const it of Object.values(items)) {
       if (it.reservedFor !== r.id) continue;
       const { reservedFor: _r, ...rest } = it;
@@ -80,10 +80,11 @@ function correctMark(state: GameState, key: string, c: Exclude<Correction, { fie
   }
   if (!MARK_FIELDS.includes(c.field)) return fail('invalid', 'неизвестное поле исправления');
   if (typeof c.value !== 'boolean') return fail('invalid', 'value должно быть булевым');
+  // Ожидающий запрос проверяется раньше наличия отметки: ведущему важнее, что делать дальше.
+  if (c.field === 'abilityUsed' && p.abilityPending !== undefined) return fail('invalid', 'способность ждёт ответа: сначала отмените запрос');
   const has = markOf(p, c.field);
   if (c.value && has) return fail('invalid', c.field === 'protection' ? 'защита уже есть: одна защита' : 'отметка уже есть');
   if (!c.value && !has) return fail('invalid', 'отметки нет');
-  if (c.field === 'abilityUsed' && p.abilityPending !== undefined) return fail('invalid', 'способность ждёт ответа: сначала отмените запрос');
   return markEffects(key, c);
 }
 
@@ -202,7 +203,7 @@ export const actReducers: EventReducers = {
     const lots = { ...state.lots };
     for (const id of e.announcedLots) lots[id] = { ...lots[id], status: 'announced' };
     for (const l of e.newLots) lots[l.id] = l;
-    const expired = expireRequests(state);
+    const expired = expireRequests(state, e.at);
     const items = expired.items;
     for (const it of e.newItems) items[it.id] = it;
     for (const id of e.revealedItems) {

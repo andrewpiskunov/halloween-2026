@@ -300,10 +300,12 @@ export function requestOutcomeText(r: ConsentRequestView, v: PlayerView): string
       const tail = what === undefined ? '' : what ? `: ${what} ${what === 'проклятие' ? 'снято' : 'сняты'}` : ': снимать было нечего';
       return `${names.join(', ')} ${many ? 'согласились' : verb(first, 'согласился', 'согласилась')}${tail}`;
     }
-    case 'declined': return many ? `Просьба отклонена: ${names.join(', ')}` : `${first} ${verb(first, 'отказался', 'отказалась')}`;
-    case 'expired': return `Просьба к ${names.map(n => nameCase(n, 'dat')).join(', ')} истекла`;
+    // Кто именно из нескольких отказал, проекция не знает: без имён.
+    case 'declined': return many ? 'Просьба отклонена' : `${first} ${verb(first, 'отказался', 'отказалась')}`;
+    case 'expired': return r.reason === 'act' ? 'Просьба закрыта: акт закончился' : `Просьба к ${names.map(n => nameCase(n, 'dat')).join(', ')} истекла`;
     case 'failed': return `Не выполнено: ${r.reason ?? 'условия изменились'}`;
-    case 'cancelled': return r.reason === 'gm' ? 'Ведущий отменил вашу просьбу' : r.reason ? 'Просьба закрыта: акт закончился' : null;
+    // Свою отмену автор видит сам; уведомляем только об отмене ведущим.
+    case 'cancelled': return r.reason === 'gm' ? 'Ведущий отменил вашу просьбу' : null;
     default: return null;
   }
 }

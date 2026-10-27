@@ -20,7 +20,8 @@ const DETAIL: Partial<Record<ErrorCode, string>> = {
 
 /** Общие проверки вещи (§3): существует, лежит у автора, свободна, применяемого вида. */
 export function usableItem(state: GameState, author: string, itemId: string): Item | ErrorCode {
-  const it = state.items[itemId];
+  // Только собственные ключи: «constructor» и подобные из прототипа — не вещи.
+  const it = Object.hasOwn(state.items, itemId) ? state.items[itemId] : undefined;
   if (!it) return 'not_found';
   if (it.owner.type !== 'player' || it.owner.key !== author) return 'not_owner';
   if (it.reservedFor !== undefined) return 'reserved';
@@ -73,7 +74,7 @@ function useOnTarget(state: GameState, author: string, it: Item, target: unknown
 
 /** Повторная проверка вещи после согласия: всё ещё у автора и в резерве этого запроса. */
 export function performItemConsented(state: GameState, req: ConsentRequest, a: ItemAction, ctx: Ctx): Result {
-  const it = state.items[a.itemId];
+  const it = Object.hasOwn(state.items, a.itemId) ? state.items[a.itemId] : undefined;
   if (!it || it.owner.type !== 'player' || it.owner.key !== req.author) return fail('not_owner', 'вещи больше нет у автора');
   if (it.reservedFor !== req.id) return fail('reserved', DETAIL.reserved);
   if (!presentPlayer(state, req.author)) return fail('forbidden', 'автора нет на ярмарке');

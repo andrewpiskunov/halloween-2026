@@ -47,11 +47,14 @@ function requestAction(r: ConsentRequest): ConsentRequestView['action'] {
   };
 }
 
-/** Запросы, где игрок автор или одобряющий: открытые и закрытые в этом акте. */
+/**
+ * Запросы, где игрок автор или одобряющий: открытые, созданные в этом акте
+ * и закрытые с начала этого акта (закрытые сменой акта видны весь следующий акт).
+ */
 export function requestsFor(state: GameState, key: string): ConsentRequestView[] {
   return Object.values(state.requests)
     .filter(r => r.author === key || r.approvers.includes(key))
-    .filter(r => r.status === 'pending' || r.createdAt >= state.clock.actStartedAt)
+    .filter(r => r.status === 'pending' || Math.max(r.createdAt, r.closedAt ?? r.createdAt) >= state.clock.actStartedAt)
     .map(r => ({
       id: r.id, author: r.author, approvers: r.approvers, approved: r.approved, status: r.status,
       createdAt: r.createdAt, expiresAt: r.expiresAt, ...(r.reason !== undefined ? { reason: r.reason } : {}),

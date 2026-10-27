@@ -247,6 +247,24 @@ test('requests: видят автор и одобряющий, третий не
   expect(JSON.stringify(seen)).not.toContain(stone.id);
 });
 
+test('requests: закрытая сменой акта просьба видна весь следующий акт, потом пропадает', () => {
+  const at = (st: GameState, cmd: Command, actor: Actor, now: number) => {
+    const r = run(st, cmd, actor, now);
+    if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
+    return r.state;
+  };
+  let s = at(makeGame(30), use({ kind: 'cleanseOther', target: 'o9' }), player('o10'), 1000);
+  const id = s.players.o10.abilityPending!;
+  s = at(s, { type: 'act.next' }, gm, 5000);
+  for (const k of ['o10', 'o9']) {
+    expect(pv(viewFor(s, content, player(k), 6000)).requests).toEqual([
+      expect.objectContaining({ id, status: 'expired', reason: 'act', createdAt: 1000 }),
+    ]);
+  }
+  s = at(s, { type: 'act.next' }, gm, 9000);
+  expect(pv(viewFor(s, content, player('o10'), 10000)).requests).toEqual([]);
+});
+
 test('others[].guise: облик после Камня виден всем', () => {
   let s = makeGame(30);
   s = must(s, { type: 'shop.craft', recipeId: 'shape' }, player('r5'));

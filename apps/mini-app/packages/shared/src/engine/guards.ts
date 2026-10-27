@@ -17,7 +17,7 @@ export const presentPlayer = (state: GameState, key: string) =>
 
 /** Цель способности «на другого» (§5.3 шаг 6): в составе и присутствует, не сам автор. */
 export function otherTarget(state: GameState, author: string, target: string): Result | undefined {
-  if (!presentPlayer(state, target)) return fail('not_found', target);
+  if (!presentPlayer(state, target)) return fail('not_found', 'участник не на ярмарке');
   if (target === author) return fail('invalid', 'цель должна быть другим игроком');
   return undefined;
 }

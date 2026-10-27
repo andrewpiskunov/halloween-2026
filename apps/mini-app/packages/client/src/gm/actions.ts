@@ -1,5 +1,5 @@
 import type { ActionRecord, ConsentRequest, Effect, GmView, Intel, Player } from '@fair/shared';
-import { abilityTitle, ingredientName, nameCase, roman } from '../labels';
+import { abilityTitle, goldText, ingredientName, nameCase, plural, roman } from '../labels';
 
 const ITEM_TITLE: Record<'potion' | 'ward' | 'shape', string> = { potion: 'Очищающее зелье', ward: 'Защитный талисман', shape: 'Камень облика' };
 
@@ -43,8 +43,8 @@ const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 /** Суть одного эффекта словами; null — не показывать (служебный эффект). */
 function effectText(e: Effect, v: GmView): string | null {
   switch (e.type) {
-    case 'goldMove': return `${e.amount} золото`;
-    case 'gold': return `${signed(e.delta)} золото`;
+    case 'goldMove': return goldText(e.amount);
+    case 'gold': return `${signed(e.delta)} ${plural(Math.abs(e.delta), 'золотой', 'золотых', 'золотых')}`;
     case 'ingredientMove': return ingredientName(e.ingredient);
     case 'ingredient': return `${ingredientName(e.ingredient)} ${signed(e.delta)}`;
     case 'workshop': return null;
@@ -61,7 +61,7 @@ function effectText(e: Effect, v: GmView): string | null {
 
 function intelText(i: Intel, v: GmView): string {
   switch (i.kind) {
-    case 'inventory': return `сумка: ${i.gold} золото, ${i.items.length} вещ.`;
+    case 'inventory': return `сумка: ${goldText(i.gold)}, ${i.items.length} вещ.`;
     case 'gold': return `золото: ${i.gold}`;
     case 'side': return `сторона: ${v.content.factions.find(f => f.id === i.side)?.name ?? i.side}`;
     case 'sniff': return `у кого: ${i.holders.length ? i.holders.map(k => roleName(k, v)).join(', ') : 'ни у кого'}`;
@@ -76,7 +76,7 @@ function removedText(r: NonNullable<ActionRecord['removed']>): string {
   return `${parts.length > 1 || r.thorns ? 'сняты' : 'снято'} ${parts.join(' и ')}`;
 }
 
-/** Строка журнала применений на пульте: «Акт II, 12:40. Никс → Брам: Ловкая рука, 1 золото». */
+/** Строка журнала применений на пульте: «Акт II, 12:40. Никс → Брам: Ловкая рука, 1 золотой». */
 export function actionLine(a: ActionRecord, v: GmView): string {
   const who = a.from !== undefined && a.to !== undefined
     ? `${roleName(a.author, v)}: ${roleName(a.from, v)} → ${roleName(a.to, v)}`

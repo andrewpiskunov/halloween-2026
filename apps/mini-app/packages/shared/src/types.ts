@@ -104,6 +104,8 @@ export interface ConsentRequest {
   expiresAt: number;
   /** timeout | act | closed | gm | текст причины failed */
   reason?: string;
+  /** Когда запрос закрыт (кроме accepted): по нему «Просьбы» держат закрытые сменой акта весь следующий акт. */
+  closedAt?: number;
 }
 
 export interface GameState {

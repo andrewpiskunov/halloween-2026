@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import type { ActionRecord, PlayerView } from '@fair/shared';
-import { actionText, countsText, goldText, nameCase, offerItem, plural, roleName, roman } from '../labels';
+import type { ActionRecord, ConsentRequestView, PlayerView } from '@fair/shared';
+import { actionText, countsText, goldText, nameCase, offerItem, plural, requestOutcomeText, roleName, roman } from '../labels';
 
 test('римские номера карт', () => {
   expect([1, 4, 9, 14, 19, 24, 28, 30].map(roman)).toEqual(['I', 'IV', 'IX', 'XIV', 'XIX', 'XXIV', 'XXVIII', 'XXX']);
@@ -74,4 +74,18 @@ test('уведомления цели о чужих действиях (§7.5)',
     .toBe('Ада сняла с вас проклятие');
   expect(actionText(rec({ author: 'r5', target: 'o2', source: { type: 'ability', ability: 'askYesNo' } }), pv))
     .toBe('Веста задаёт вопрос о ваших целях. Ответьте честно, голосом');
+});
+
+test('итог просьбы автору: смена акта, отказ нескольких, отмена', () => {
+  const r = (over: Partial<ConsentRequestView>): ConsentRequestView => ({
+    id: 'q1', author: 'o2', approvers: ['o9'], approved: [], status: 'pending', createdAt: 0, expiresAt: 300_000,
+    action: { type: 'ability', ability: 'cleanseOther', target: 'o9' }, ...over,
+  });
+  expect(requestOutcomeText(r({ status: 'expired', reason: 'act' }), pv)).toBe('Просьба закрыта: акт закончился');
+  expect(requestOutcomeText(r({ status: 'expired', reason: 'timeout' }), pv)).toBe('Просьба к Эльмару истекла');
+  expect(requestOutcomeText(r({ status: 'declined', approvers: ['o9', 'o10'] }), pv)).toBe('Просьба отклонена');
+  expect(requestOutcomeText(r({ status: 'declined' }), pv)).toBe('Эльмар отказался');
+  expect(requestOutcomeText(r({ status: 'cancelled', reason: 'gm' }), pv)).toBe('Ведущий отменил вашу просьбу');
+  expect(requestOutcomeText(r({ status: 'cancelled' }), pv)).toBeNull();
+  expect(requestOutcomeText(r({ status: 'failed', reason: 'участника нет на ярмарке' }), pv)).toBe('Не выполнено: участника нет на ярмарке');
 });
