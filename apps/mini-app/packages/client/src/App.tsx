@@ -30,7 +30,7 @@ export function App() {
   switch (rootScreen(s, v, content.value)) {
     case 'no_auth': return <Notice icon="✉" text="Откройте приложение из Telegram" />;
     // Токен мог протухнуть: новый вход выдаст свежий.
-    case 'unauthorized': return <Notice icon="✠" text="Вход не удался. Откройте приложение из Telegram заново" retry />;
+    case 'unauthorized': return <Notice icon="✠" text="Вход не удался. Нажмите «Повторить» или откройте приложение из Telegram заново" retry />;
     case 'auth_failed': return <Notice icon="☾" text="Нет связи с ярмаркой" retry />;
     case 'no_role': return <Notice icon="☉" text="Роль не найдена, обратитесь к ведущему" />;
     case 'connecting': return <Notice icon="☽" text="Подключение к ярмарке…" />;
@@ -72,7 +72,8 @@ function LinkBar() {
   return (
     <div class="as-bar live-bar" role="status">
       <span>Нет связи, переподключение…</span>
-      <button type="button" onClick={retryNow}>Сейчас</button>
+      {/* При connecting сокет уже открывается: торопить нечего. */}
+      {s === 'closed' && <button type="button" onClick={retryNow}>Сейчас</button>}
     </div>
   );
 }

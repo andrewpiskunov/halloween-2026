@@ -81,7 +81,7 @@ function itemName(item: NonNullable<ActionRecord['item']>, c: ContentData): stri
   switch (item.kind) {
     case 'relic': return item.ref;
     case 'shard': return `Осколок ${item.ref}`;
-    case 'clue': return c.clues?.find(x => x.id === item.ref)?.name ?? 'улика';
+    case 'clue': return c.clues?.find(x => x.id === item.ref)?.name ?? 'Улика';
     default: return c.recipes?.find(r => r.id === item.ref)?.name ?? item.ref;
   }
 }

@@ -24,3 +24,8 @@ export function frozenReason(v: PlayerView): string | false {
   if (playerLeft(v)) return 'Вы не на ярмарке';
   return false;
 }
+
+/** Подпись на паузе вместо кнопок «Предложить» и «Принять» (этап 7, §7): в сумке и в сделках. */
+export function PauseNote() {
+  return <p class="frozen-note" role="status">Пауза: сделки подождут</p>;
+}

@@ -1,6 +1,6 @@
 import type { Bundle, ContentData, GameState, Item, Phase, PlayerView, TargetMode, Want } from '@fair/shared';
 import type { Status, View } from './api';
-import { roleName } from './labels';
+import { roleName, verb } from './labels';
 import type { Tab } from './store';
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -51,18 +51,23 @@ export const tradesPaused = (v: PlayerView) =>
 /** Отметку «пришёл» на пульте можно менять в подготовке и в актах; после закрытия итоги считаются по ней. */
 export const presenceEditable = (phase: Phase) => phase !== 'closed' && phase !== 'revealed';
 
-/** Подтверждение прихода или ухода после открытия (§2.5); started — стартовый набор уже выдан раньше. */
+/**
+ * Подтверждение прихода или ухода после открытия (§2.5), в роде по имени.
+ * started — стартовый набор уже выдан: вернувшийся ничего не получает заново, его цели снова считаются.
+ */
 export function presenceConfirm(name: string, present: boolean, started: boolean): { title: string; text: string; okLabel: string } {
   if (present) {
     return {
-      title: `Отметить, что ${name} пришёл?`,
-      text: started ? 'Получит 6 золотых и стартовые ингредиенты' : 'Получит 6 золотых и стартовые ингредиенты. Вещи роли уже на рынке',
+      title: `Отметить, что ${name} ${verb(name, 'пришёл', 'пришла')}?`,
+      text: started
+        ? `Вернётся с тем, что у ${verb(name, 'него', 'неё')} было. Цели снова считаются`
+        : 'Получит 6 золотых и стартовые ингредиенты. Вещи роли уже на рынке',
       okLabel: 'Отметить',
     };
   }
   return {
-    title: `Отметить, что ${name} ушёл?`,
-    text: 'Его сделки отменятся, вещи и вклады останутся, цели не считаются. Отметку можно снять',
+    title: `Отметить, что ${name} ${verb(name, 'ушёл', 'ушла')}?`,
+    text: `${verb(name, 'Его', 'Её')} сделки отменятся, вещи и вклады останутся, цели не считаются. Отметку можно снять`,
     okLabel: 'Отметить',
   };
 }

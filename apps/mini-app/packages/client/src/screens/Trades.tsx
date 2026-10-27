@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Bundle, ConsentRequestView, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
-import { FrozenNote } from '../components/Frozen';
+import { FrozenNote, PauseNote } from '../components/Frozen';
 import { Portrait } from '../components/Portrait';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
@@ -125,11 +125,6 @@ export function Trades({ v }: { v: PlayerView }) {
       </div>
     </>
   );
-}
-
-/** Подпись на паузе вместо кнопок «Предложить» и «Принять». */
-function PauseNote() {
-  return <p class="frozen-note" role="status">Пауза: сделки подождут</p>;
 }
 
 const REQUEST_STATUS: Record<ConsentRequestView['status'], string> = {

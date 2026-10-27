@@ -187,6 +187,7 @@ async function login(): Promise<void> {
   connection = null;
   playingAs.value = null;
   view.value = null;
+  bagSeenMarks.value = null;
   status.value = 'connecting';
   try {
     const { token, botName: bot } = await auth();

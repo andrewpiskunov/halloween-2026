@@ -174,7 +174,14 @@ describe('присутствие и пауза (этап 7)', () => {
       okLabel: 'Отметить',
     });
     expect(presenceConfirm('Брам', true, true)).toEqual({
-      title: 'Отметить, что Брам пришёл?', text: 'Получит 6 золотых и стартовые ингредиенты', okLabel: 'Отметить',
+      title: 'Отметить, что Брам пришёл?', text: 'Вернётся с тем, что у него было. Цели снова считаются', okLabel: 'Отметить',
+    });
+    expect(presenceConfirm('Грета', true, false).title).toBe('Отметить, что Грета пришла?');
+    expect(presenceConfirm('Грета', true, true).text).toBe('Вернётся с тем, что у неё было. Цели снова считаются');
+    expect(presenceConfirm('Грета', false, true)).toEqual({
+      title: 'Отметить, что Грета ушла?',
+      text: 'Её сделки отменятся, вещи и вклады останутся, цели не считаются. Отметку можно снять',
+      okLabel: 'Отметить',
     });
     expect(presenceConfirm('Брам', false, true)).toEqual({
       title: 'Отметить, что Брам ушёл?',

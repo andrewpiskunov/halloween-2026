@@ -177,7 +177,7 @@ export function nameCase(name: string, c: NameCase): string {
 /** Пола в содержимом нет: имена на -а/-я считаются женскими (Ада, Хельга, Клёпа). */
 export const isFemaleName = (name: string) => /[ая]$/.test(name.split(' ')[0]);
 /** Глагол прошедшего времени по имени: verb('Ада', 'дал', 'дала'). */
-const verb = (name: string, m: string, f: string) => (isFemaleName(name) ? f : m);
+export const verb = (name: string, m: string, f: string) => (isFemaleName(name) ? f : m);
 
 /** Ингредиенты в винительном падеже: «взять Лунную пыль». */
 const ING_ACC: Record<Ingredient, string> = { ash: 'Пепел феникса', moon: 'Лунную пыль', dew: 'Росу' };

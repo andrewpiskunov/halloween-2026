@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import type { Item, PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
-import { FrozenNote } from '../components/Frozen';
+import { FrozenNote, PauseNote } from '../components/Frozen';
 import { ItemCard } from '../components/ItemCard';
 import { Select } from '../components/Select';
 import { Thumb } from '../components/Thumb';
@@ -45,6 +45,8 @@ export function Bag({ v }: { v: PlayerView }) {
     <>
       <h2 class="scr-h">Сумка <small>{items.length ? `${items.length} ${plural(items.length, 'вещь', 'вещи', 'вещей')}` : 'пусто'}</small></h2>
       <FrozenNote v={v} />
+      {/* На паузе кнопки «Предложить» нет: подпись одна на всю сумку, как в сделках. */}
+      {tradesPaused(v) && <PauseNote />}
       <div class="res">
         <div class="gold"><Thumb src={resourceImageUrl('gold')} emoji={GOLD.emoji} size="md" /><b>{available.gold}</b><span>доступно</span></div>
         <div class="gold"><Thumb src={resourceImageUrl('gold')} emoji={GOLD.emoji} size="md" /><b>{player.reservedGold}</b><span>обещано</span></div>
