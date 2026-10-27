@@ -189,3 +189,46 @@ describe('выгрузка журнала', () => {
     expect(open).toHaveBeenCalledWith('https://x/b', '_blank');
   });
 });
+
+describe('устойчивость (этап 7, §4)', () => {
+  test('без crypto.randomUUID id команд не пусты и различаются', () => {
+    vi.stubGlobal('crypto', {});
+    const { conn } = setup();
+    last().open();
+    void conn.send(cmd);
+    void conn.send(cmd);
+    void conn.send(cmd);
+    const ids = last().sent.map(m => m.id);
+    expect(ids.every(id => typeof id === 'string' && id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  test('retryNow во время ожидания открывает сокет сразу, без таймера', () => {
+    const { conn, statuses } = setup();
+    last().open();
+    last().drop();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    conn.retryNow();
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(statuses[statuses.length - 1]).toBe('connecting');
+    // старый таймер сброшен: лишнего сокета через секунду нет
+    vi.advanceTimersByTime(1000);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+  });
+
+  test('retryNow при открытом сокете и после остановки ничего не делает', () => {
+    const { conn } = setup();
+    last().open();
+    conn.retryNow();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    conn.close();
+    conn.retryNow();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  test('retryNow во время подключения не открывает второй сокет', () => {
+    const { conn } = setup();
+    conn.retryNow();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+});

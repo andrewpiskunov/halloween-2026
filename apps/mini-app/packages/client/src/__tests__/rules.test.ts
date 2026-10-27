@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
-import type { GameState, Item, Offer, PlayerView } from '@fair/shared';
+import { describe, expect, test } from 'vitest';
+import type { GameState, Item, Offer, Phase, PlayerView } from '@fair/shared';
 import { effectiveTab, tabsFor } from '../components/Tabs';
-import { GUISE_MAX, abilityTargets, nextTab, canChooseSide, canOffer, canPutOnAltar, canUseItem, correctableItems, gameFrozen, phaseLabel, remainingMs } from '../rules';
+import { GUISE_MAX, abilityTargets, nextTab, canChooseSide, canOffer, canPutOnAltar, canUseItem, correctableItems, gameFrozen, leftText, phaseLabel, playerLeft, presenceConfirm, presenceEditable, remainingMs, tradesPaused } from '../rules';
 
 const item = (over: Partial<Item>): Item => ({ id: 'i1', kind: 'shard', ref: 'I', owner: { type: 'player', key: 'o1' }, ...over });
 const view = (act: 0 | 1 | 2 | 3, free: string[]) => ({ act, me: { available: { items: free } } }) as unknown as PlayerView;
@@ -140,4 +140,51 @@ test('вкладки: в revealed «Итоги» вместо «Событий»
   expect(effectiveTab('events', false)).toBe('events');
   expect(tabsFor(true).map(t => t.key)).toEqual(['role', 'bag', 'trades', 'workshop', 'altars', 'results']);
   expect(tabsFor(false).map(t => t.key)).toEqual(['role', 'bag', 'trades', 'workshop', 'altars', 'events']);
+});
+
+describe('присутствие и пауза (этап 7)', () => {
+  const lv = (phase: string, present: boolean, startIssuedAt?: number, paused = false) =>
+    ({ phase, clock: { paused }, me: { player: { present, ...(startIssuedAt !== undefined ? { startIssuedAt } : {}) } } }) as unknown as PlayerView;
+
+  test('playerLeft: только после открытия и при present = false', () => {
+    expect(playerLeft(lv('setup', false))).toBe(false);
+    expect(playerLeft(lv('act1', true, 1))).toBe(false);
+    expect(playerLeft(lv('act2', false, 1))).toBe(true);
+    expect(playerLeft(lv('act3', false))).toBe(true);
+    expect(playerLeft(lv('closed', false, 1))).toBe(true);
+  });
+
+  test('полоса ушедшего: ушёл или ещё не отмечен', () => {
+    expect(leftText(lv('act2', false, 1))).toBe('Ведущий отметил, что вы ушли. Если это ошибка, скажите ему');
+    expect(leftText(lv('act1', false))).toBe('Ведущий ещё не отметил ваш приход. Скажите ему');
+  });
+
+  test('tradesPaused: пауза в акте', () => {
+    expect(tradesPaused(lv('act1', true, 1, true))).toBe(true);
+    expect(tradesPaused(lv('act3', true, 1, true))).toBe(true);
+    expect(tradesPaused(lv('act1', true, 1, false))).toBe(false);
+    expect(tradesPaused(lv('setup', true, undefined, true))).toBe(false);
+    expect(tradesPaused(lv('closed', true, 1, true))).toBe(false);
+  });
+
+  test('подтверждения прихода и ухода на пульте дословно по §2.5', () => {
+    expect(presenceConfirm('Брам', true, false)).toEqual({
+      title: 'Отметить, что Брам пришёл?',
+      text: 'Получит 6 золотых и стартовые ингредиенты. Вещи роли уже на рынке',
+      okLabel: 'Отметить',
+    });
+    expect(presenceConfirm('Брам', true, true)).toEqual({
+      title: 'Отметить, что Брам пришёл?', text: 'Получит 6 золотых и стартовые ингредиенты', okLabel: 'Отметить',
+    });
+    expect(presenceConfirm('Брам', false, true)).toEqual({
+      title: 'Отметить, что Брам ушёл?',
+      text: 'Его сделки отменятся, вещи и вклады останутся, цели не считаются. Отметку можно снять',
+      okLabel: 'Отметить',
+    });
+  });
+
+  test('пульт: «пришёл» активен в подготовке и актах, но не после закрытия', () => {
+    expect(['setup', 'act1', 'act2', 'act3', 'closed', 'revealed'].map(p => presenceEditable(p as Phase)))
+      .toEqual([true, true, true, true, false, false]);
+  });
 });

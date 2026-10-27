@@ -10,14 +10,19 @@ export type CmdResult = { ok: true; seq: number } | { ok: false; error: ErrorCod
 
 export type View = PlayerView | GmView;
 
-/** Состояние соединения: последние три — окончательные, переподключения нет. */
-export type Status = 'connecting' | 'open' | 'closed' | 'unauthorized' | 'no_role' | 'no_auth';
+/**
+ * Состояние соединения. unauthorized, no_role и no_auth окончательные, сами не переподключаются.
+ * auth_failed: вход не прошёл из-за сети или ответа сервера; экран предлагает «Повторить».
+ */
+export type Status = 'connecting' | 'open' | 'closed' | 'unauthorized' | 'no_role' | 'no_auth' | 'auth_failed';
 
 export interface AuthResult { token: string; actor: Exclude<Actor, { type: 'system' }> | null; botName: string }
 
 export interface Connection {
   send(cmd: Command): Promise<CmdResult>;
   close(): void;
+  /** Переподключиться сейчас, не дожидаясь паузы. Если сокет открыт, открывается или соединение остановлено, ничего не делает. */
+  retryNow(): void;
 }
 
 export interface ConnectOptions {
@@ -39,6 +44,18 @@ export const CLOSE_UNAUTHORIZED = 4401;
 export const CLOSE_NO_ROLE = 4403;
 const DEFAULT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
 const OPEN = 1;
+
+let idCounter = 0;
+/**
+ * Id команды. Старые WebView (и страницы не по https) не знают crypto.randomUUID,
+ * поэтому запасной вариант: время, счётчик и случайный хвост (решение этапа 7, §4.3).
+ * Сервер требует от id только уникальности.
+ */
+function commandId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  idCounter += 1;
+  return `${Date.now().toString(36)}-${idCounter}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 /** Вход: через initData Telegram, а без него dev-входом по `?dev=<userId>&code=<код>`. */
 export async function auth(): Promise<AuthResult> {
@@ -159,12 +176,17 @@ export function connect(
 
   return {
     send(cmd) {
-      const id = crypto.randomUUID();
+      const id = commandId();
       if (stopped) return Promise.resolve({ ok: false, error: 'forbidden' });
       return new Promise<CmdResult>(resolve => {
         pending.set(id, { resolve, cmd });
         transmit(id, cmd);
       });
+    },
+    retryNow() {
+      if (stopped || ws !== undefined) return;
+      if (timer !== undefined) { clearTimeout(timer); timer = undefined; }
+      open();
     },
     close() {
       if (stopped) return;

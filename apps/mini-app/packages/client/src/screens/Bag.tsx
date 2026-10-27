@@ -6,8 +6,8 @@ import { FrozenNote } from '../components/Frozen';
 import { ItemCard } from '../components/ItemCard';
 import { Select } from '../components/Select';
 import { Thumb } from '../components/Thumb';
-import { GOLD, INGREDIENTS, itemLabel, kindLabel, marksText, nameCase, plainName, plural, roleEmoji, roleName } from '../labels';
-import { GUISE_MAX, canOffer, canPutOnAltar, canUseItem } from '../rules';
+import { GOLD, INGREDIENTS, clueText, itemLabel, kindLabel, marksText, nameCase, plainName, plural, roleEmoji, roleName } from '../labels';
+import { GUISE_MAX, canOffer, canPutOnAltar, canUseItem, tradesPaused } from '../rules';
 import { ask, run, tab, tradeDraft } from '../store';
 
 /** Сумка: золото и ингредиенты в бумажной рамке, вещи на тёмных карточках с действиями. */
@@ -74,9 +74,9 @@ export function Bag({ v }: { v: PlayerView }) {
         const hasUse = item.kind === 'potion' || item.kind === 'ward' || item.kind === 'shape';
         return (
           <div key={item.id} class="item-block">
-            <ItemCard emoji={label.emoji} img={itemImageUrl(item)} title={label.name} sub={sub} />
+            <ItemCard emoji={label.emoji} img={itemImageUrl(item)} title={label.name} text={clueText(item, v)} sub={sub} />
             <div class="m-btns">
-              <Button small kind="sec" disabled={!canOffer(item, v)} onClick={() => offer(item)}>Предложить</Button>
+              {!tradesPaused(v) && <Button small kind="sec" disabled={!canOffer(item, v)} onClick={() => offer(item)}>Предложить</Button>}
               <Button small kind="sec" disabled={!canPutOnAltar(item, v) || v.altars.length === 0}
                 onClick={() => toggle('altar', item.id)}>На алтарь</Button>
               {hasUse && <Button small kind="sec" disabled={!usable.ok} onClick={() => use(item)}>Использовать</Button>}

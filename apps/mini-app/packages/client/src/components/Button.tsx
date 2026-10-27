@@ -12,12 +12,12 @@ interface Props {
 
 /** Кнопка гравюры: main — светлая на поле и чернильная на бумаге, sec — контурная, red — киноварь (печать или необратимое). */
 export function Button({ icon, kind = 'main', small, disabled, onClick, children }: Props) {
-  // после закрытия ярмарки все кнопки действий на экранах игрока выключены
+  // после закрытия ярмарки и у ушедшего игрока все кнопки действий на экранах игрока выключены
   const frozen = useFrozen();
-  const off = disabled || frozen;
+  const off = disabled || frozen !== false;
   const cls = ['m-btn', kind !== 'main' ? kind : '', small ? 'small' : ''].filter(Boolean).join(' ');
   return (
-    <button type="button" class={cls} disabled={off} title={frozen ? 'Ярмарка закрыта' : undefined} onClick={off ? undefined : onClick}>
+    <button type="button" class={cls} disabled={off} title={frozen === false ? undefined : frozen} onClick={off ? undefined : onClick}>
       {icon && <span class="ic">{icon}</span>}
       {children}
     </button>

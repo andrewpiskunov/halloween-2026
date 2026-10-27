@@ -1,8 +1,8 @@
 import type { PlayerView } from '@fair/shared';
-import { actionText, nameCase, plainName, requestOutcomeText } from './labels';
+import { actionText, nameCase, offerClosedText, plainName, requestOutcomeText } from './labels';
 
-/** Что клиент уже видел: id записей журнала, статусы просьб и число объявлений. Живёт в памяти, не в хранилище. */
-export interface Seen { actions: Set<string>; requests: Map<string, string>; announcements: number }
+/** Что клиент уже видел: id записей журнала, статусы просьб и сделок, число объявлений. Живёт в памяти, не в хранилище. */
+export interface Seen { actions: Set<string>; requests: Map<string, string>; offers: Map<string, string>; announcements: number }
 
 /**
  * Уведомления по новой проекции (§7.5). Первая проекция (seen = null) только запоминается:
@@ -13,6 +13,7 @@ export function collectNotices(seen: Seen | null, v: PlayerView): { texts: strin
   const next: Seen = {
     actions: new Set(v.actions.map(a => a.id)),
     requests: new Map(v.requests.map(r => [r.id, r.status])),
+    offers: new Map(v.offers.map(o => [o.id, o.status])),
     announcements: v.announcements.length,
   };
   if (!seen) return { texts: [], seen: next };
@@ -32,6 +33,12 @@ export function collectNotices(seen: Seen | null, v: PlayerView): { texts: strin
     } else if (before === undefined && r.status === 'pending' && r.approvers.includes(me)) {
       texts.push(`Новая просьба от ${nameCase(plainName(r.author, v), 'gen')}`);
     }
+  }
+  // Сделку сервер отменил сам: ведущий отметил уход участника. Остальные закрытия видны на вкладке «Сделки».
+  for (const o of v.offers) {
+    if (seen.offers.get(o.id) !== 'pending') continue;
+    const t = offerClosedText(o);
+    if (t) texts.push(t);
   }
   // После показа итогов вкладки «События» нет: новое объявление ведущего приходит уведомлением.
   if (v.phase === 'revealed') {

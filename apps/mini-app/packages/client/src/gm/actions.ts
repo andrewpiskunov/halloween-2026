@@ -76,6 +76,16 @@ function removedText(r: NonNullable<ActionRecord['removed']>): string {
   return `${parts.length > 1 || r.thorns ? 'сняты' : 'снято'} ${parts.join(' и ')}`;
 }
 
+/** Название вещи по виду и ref из содержимого: реликвия по имени, осколок по номеру, улика и изделия по id. */
+function itemName(item: NonNullable<ActionRecord['item']>, c: ContentData): string {
+  switch (item.kind) {
+    case 'relic': return item.ref;
+    case 'shard': return `Осколок ${item.ref}`;
+    case 'clue': return c.clues?.find(x => x.id === item.ref)?.name ?? 'улика';
+    default: return c.recipes?.find(r => r.id === item.ref)?.name ?? item.ref;
+  }
+}
+
 /**
  * Строка журнала применений на пульте: «Акт II, 12:40. Никс → Брам: Ловкая рука, 1 золотой».
  * Содержимое приходит отдельным сообщением при подключении, поэтому передаётся рядом с проекцией.
@@ -84,14 +94,20 @@ export function actionLine(a: ActionRecord, v: GmView, c: ContentData): string {
   const who = a.from !== undefined && a.to !== undefined
     ? `${roleName(a.author, c)}: ${roleName(a.from, c)} → ${roleName(a.to, c)}`
     : a.target !== undefined && a.target !== a.author ? `${roleName(a.author, c)} → ${roleName(a.target, c)}` : roleName(a.author, c);
-  const title = a.source.type === 'item' ? ITEM_TITLE[a.source.kind]
+  let title = a.source.type === 'item' ? ITEM_TITLE[a.source.kind]
     : a.source.copied ? `${v.abilities[a.author]?.name ?? abilityTitle(a.source.ability)} (${abilityTitle(a.source.copied)})`
       : v.abilities[a.author]?.name ?? abilityTitle(a.source.ability);
   const head = `Акт ${roman(a.act)}, ${hhmm(a.at)}. ${who}: `;
+  // Вещь способности (§5.2): «Перековка: Защитный талисман»; созданная вещь из эффектов тогда не повторяется.
+  if (a.item) title = `${title}: ${itemName(a.item, c)}`;
   if (a.outcome === 'blocked') return `${head}${title} ${blockedVerb(title)} защитой (${protectorOf(a, v, c)})`;
   const parts: string[] = [];
   if (a.removed) parts.push(removedText(a.removed));
-  else for (const e of a.effects) { const t = effectText(e, c); if (t && !parts.includes(t)) parts.push(t); }
+  else for (const e of a.effects) {
+    if (a.item && e.type === 'itemCreated') continue;
+    const t = effectText(e, c);
+    if (t && !parts.includes(t)) parts.push(t);
+  }
   if (a.intel) parts.push(intelText(a.intel, c));
   return `${head}${[title, ...parts].join(', ')}`;
 }

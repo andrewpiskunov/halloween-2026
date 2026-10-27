@@ -1,4 +1,5 @@
-import type { Bundle, GameState, Item, Phase, PlayerView, TargetMode, Want } from '@fair/shared';
+import type { Bundle, ContentData, GameState, Item, Phase, PlayerView, TargetMode, Want } from '@fair/shared';
+import type { Status, View } from './api';
 import { roleName } from './labels';
 import type { Tab } from './store';
 
@@ -21,6 +22,50 @@ export function nextTab(phase: Phase, shownFor: number | null, current: Tab, clo
 
 /** Ярмарка закрыта: вкладки читаются, действия выключены (спецификация этапа 5, §6.2). */
 export const gameFrozen = (v: PlayerView) => v.phase === 'closed' || v.phase === 'revealed';
+
+/** Что показывает корень: экран отказа, ожидание подключения или сами экраны. */
+export type RootScreen = 'auth_failed' | 'unauthorized' | 'no_auth' | 'no_role' | 'connecting' | 'app';
+
+/**
+ * Выбор экрана корня. Экраны ведущего читают содержимое, поэтому проекция ведущего без сообщения content
+ * тоже ждёт. При обрыве (closed, connecting) уже показанные экраны остаются, над ними полоса переподключения.
+ */
+export function rootScreen(status: Status, view: View | null, content: ContentData | null): RootScreen {
+  if (status === 'auth_failed' || status === 'unauthorized' || status === 'no_auth' || status === 'no_role') return status;
+  if (!view || (view.kind === 'gm' && content === null)) return 'connecting';
+  return 'app';
+}
+
+/** Игрок не на ярмарке после открытия: ушёл или ещё не отмечен пришедшим (спек этапа 7, §2.3–2.4). */
+export const playerLeft = (v: PlayerView) => v.phase !== 'setup' && v.me.player.present === false;
+
+/** Полоса над экранами отсутствующего: стартовый набор не выдан — значит, приход ещё не отметили. */
+export const leftText = (v: PlayerView) => v.me.player.startIssuedAt === undefined
+  ? 'Ведущий ещё не отметил ваш приход. Скажите ему'
+  : 'Ведущий отметил, что вы ушли. Если это ошибка, скажите ему';
+
+/** Пауза в акте: сервер не принимает новые сделки и согласия на них, кнопки прячутся (§7). */
+export const tradesPaused = (v: PlayerView) =>
+  v.clock.paused && (v.phase === 'act1' || v.phase === 'act2' || v.phase === 'act3');
+
+/** Отметку «пришёл» на пульте можно менять в подготовке и в актах; после закрытия итоги считаются по ней. */
+export const presenceEditable = (phase: Phase) => phase !== 'closed' && phase !== 'revealed';
+
+/** Подтверждение прихода или ухода после открытия (§2.5); started — стартовый набор уже выдан раньше. */
+export function presenceConfirm(name: string, present: boolean, started: boolean): { title: string; text: string; okLabel: string } {
+  if (present) {
+    return {
+      title: `Отметить, что ${name} пришёл?`,
+      text: started ? 'Получит 6 золотых и стартовые ингредиенты' : 'Получит 6 золотых и стартовые ингредиенты. Вещи роли уже на рынке',
+      okLabel: 'Отметить',
+    };
+  }
+  return {
+    title: `Отметить, что ${name} ушёл?`,
+    text: 'Его сделки отменятся, вещи и вклады останутся, цели не считаются. Отметку можно снять',
+    okLabel: 'Отметить',
+  };
+}
 
 /** Кнопка «Выбрать сторону»: свободная роль, сторона ещё не выбрана, первый или второй акт (§6.4). */
 export const canChooseSide = (v: PlayerView) =>

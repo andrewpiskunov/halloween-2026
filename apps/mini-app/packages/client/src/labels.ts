@@ -1,4 +1,4 @@
-import type { AbilityKind, ActionRecord, Bundle, ConsentRequestView, CopyableKind, Ingredient, Item, PlayerView, Want } from '@fair/shared';
+import type { AbilityKind, ActionRecord, Bundle, ConsentRequestView, CopyableKind, Ingredient, Item, Offer, PlayerView, Want } from '@fair/shared';
 
 export const INGREDIENTS: { key: Ingredient; name: string; short: string; emoji: string }[] = [
   { key: 'ash', name: 'Пепел феникса', short: 'пепел', emoji: '🔥' },
@@ -25,6 +25,11 @@ export function itemLabel(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): { na
       return { name: r?.name ?? item.ref, emoji: r?.emoji ?? '🧪' };
     }
   }
+}
+
+/** Текст найденной улики для сумки; where не показывается: это подсказка, где улика лежала до находки. */
+export function clueText(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): string | undefined {
+  return item.kind === 'clue' ? v.public.clues.find(c => c.id === item.ref)?.text : undefined;
 }
 
 /** Вид вещи, если известен только ref (вклады на алтарях). Для изделий — любой вид рецепта. */
@@ -215,8 +220,19 @@ function removedText(r: ActionRecord['removed']): string | null {
   return parts.length ? parts.join(' и ') : null;
 }
 
-/** Своя запись журнала: «Акт I. Шипы → Грета: отражено защитой». */
+/**
+ * Способность и её вещь: «Перековка: Защитный талисман» (созданная или убранная вещь, спек этапа 7, §5.2).
+ * null — в записи нет вещи (старые журналы, способности без вещи).
+ */
+export function recordItemText(a: ActionRecord, v: PlayerView): string | null {
+  if (!a.item || a.source.type !== 'ability') return null;
+  return `${abilityText(a.source.ability, { copied: a.source.copied }, v)}: ${itemLabel(a.item, v).name}`;
+}
+
+/** Своя запись журнала: «Акт I. Шипы → Грета: отражено защитой», «Акт I. Перековка: Защитный талисман, исполнено». */
 export function ownActionText(a: ActionRecord, v: PlayerView): string {
+  const withItem = recordItemText(a, v);
+  if (withItem) return `Акт ${roman(a.act)}. ${withItem}, ${a.outcome === 'blocked' ? 'отражено защитой' : 'исполнено'}`;
   const head = a.source.type === 'ability'
     ? abilityText(a.source.ability, { target: a.target !== a.author ? a.target : undefined, from: a.from, to: a.to, copied: a.source.copied }, v)
     : `${ITEM_TITLE[a.source.kind]}${a.target && a.target !== a.author ? ` → ${roleName(a.target, v)}` : ''}${a.guise ? `: «${a.guise}»` : ''}`;
@@ -305,9 +321,16 @@ export function requestOutcomeText(r: ConsentRequestView, v: PlayerView): string
     case 'expired': return r.reason === 'act' ? 'Просьба закрыта: акт закончился' : `Просьба к ${names.map(n => nameCase(n, 'dat')).join(', ')} истекла`;
     case 'failed': return `Не выполнено: ${r.reason ?? 'условия изменились'}`;
     // Свою отмену автор видит сам; уведомляем только об отмене ведущим.
-    case 'cancelled': return r.reason === 'gm' ? 'Ведущий отменил вашу просьбу' : null;
+    case 'cancelled':
+      if (r.reason === 'left') return 'Просьба закрыта: участник ушёл';
+      return r.reason === 'gm' ? 'Ведущий отменил вашу просьбу' : null;
     default: return null;
   }
+}
+
+/** Сделка закрыта сервером, потому что ведущий отметил уход участника; null — обычное закрытие. */
+export function offerClosedText(o: Pick<Offer, 'status' | 'reason'>): string | null {
+  return o.status === 'cancelled' && o.reason === 'left' ? 'Сделка отменена: участник ушёл' : null;
 }
 
 /** Отметки на игроке словами для блока «На вас действует». */

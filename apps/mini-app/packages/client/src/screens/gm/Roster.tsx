@@ -3,6 +3,7 @@ import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Portrait } from '../../components/Portrait';
 import { lotsPreview } from '../../gm/lots';
+import { presenceConfirm, presenceEditable } from '../../rules';
 import { ask, botName, loadedContent, playAs, run, showToast } from '../../store';
 
 const inviteLink = (code: string) => `https://t.me/${botName.value}?startapp=${code}`;
@@ -29,6 +30,16 @@ export function Roster({ v }: { v: GmView }) {
     } catch {
       setShownLink(link);
     }
+  };
+
+  /**
+   * «Пришёл» в подготовке переключается сразу. После открытия приход выдаёт стартовый набор,
+   * а уход отменяет сделки, поэтому сначала подтверждение (спек этапа 7, §2.5).
+   */
+  const setPresent = (roleKey: string, name: string, present: boolean) => {
+    const send = () => { void run({ type: 'player.setPresent', roleKey, present }); };
+    if (setup) { send(); return; }
+    ask({ ...presenceConfirm(name, present, state.players[roleKey]?.startIssuedAt !== undefined), onOk: send });
   };
 
   const open = () => {
@@ -95,8 +106,14 @@ export function Roster({ v }: { v: GmView }) {
                 </label>
                 {inRoster && (
                   <label class={`check ${i?.present ? 'on' : ''}`}>
-                    <input type="checkbox" checked={!!i?.present} disabled={!setup}
-                      onChange={e => { void run({ type: 'player.setPresent', roleKey: r.key, present: (e.currentTarget as HTMLInputElement).checked }); }} />
+                    <input type="checkbox" checked={!!i?.present} disabled={!presenceEditable(state.phase)}
+                      onChange={e => {
+                        const box = e.currentTarget as HTMLInputElement;
+                        const want = box.checked;
+                        // После открытия сначала подтверждение: до ответа (и при отказе в окне) галочка остаётся прежней.
+                        if (!setup) box.checked = !!i?.present;
+                        setPresent(r.key, r.name, want);
+                      }} />
                     пришёл
                   </label>
                 )}

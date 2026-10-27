@@ -68,6 +68,8 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
   color: var(--bone-hi); font: italic 400 15px var(--serif);
 }
 .as-bar b { font-style: normal; letter-spacing: .06em; }
+.live-bar { font-style: normal; font-size: 14px; }
+.notice .m-btn { margin-top: 14px; }
 .as-bar button {
   min-height: 36px; padding: 0 14px; border: 1px solid var(--cinnabar, #8a2b1f); background: var(--cinnabar, #8a2b1f);
   color: #f6e8d6; font: 400 15px var(--serif); letter-spacing: .04em; cursor: pointer;
@@ -221,6 +223,7 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .item-text { min-width: 0; flex: 1; }
 .item-text b { display: block; font-size: 16px; font-weight: 700; color: var(--fg-hi); line-height: 1.25; overflow-wrap: anywhere; }
 .item-text > span { display: block; font-size: 14px; font-style: italic; color: var(--note); overflow-wrap: anywhere; line-height: 1.35; }
+.item-text .item-desc { margin: 2px 0 4px; font-size: 15px; color: var(--fg); line-height: 1.4; overflow-wrap: anywhere; }
 .item-text b .m-tag { margin: 0 0 0 8px; vertical-align: 2px; }
 .item-actions { display: flex; gap: 6px; align-items: center; flex: none; }
 /* Вещь — тёмная карточка на поле */

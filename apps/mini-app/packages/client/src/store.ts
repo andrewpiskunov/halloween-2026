@@ -166,15 +166,37 @@ export function backToGm(): void {
 /** Вход и соединение. Вызывается один раз из main.tsx. */
 export async function start(): Promise<void> {
   setInterval(() => { now.value = Date.now(); }, 1000);
+  await login();
+}
+
+/**
+ * Кнопка «Повторить» на экранах «Нет связи с ярмаркой» и «Вход не удался»: вход заново.
+ * Новый вход даёт свежий токен, поэтому помогает и после отказа сокета с 4401.
+ */
+export async function retryLogin(): Promise<void> {
+  await login();
+}
+
+/** Кнопка «Сейчас» в полосе обрыва: переподключиться, не дожидаясь паузы. */
+export function retryNow(): void {
+  connection?.retryNow();
+}
+
+async function login(): Promise<void> {
+  connection?.close();
+  connection = null;
+  playingAs.value = null;
+  view.value = null;
+  status.value = 'connecting';
   try {
     const { token, botName: bot } = await auth();
     botName.value = bot;
     ownToken = token;
+    seen = null;
     connection = connect(token, onView, onStatus, { onContent });
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
-    if (msg === 'no_auth') status.value = 'no_auth';
-    else if (msg === 'unauthorized') status.value = 'unauthorized';
-    else { status.value = 'closed'; showToast('Сервер недоступен, обновите страницу'); }
+    // ошибки сети, ответы не 200 и всё неожиданное: экран с кнопкой «Повторить»
+    status.value = msg === 'no_auth' || msg === 'unauthorized' ? msg : 'auth_failed';
   }
 }

@@ -8,10 +8,10 @@ import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
 import { Thumb } from '../components/Thumb';
 import {
-  GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, nameCase, offerItem, plainName, plural,
+  GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, nameCase, offerClosedText, offerItem, plainName, plural,
   requestText, roleEmoji, roleName, waitingFor, wantCatalog,
 } from '../labels';
-import { canOffer, missingWants, remainingMs } from '../rules';
+import { canOffer, missingWants, remainingMs, tradesPaused } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
 
 /** Срок ответа на предложение; копия OFFER_TTL_MS из engine/offers.ts (клиент берёт из shared только типы). */
@@ -49,6 +49,9 @@ export function Trades({ v }: { v: PlayerView }) {
   const reqOut = v.requests.filter(r => r.status === 'pending' && r.author === me);
   const reqDone = v.requests.filter(r => r.status !== 'pending').sort((a, b) => b.createdAt - a.createdAt);
 
+  // На паузе сервер не принимает новые сделки и принятие (§7): кнопок нет, отклонить и отменить можно.
+  const paused = tradesPaused(v);
+
   const waiting = incoming.length
     ? `${incoming.length} ${plural(incoming.length, 'ждёт', 'ждут', 'ждут')} ответа`
     : outgoing.length ? `${outgoing.length} отправлено` : '';
@@ -57,6 +60,7 @@ export function Trades({ v }: { v: PlayerView }) {
     <>
       <h2 class="scr-h">Сделки {waiting && <small>{waiting}</small>}</h2>
       <FrozenNote v={v} />
+      {paused && <PauseNote />}
 
       {(reqIn.length > 0 || reqOut.length > 0) && <h5 class="sec-h">Просьбы</h5>}
       {reqIn.map(r => <RequestIn key={r.id} v={v} r={r} />)}
@@ -75,8 +79,8 @@ export function Trades({ v }: { v: PlayerView }) {
             {missing.length > 0 && (
               <p class="m-note warn">У вас нет: {missing.map(w => itemLabel(w, v).name).join(', ')}. Принять нельзя.</p>
             )}
-            <div class="m-btns two">
-              <Button disabled={missing.length > 0} onClick={() => accept(o)}>Принять</Button>
+            <div class={`m-btns ${paused ? '' : 'two'}`}>
+              {!paused && <Button disabled={missing.length > 0} onClick={() => accept(o)}>Принять</Button>}
               <Button kind="sec" onClick={() => decline(o)}>Отклонить</Button>
             </div>
           </div>
@@ -102,7 +106,10 @@ export function Trades({ v }: { v: PlayerView }) {
         {history.length === 0 && reqDone.length === 0 && <p class="m-note">Закрытых сделок пока нет.</p>}
         {reqDone.map(r => (
           <div class="m-row" key={r.id}>
-            <span>Просьба: {requestText(r, v)}{r.author === me ? '' : ` (от ${nameCase(plainName(r.author, v), 'gen')})`}{r.status === 'failed' && r.reason ? `. ${r.reason}` : ''}</span>
+            <span>
+              Просьба: {requestText(r, v)}{r.author === me ? '' : ` (от ${nameCase(plainName(r.author, v), 'gen')})`}
+              {r.status === 'failed' && r.reason ? `. ${r.reason}` : ''}{r.status === 'cancelled' && r.reason === 'left' ? '. Участник ушёл' : ''}
+            </span>
             <b class={r.status === 'accepted' ? 'm-ok' : 'm-no'}>{REQUEST_STATUS[r.status]}</b>
           </div>
         ))}
@@ -110,6 +117,7 @@ export function Trades({ v }: { v: PlayerView }) {
           <div class="m-row" key={o.id}>
             <span>
               {o.from === me ? `Вы → ${roleName(o.to, v)}` : `${roleName(o.from, v)} → вы`}: {bundleText(o.give, v)} за {bundleText(o.get, v)}
+              {offerClosedText(o) ? '. Участник ушёл' : ''}
             </span>
             <b class={o.status === 'accepted' ? 'm-ok' : 'm-no'}>{STATUS_TEXT[o.status]}</b>
           </div>
@@ -117,6 +125,11 @@ export function Trades({ v }: { v: PlayerView }) {
       </div>
     </>
   );
+}
+
+/** Подпись на паузе вместо кнопок «Предложить» и «Принять». */
+function PauseNote() {
+  return <p class="frozen-note" role="status">Пауза: сделки подождут</p>;
 }
 
 const REQUEST_STATUS: Record<ConsentRequestView['status'], string> = {
@@ -317,7 +330,9 @@ function OfferForm({ v }: { v: PlayerView }) {
       <p class="m-note">Сумку собеседника приложение не показывает. Если просимой вещи у него нет, принять сделку он не сможет.</p>
 
       <p class="m-note">Отданное будет обещано до ответа. Отменить можно, пока не приняли.</p>
-      <Button kind="red" disabled={!canSend} onClick={() => void submit()}>Запечатать и отправить</Button>
+      {tradesPaused(v)
+        ? <PauseNote />
+        : <Button kind="red" disabled={!canSend} onClick={() => void submit()}>Запечатать и отправить</Button>}
     </div>
   );
 }

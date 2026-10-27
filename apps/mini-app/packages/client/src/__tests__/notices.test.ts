@@ -11,7 +11,7 @@ const req = (id: string, over: Partial<ConsentRequestView> = {}): ConsentRequest
   action: { type: 'ability', ability: 'cleanseOther', target: 'o2' }, ...over,
 });
 const pv = (actions: ActionRecord[], requests: ConsentRequestView[], over: Partial<PlayerView> = {}) => ({
-  phase: 'act1', announcements: [],
+  phase: 'act1', announcements: [], offers: [],
   me: { role: { key: 'o2', name: 'Брам' }, player: {} },
   others: [{ roleKey: 'o8', name: 'Никс' }, { roleKey: 'o10', name: 'Ада' }, { roleKey: 'o9', name: 'Эльмар' }],
   contacts: [], actions, requests, ...over,
@@ -44,4 +44,12 @@ test('после показа итогов новое объявление ве�
   // до итогов объявления читают во вкладке «События», уведомления нет
   const s2 = collectNotices(null, pv([], [], { announcements: [a1] })).seen;
   expect(collectNotices(s2, pv([], [], { announcements: [a1, a2] })).texts).toEqual([]);
+});
+
+test('сделку отменил уход участника: уведомление один раз', () => {
+  const offer = (status: string, reason?: string) => ({ id: 'f1', from: 'o2', to: 'o8', status, ...(reason ? { reason } : {}) });
+  const s1 = collectNotices(null, pv([], [], { offers: [offer('pending')] } as unknown as Partial<PlayerView>)).seen;
+  const r = collectNotices(s1, pv([], [], { offers: [offer('cancelled', 'left')] } as unknown as Partial<PlayerView>));
+  expect(r.texts).toEqual(['Сделка отменена: участник ушёл']);
+  expect(collectNotices(r.seen, pv([], [], { offers: [offer('cancelled', 'left')] } as unknown as Partial<PlayerView>)).texts).toEqual([]);
 });

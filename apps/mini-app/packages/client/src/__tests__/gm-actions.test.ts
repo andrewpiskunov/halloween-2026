@@ -95,3 +95,15 @@ test('просьба словами для пульта: способность 
   expect(requestLine({ ...base, id: 'r3', author: 'o2', action: { type: 'item', itemId: 'gone', target: 'o6', guise: 'Ворон' } }, v, content))
     .toBe('Брам → Грета: Камень облика «Ворон»');
 });
+
+test('запись с вещью: «способность: вещь», без повтора созданной вещи', () => {
+  const c = { ...content, recipes: [{ id: 'ward', name: 'Защитный талисман' }], clues: [{ id: 'c1', name: 'Письмо' }] } as unknown as ContentData;
+  const reforge: ActionRecord = {
+    id: '20', at: at(12, 50), act: 2, author: 'o2', source: { type: 'ability', ability: 'reforge' },
+    outcome: 'done', hostile: false, item: { kind: 'ward', ref: 'ward' },
+    effects: [{ type: 'itemCreated', item: { id: 'i9', kind: 'ward', ref: 'ward', owner: { type: 'player', key: 'o2' } } }],
+  };
+  expect(actionLine(reforge, view([reforge]), c)).toBe('Акт II, 12:50. Брам: Рост: Защитный талисман');
+  const sold: ActionRecord = { ...reforge, id: '21', source: { type: 'ability', ability: 'sellToBank' }, item: { kind: 'clue', ref: 'c1' }, effects: [] };
+  expect(actionLine(sold, view([sold]), c)).toBe('Акт II, 12:50. Брам: Рост: Письмо');
+});

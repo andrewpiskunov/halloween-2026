@@ -1,10 +1,11 @@
 import type { GmView, PlayerView } from '@fair/shared';
 import { Confirm } from './components/Confirm';
 import { GmTabs } from './components/GmTabs';
-import { Frozen } from './components/Frozen';
+import { Button } from './components/Button';
+import { Frozen, frozenReason } from './components/Frozen';
 import { Tabs, effectiveTab } from './components/Tabs';
 import { goldText, mmss, plural, roman } from './labels';
-import { gameFrozen, phaseLabel } from './rules';
+import { leftText, phaseLabel, playerLeft, rootScreen } from './rules';
 import { Altars } from './screens/Altars';
 import { Bag } from './screens/Bag';
 import { Events } from './screens/Events';
@@ -16,7 +17,7 @@ import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
 import { Workshop } from './screens/Workshop';
 import { useEffect } from 'preact/hooks';
-import { backToGm, bagSeenMarks, content, gmTab, now, playingAs, status, tab, toast, view, viewAt, type Tab } from './store';
+import { backToGm, bagSeenMarks, content, gmTab, now, playingAs, retryLogin, retryNow, status, tab, toast, view, viewAt, type Tab } from './store';
 
 /** Корень: экран статуса до первой проекции, дальше маршрут по view.kind. */
 export function App() {
@@ -25,11 +26,17 @@ export function App() {
   const as = playingAs.value;
   // Ведущий играл за игрока, но роль пропала (перепривязка, смена состава): вернуться к пульту.
   if (as && s === 'no_role') { backToGm(); return <Notice icon="☿" text="Возвращение к пульту…" />; }
-  if (s === 'no_auth') return <Notice icon="✉" text="Откройте приложение из Telegram" />;
-  if (s === 'unauthorized') return <Notice icon="✠" text="Вход не удался. Откройте приложение из Telegram заново" />;
-  if (s === 'no_role') return <Notice icon="☉" text="Роль не найдена, обратитесь к ведущему" />;
   // Экраны ведущего читают содержимое: до сообщения content ждём так же, как до первой проекции.
-  if (!v || (v.kind === 'gm' && content.value === null)) return <Notice icon="☽" text="Подключение к ярмарке…" />;
+  switch (rootScreen(s, v, content.value)) {
+    case 'no_auth': return <Notice icon="✉" text="Откройте приложение из Telegram" />;
+    // Токен мог протухнуть: новый вход выдаст свежий.
+    case 'unauthorized': return <Notice icon="✠" text="Вход не удался. Откройте приложение из Telegram заново" retry />;
+    case 'auth_failed': return <Notice icon="☾" text="Нет связи с ярмаркой" retry />;
+    case 'no_role': return <Notice icon="☉" text="Роль не найдена, обратитесь к ведущему" />;
+    case 'connecting': return <Notice icon="☽" text="Подключение к ярмарке…" />;
+    case 'app': break;
+  }
+  if (!v) return null;
   return (
     <div class="app">
       {as && v.kind === 'player' && (
@@ -45,11 +52,27 @@ export function App() {
   );
 }
 
-function Notice({ icon, text }: { icon: string; text: string }) {
+/** Экран статуса без проекции; retry — кнопка «Повторить», которая запускает вход заново (§4.1). */
+function Notice({ icon, text, retry }: { icon: string; text: string; retry?: boolean }) {
   return (
     <div class="app notice">
-      <div class="m-card"><div class="notice-icon" aria-hidden="true">{icon}{'\uFE0E'}</div><p>{text}</p></div>
+      <div class="m-card">
+        <div class="notice-icon" aria-hidden="true">{icon}{'\uFE0E'}</div><p>{text}</p>
+        {retry && <Button onClick={() => { void retryLogin(); }}>Повторить</Button>}
+      </div>
       {toast.value && <div class="toast" role="alert">{toast.value}</div>}
+    </div>
+  );
+}
+
+/** Полоса под HUD при обрыве, когда экраны уже показаны (§4.2): «Сейчас» переподключает без ожидания. */
+function LinkBar() {
+  const s = status.value;
+  if (s !== 'closed' && s !== 'connecting') return null;
+  return (
+    <div class="as-bar live-bar" role="status">
+      <span>Нет связи, переподключение…</span>
+      <button type="button" onClick={retryNow}>Сейчас</button>
     </div>
   );
 }
@@ -116,7 +139,10 @@ function PlayerApp({ v }: { v: PlayerView }) {
   return (
     <>
       <TopBar v={v} gold={v.me.available.gold} />
-      <main class="cnt"><Frozen.Provider value={gameFrozen(v)}>{screen}</Frozen.Provider></main>
+      <LinkBar />
+      {/* Ушедший видит экраны, но действовать не может: сервер всё равно откажет (§2.4). */}
+      {playerLeft(v) && <div class="as-bar live-bar" role="status"><span>{leftText(v)}</span></div>}
+      <main class="cnt"><Frozen.Provider value={frozenReason(v)}>{screen}</Frozen.Provider></main>
       <Tabs badges={{ trades: incoming }} dots={dots} revealed={revealed} />
     </>
   );
@@ -126,6 +152,7 @@ function GmApp({ v }: { v: GmView }) {
   return (
     <>
       <TopBar v={v} />
+      <LinkBar />
       <main class="cnt">{gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? <GmResults v={v} /> : <Roster v={v} />}</main>
       <GmTabs />
     </>

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import type { ActionRecord, ConsentRequestView, PlayerView } from '@fair/shared';
-import { actionText, countsText, goldText, nameCase, offerItem, plural, requestOutcomeText, roleName, roman } from '../labels';
+import type { ActionRecord, ConsentRequestView, Offer, PlayerView } from '@fair/shared';
+import { actionText, clueText, countsText, goldText, nameCase, offerClosedText, offerItem, ownActionText, plural, recordItemText, requestOutcomeText, roleName, roman } from '../labels';
 
 test('римские номера карт', () => {
   expect([1, 4, 9, 14, 19, 24, 28, 30].map(roman)).toEqual(['I', 'IV', 'IX', 'XIV', 'XIX', 'XXIV', 'XXVIII', 'XXX']);
@@ -88,4 +88,25 @@ test('итог просьбы автору: смена акта, отказ не
   expect(requestOutcomeText(r({ status: 'cancelled', reason: 'gm' }), pv)).toBe('Ведущий отменил вашу просьбу');
   expect(requestOutcomeText(r({ status: 'cancelled' }), pv)).toBeNull();
   expect(requestOutcomeText(r({ status: 'failed', reason: 'участника нет на ярмарке' }), pv)).toBe('Не выполнено: участника нет на ярмарке');
+});
+
+test('участник ушёл: подпись закрытой сделки и просьбы', () => {
+  expect(offerClosedText({ status: 'cancelled', reason: 'left' } as Offer)).toBe('Сделка отменена: участник ушёл');
+  expect(offerClosedText({ status: 'cancelled', reason: 'author' } as Offer)).toBeNull();
+  const r = { id: 'q', author: 'o2', approvers: ['o8'], approved: [], status: 'cancelled', reason: 'left' } as unknown as ConsentRequestView;
+  expect(requestOutcomeText(r, pv)).toBe('Просьба закрыта: участник ушёл');
+});
+
+test('запись журнала с вещью: «способность: вещь»', () => {
+  const v = { ...pv, recipes: [{ id: 'ward', name: 'Защитный талисман', emoji: '🧿' }], public: { factions: [], clues: [] } } as unknown as PlayerView;
+  const a = rec({ author: 'o2', source: { type: 'ability', ability: 'reforge' }, item: { kind: 'ward', ref: 'ward' } });
+  expect(recordItemText(a, v)).toBe('Перековка: Защитный талисман');
+  expect(recordItemText(rec({}), v)).toBeNull();
+  expect(ownActionText(a, v)).toBe('Акт I. Перековка: Защитный талисман, исполнено');
+});
+
+test('улика в сумке показывает свой текст, но не место, где лежала', () => {
+  const v = { public: { clues: [{ id: 'c1', name: 'Письмо', text: 'Встреча у колодца в полночь', where: 'под прилавком' }] } } as unknown as PlayerView;
+  expect(clueText({ kind: 'clue', ref: 'c1' }, v)).toBe('Встреча у колодца в полночь');
+  expect(clueText({ kind: 'relic', ref: 'c1' }, v)).toBeUndefined();
 });
