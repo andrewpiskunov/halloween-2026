@@ -455,3 +455,8 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 
 .danger-zone { border-color: var(--cinnabar); }
 .danger-zone h5 { color: var(--cinnabar); }
+
+.lot-bid { align-items: center; gap: 10px; }
+.lot-bid .m-btn { flex: 0 0 auto; min-width: 120px; }
+.lot-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 6px 0 2px; font-size: 16px; }
+.lot-title small { color: var(--ink-soft); white-space: nowrap; }

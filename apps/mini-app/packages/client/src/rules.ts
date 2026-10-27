@@ -11,6 +11,17 @@ export function offerRemainingMs(o: Pick<Offer, 'expiresAt'>, clock: { paused: b
   return o.expiresAt - (clock.paused && clock.pausedAt !== undefined ? clock.pausedAt : now);
 }
 
+/** Остаток окна торга по часам ярмарки: на паузе стоит. Копия логики offerRemainingMs для лотов. */
+export function untilRemainingMs(until: number, clock: { paused: boolean; pausedAt?: number }, now: number): number {
+  return until - (clock.paused && clock.pausedAt !== undefined ? clock.pausedAt : now);
+}
+
+/** Ставка на лот: от «своя + 1» до «доступное золото + своя» (своя уже в резерве). */
+export function bidBounds(lot: { bids: { player: string; amount: number }[] }, v: PlayerView): { min: number; max: number; mine: number } {
+  const mine = lot.bids.find(b => b.player === v.me.role.key)?.amount ?? 0;
+  return { min: mine + 1, max: v.me.available.gold + mine, mine };
+}
+
 /** Повторяет проверки сервера: свободная вещь, не скрытая до третьего акта. */
 export function canOffer(item: Item, v: PlayerView): boolean {
   if (!v.me.available.items.includes(item.id)) return false;

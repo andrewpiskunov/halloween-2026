@@ -13,7 +13,8 @@ export interface PlayerView {
   offerItems: Record<string, { kind: Item['kind']; ref: string }>;
   workshop: Counts; recipes: Recipe[];
   altars: { side: AltarSide; name: string; contributions: (Contribution & { name: string; itemRef?: string })[] }[];
-  lots: (Omit<Lot, 'items'> & { items: Item[] })[];
+  /** Лоты с вещами; чужие ставки скрыты, виден только их счёт. */
+  lots: (Omit<Lot, 'items'> & { items: Item[]; bidders: number })[];
   announcements: Announcement[];
   public: {
     factions: Faction[]; resources: Resource[]; shards: { id: string; status: 'player' | 'lot' | 'altar' | 'unknown' }[]; clues: Clue[]; story: string;
@@ -135,6 +136,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       ...l,
       // чужие ставки не раскрываем ни в одном статусе торгов
       bids: l.bids.filter(b => b.player === key),
+      bidders: l.bids.length,
       items: l.items.map(itemById).filter((i): i is Item => !!i && !i.hiddenUntilAct),
     })),
     announcements: state.announcements,

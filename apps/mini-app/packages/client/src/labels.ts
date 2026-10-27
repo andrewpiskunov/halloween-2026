@@ -129,3 +129,6 @@ export function wantCatalog(v: PlayerView): (Want & { name: string; emoji: strin
   for (const r of v.recipes) out.push({ kind: KIND_BY_RECIPE[r.id] ?? 'potion', ref: r.id, name: r.name, emoji: r.emoji, group: 'Изделия' });
   return out;
 }
+
+/** Название лота: вещи через « + », например «Осколок IV + Обрывок договора». */
+export const lotTitle = (items: Pick<Item, 'kind' | 'ref'>[], v: PlayerView) => items.map(i => itemLabel(i, v).name).join(' + ');

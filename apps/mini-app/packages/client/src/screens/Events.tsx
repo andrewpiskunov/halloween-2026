@@ -1,7 +1,12 @@
+import { useState } from 'preact/hooks';
 import type { Lot, PlayerView } from '@fair/shared';
 import { itemImageUrl } from '../assets';
+import { Button } from '../components/Button';
 import { ItemCard } from '../components/ItemCard';
-import { goldText, itemLabel, roman } from '../labels';
+import { Stepper } from '../components/Stepper';
+import { goldText, itemLabel, lotTitle, mmss, plural, roleName, roman } from '../labels';
+import { bidBounds, untilRemainingMs } from '../rules';
+import { ask, now, run } from '../store';
 
 const LOT_STATUS: Record<Lot['status'], string> = {
   queued: 'в очереди', announced: 'объявлен', openBidding: 'открытый торг', sealedBidding: 'закрытые ставки',
@@ -10,7 +15,6 @@ const LOT_STATUS: Record<Lot['status'], string> = {
 
 /** События: сюжет, лоты для справки и лента объявлений ведущего, записанных от руки. */
 export function Events({ v }: { v: PlayerView }) {
-  const me = v.me.role.key;
   return (
     <>
       <h2 class="scr-h">События</h2>
@@ -21,18 +25,7 @@ export function Events({ v }: { v: PlayerView }) {
       {v.lots.length > 0 && (
         <div class="m-card">
           <h5>Лоты</h5>
-          {v.lots.map(l => {
-            const myBid = l.bids.find(b => b.player === me);
-            return (
-              <div class="lot" key={l.id}>
-                <div class="m-row"><span>Лот акта {roman(l.act)}</span><b>{LOT_STATUS[l.status]}</b></div>
-                {l.items.map(i => { const lb = itemLabel(i, v); return <ItemCard key={i.id} emoji={lb.emoji} img={itemImageUrl(i)} title={lb.name} />; })}
-                {l.fixedPrice !== undefined && <div class="m-row"><span>Цена</span><b>{goldText(l.fixedPrice)}</b></div>}
-                {myBid && <div class="m-row"><span>Ваша ставка</span><b>{goldText(myBid.amount)}</b></div>}
-              </div>
-            );
-          })}
-          <p class="m-note">Лоты здесь только для справки.</p>
+          {v.lots.map(l => <LotCard key={l.id} l={l} v={v} />)}
         </div>
       )}
       <h2 class="scr-h">Объявления</h2>
@@ -47,5 +40,64 @@ export function Events({ v }: { v: PlayerView }) {
         ))}
       </div>
     </>
+  );
+}
+
+type LotView = PlayerView['lots'][number];
+
+/** Лот: статус с отсчётом, вещи, своя ставка и действия: закрытая ставка или выкуп. */
+function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
+  const me = v.me.role.key;
+  const title = lotTitle(l.items, v);
+  const until = l.status === 'openBidding' ? l.openUntil : l.status === 'sealedBidding' ? l.sealedUntil : undefined;
+  const left = until === undefined ? 0 : Math.max(0, untilRemainingMs(until, v.clock, now.value));
+  const bounds = bidBounds(l, v);
+  const [amount, setAmount] = useState(0);
+  const chosen = Math.min(bounds.max, Math.max(bounds.min, amount || bounds.min));
+  const canBid = l.status === 'sealedBidding' && (left > 0 || v.clock.paused) && bounds.max >= bounds.min;
+  const bid = () => ask({
+    title: `${bounds.mine ? 'Поднять ставку до' : 'Поставить'} ${goldText(chosen)}?`,
+    text: `${title}. Ставку видит только сервер; золото будет обещано до конца торга.`,
+    okLabel: bounds.mine ? 'Поднять' : 'Поставить',
+    onOk: () => void run({ type: 'lot.bid', id: l.id, amount: chosen }),
+  });
+  const buyout = () => ask({
+    title: `Выкупить ${title} за ${goldText(l.fixedPrice ?? 0)}?`, okLabel: 'Выкупить',
+    onOk: () => void run({ type: 'lot.buyout', id: l.id }),
+  });
+  return (
+    <div class="lot">
+      <div class="m-row">
+        <span>Лот акта {roman(l.act)}</span>
+        <b>{LOT_STATUS[l.status]}{until !== undefined && ` · ${mmss(left)}`}</b>
+      </div>
+      {l.items.map(i => { const lb = itemLabel(i, v); return <ItemCard key={i.id} emoji={lb.emoji} img={itemImageUrl(i)} title={lb.name} />; })}
+      {l.status === 'openBidding' && <p class="m-note">Торгуйтесь голосом; ставки в приложении откроет ведущий.</p>}
+      {l.status === 'sealedBidding' && (
+        <>
+          <div class="m-row">
+            <span>{l.bidders ? `${l.bidders} ${plural(l.bidders, 'ставка', 'ставки', 'ставок')}` : 'ставок пока нет'}</span>
+            {bounds.mine > 0 && <b>ваша {goldText(bounds.mine)}</b>}
+          </div>
+          {canBid
+            ? (
+              <div class="m-row lot-bid">
+                <Stepper value={chosen} min={bounds.min} max={bounds.max} onChange={setAmount} label="Ставка" />
+                <Button onClick={bid}>{bounds.mine ? 'Поднять' : 'Поставить'}</Button>
+              </div>
+            )
+            : <p class="m-note">{bounds.max < bounds.min ? 'Свободного золота на ставку нет.' : 'Окно ставок закрыто.'}</p>}
+        </>
+      )}
+      {l.status === 'fixedPrice' && l.fixedPrice !== undefined && (
+        <div class="m-row lot-bid">
+          <span>Ставок не было: цена {goldText(l.fixedPrice)}</span>
+          <Button disabled={v.me.available.gold < l.fixedPrice} onClick={buyout}>Выкупить</Button>
+        </div>
+      )}
+      {l.status === 'sold' && l.winner !== undefined && (
+        <div class="m-row"><span>Ушёл</span><b>{l.winner === me ? 'вам' : roleName(l.winner, v)} за {goldText(l.price ?? 0)}</b></div>
+      )}
+    </div>
   );
 }

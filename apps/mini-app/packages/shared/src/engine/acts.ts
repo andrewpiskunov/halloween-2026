@@ -1,6 +1,7 @@
 import type { Actor } from '../commands';
 import type { Counts, GameState, Item, Lot } from '../types';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
+import { biddingInProgress, shiftLots } from './lots';
 
 const isGm = (a: Actor) => a.type === 'gm';
 const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
@@ -19,6 +20,7 @@ export const actCommands: CommandHandlers = {
   'act.next': (state, content, _cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase !== 'act1' && state.phase !== 'act2') return fail('phase');
+    if (biddingInProgress(state)) return fail('invalid', 'сначала завершите торг за лот');
     const act: 2 | 3 = state.phase === 'act1' ? 2 : 3;
 
     const newLots: Lot[] = [];
@@ -143,7 +145,7 @@ export const actReducers: EventReducers = {
   ClockPaused: (state, _c, e) => ({ ...state, clock: { ...state.clock, pausedAt: e.at } }),
   ClockResumed: (state, _c, e) => {
     const { pausedAt: _p, ...clock } = state.clock;
-    return { ...state, offers: shiftPending(state.offers, e.pausedMs), clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs } };
+    return { ...state, offers: shiftPending(state.offers, e.pausedMs), lots: shiftLots(state.lots, e.pausedMs), clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs } };
   },
   ClockExtended: (state, _c, e) => ({
     ...state, clock: { ...state.clock, pausedTotal: state.clock.pausedTotal + e.minutes * 60000 },

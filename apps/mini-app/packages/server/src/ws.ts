@@ -19,6 +19,7 @@ const COMMAND_TYPES: Record<Command['type'], true> = {
   'gm.announce': true, 'gm.correct': true, 'gm.rebind': true,
   'offer.create': true, 'offer.accept': true, 'offer.decline': true, 'offer.cancel': true, 'offer.expire': true,
   'shop.buy': true, 'shop.craft': true, 'altar.contribute': true, 'altar.withdraw': true,
+  'lot.openBidding': true, 'lot.sealedBids': true, 'lot.bid': true, 'lot.close': true, 'lot.buyout': true,
 };
 /** Поля, которые движок использует как ключи: если есть, обязаны быть короткими строками. */
 const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side'];

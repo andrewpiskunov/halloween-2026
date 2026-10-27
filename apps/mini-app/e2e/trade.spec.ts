@@ -112,6 +112,33 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await gm.locator('.as-bar').getByRole('button', { name: 'К пульту' }).click();
     await expect(gm.getByText('Ярмарка открыта, состав зафиксирован.')).toBeVisible();
     await expect(gm.locator('.as-bar')).toHaveCount(0);
+
+    // 8. Акт II: лот с осколком IV. Ведущий открывает закрытые ставки, Серафина ставит 2, ведущий завершает торг.
+    await gm.locator('nav.tabs').getByRole('button', { name: 'Пульт' }).click();
+    await gm.getByRole('button', { name: 'Начать акт II' }).click();
+    await gm.getByRole('dialog').getByRole('button', { name: 'Акт II' }).click();
+    const gmLot = gm.locator('.gm-lot', { hasText: 'Осколок IV' });
+    await expect(gmLot).toContainText('ждёт торга');
+    await gmLot.getByRole('button', { name: 'Закрытые ставки' }).click();
+    await expect(gmLot).toContainText('закрытые ставки');
+
+    await serafina.locator('nav.tabs').getByRole('button', { name: 'События' }).click();
+    const lot = serafina.locator('.lot', { hasText: 'Осколок IV' });
+    await expect(lot).toContainText('закрытые ставки');
+    const bidRow = lot.locator('.lot-bid');
+    await bidRow.getByRole('button', { name: '+' }).click();
+    await bidRow.getByRole('button', { name: 'Поставить' }).click();
+    await expect(serafina.getByRole('dialog')).toContainText('Поставить 2 золотых');
+    await serafina.getByRole('dialog').getByRole('button', { name: 'Поставить' }).click();
+    await expect(lot).toContainText('ваша 2 золотых');
+    await expect(gmLot).toContainText('1 ставка');
+
+    await gmLot.getByRole('button', { name: 'Завершить торг' }).click();
+    await gm.getByRole('dialog').getByRole('button', { name: 'Завершить' }).click();
+    await expect(gmLot).toContainText('Серафина за 2 золотых');
+    await expect(lot).toContainText('вам за 2 золотых');
+    await serafina.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
+    await expect(serafina.locator('.item-block', { hasText: 'Осколок IV' })).toBeVisible();
   } finally {
     await Promise.all([gmCtx.close(), gretaCtx.close(), serafinaCtx.close()]);
   }

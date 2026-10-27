@@ -6,8 +6,8 @@ import { Stepper } from '../../components/Stepper';
 import { actPlan } from '../../gm/clock';
 import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
-import { INGREDIENTS, mmss, roman } from '../../labels';
-import { correctableItems } from '../../rules';
+import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
+import { correctableItems, untilRemainingMs } from '../../rules';
 import { ask, now, run, showToast } from '../../store';
 
 type Field = 'gold' | 'ingredient' | 'itemOwner';
@@ -83,6 +83,8 @@ export function Console({ v }: { v: GmView }) {
         </span>
       </div>
 
+      <Lots v={v} />
+
       <div class="m-card danger-zone">
         <h5>Сброс игры</h5>
         <p class="m-note">Удалит состав, явку, привязки игроков, вещи, сделки, алтари и журнал. Коды приглашений выдадутся заново, вы останетесь ведущим.</p>
@@ -113,6 +115,74 @@ export function Console({ v }: { v: GmView }) {
     </>
   );
 }
+
+/** Название вещи по содержимому для пульта: улики и изделия по имени, осколки и реликвии по ref. */
+function gmItemName(it: { kind: string; ref: string }, content: GmView['content']): string {
+  if (it.kind === 'shard') return `Осколок ${it.ref}`;
+  if (it.kind === 'clue') return content.clues.find(c => c.id === it.ref)?.name ?? `Улика ${it.ref}`;
+  if (it.kind === 'relic') return it.ref;
+  return content.recipes.find(r => r.id === it.ref)?.name ?? it.ref;
+}
+
+/** Лоты текущей ярмарки: открыть торг, открыть ставки, завершить; счёт ставок и итог. */
+function Lots({ v }: { v: GmView }) {
+  const { state, content } = v;
+  const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
+  const clock = { paused: state.clock.pausedAt !== undefined, pausedAt: state.clock.pausedAt };
+  const lots = Object.values(state.lots).filter(l => l.status !== 'queued');
+  if (lots.length === 0) return null;
+  const busy = lots.some(l => l.status === 'openBidding' || l.status === 'sealedBidding');
+  const title = (l: (typeof lots)[number]) => l.items.map(id => state.items[id]).filter(Boolean).map(it => gmItemName(it, content)).join(' + ');
+  const cmd = (type: 'lot.openBidding' | 'lot.sealedBids' | 'lot.close', id: string) => void run({ type, id });
+  return (
+    <div class="m-card">
+      <h5>Лоты</h5>
+      {lots.map(l => {
+        const until = l.status === 'openBidding' ? l.openUntil : l.status === 'sealedBidding' ? l.sealedUntil : undefined;
+        const left = until === undefined ? 0 : Math.max(0, untilRemainingMs(until, clock, now.value));
+        return (
+          <div class="lot gm-lot" key={l.id}>
+            <div class="lot-title"><b>{title(l)}</b><small>акт {roman(l.act)}</small></div>
+            <div class="m-row"><span>Состояние</span><b>{LOT_STATUS[l.status]}{until !== undefined && ` · ${mmss(left)}`}</b></div>
+            {l.status === 'announced' && (
+              <div class="m-btns two">
+                <Button kind="sec" disabled={busy} onClick={() => cmd('lot.openBidding', l.id)}>Открытый торг</Button>
+                <Button disabled={busy} onClick={() => cmd('lot.sealedBids', l.id)}>Закрытые ставки</Button>
+              </div>
+            )}
+            {l.status === 'openBidding' && (
+              <>
+                <p class="m-note">Две минуты торга голосом. Когда зал готов, откройте закрытые ставки.</p>
+                <div class="m-btns"><Button onClick={() => cmd('lot.sealedBids', l.id)}>Закрытые ставки</Button></div>
+              </>
+            )}
+            {l.status === 'sealedBidding' && (
+              <>
+                <p class="m-note">{l.bids.length ? `${l.bids.length} ${plural(l.bids.length, 'ставка', 'ставки', 'ставок')}` : 'ставок пока нет'}. Окно закроется само; можно завершить раньше.</p>
+                <div class="m-btns">
+                  <Button kind="sec" onClick={() => ask({
+                    title: 'Завершить торг сейчас?', okLabel: 'Завершить',
+                    text: l.bids.length ? 'Победит наибольшая ставка, при равенстве жребий.' : 'Ставок нет: лот уйдёт в выкуп за 4 золота.',
+                    onOk: () => cmd('lot.close', l.id),
+                  })}>Завершить торг</Button>
+                </div>
+              </>
+            )}
+            {l.status === 'fixedPrice' && <p class="m-note">Ставок не было: выкуп за {goldText(l.fixedPrice ?? 4)}, кто первый нажмёт.</p>}
+            {l.status === 'sold' && l.winner !== undefined && (
+              <div class="m-row"><span>Ушёл</span><b>{name(l.winner)} за {goldText(l.price ?? 0)}</b></div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const LOT_STATUS: Record<string, string> = {
+  announced: 'ждёт торга', openBidding: 'открытый торг', sealedBidding: 'закрытые ставки',
+  fixedPrice: 'выкуп', sold: 'продан', unsold: 'не продан',
+};
 
 function Correction({ v }: { v: GmView }) {
   const { state, content } = v;

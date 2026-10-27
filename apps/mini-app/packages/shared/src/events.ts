@@ -68,6 +68,16 @@ export interface ItemCrafted extends EventBase {
   type: 'ItemCrafted'; player: string; item: Item; paidGold: number; paidIngredients: Partial<Counts>;
   clearedThorns: boolean; clearedDiscount: boolean;
 }
+/** Ведущий открыл торг за лот: две минуты голосом, окно только для часов. */
+export interface LotBiddingOpened extends EventBase { type: 'LotBiddingOpened'; id: string; until: number; title: string }
+/** Ведущий открыл окно закрытых ставок на 90 секунд. */
+export interface LotSealedOpened extends EventBase { type: 'LotSealedOpened'; id: string; until: number; title: string }
+/** Игрок поставил или поднял закрытую ставку; золото в резерве. */
+export interface LotBid extends EventBase { type: 'LotBid'; id: string; player: string; amount: number }
+/** Торг закрыт: победитель платит ставку в банк и получает вещи; без ставок лот уходит в выкуп по fixedPrice. */
+export interface LotClosed extends EventBase { type: 'LotClosed'; id: string; title: string; winner?: string; amount?: number; fixedPrice?: number }
+/** Лот без ставок выкуплен первым, у кого нашлось золото. */
+export interface LotBought extends EventBase { type: 'LotBought'; id: string; title: string; player: string; price: number }
 /** Вклад на алтарь: осколок, Фокус или золото. */
 export interface Contributed extends EventBase { type: 'Contributed'; side: AltarSide; contribution: Contribution }
 /** Игрок забрал свой вклад с алтаря обратно. */
@@ -78,5 +88,6 @@ export interface ContributionWithdrawn extends EventBase {
 // События следующих задач добавляются в объединение по мере реализации.
 export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
-  | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn;
+  | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
+  | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought;
 export type EventType = Event['type'];

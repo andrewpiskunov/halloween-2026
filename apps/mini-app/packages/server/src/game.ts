@@ -123,6 +123,12 @@ export class Game {
           .catch(err => console.error('Ошибка истечения предложения', err));
       }
     }
+    for (const l of Object.values(this.current.lots)) {
+      if (l.status === 'sealedBidding' && l.sealedUntil !== undefined && l.sealedUntil <= now) {
+        this.submit('close:lot:' + l.id, { type: 'lot.close', id: l.id }, { type: 'system' })
+          .catch(err => console.error('Ошибка закрытия торга', err));
+      }
+    }
   }
 
   actorFor(telegramId: number): Actor | undefined {

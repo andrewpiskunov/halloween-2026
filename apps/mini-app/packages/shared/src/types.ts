@@ -18,7 +18,16 @@ export interface Player {
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export interface Offer { id: string; from: string; to: string; give: Bundle; get: Bundle; service: boolean; status: OfferStatus; createdAt: number; expiresAt: number; reason?: string }
 export type LotStatus = 'queued' | 'announced' | 'openBidding' | 'sealedBidding' | 'fixedPrice' | 'sold' | 'unsold';
-export interface Lot { id: string; items: string[]; act: 1 | 2 | 3; status: LotStatus; bids: { player: string; amount: number; at: number }[]; fixedPrice?: number }
+export interface Lot {
+  id: string; items: string[]; act: 1 | 2 | 3; status: LotStatus;
+  /** Закрытые ставки: по одной на игрока, новая заменяет старую; золото в резерве до закрытия торга. */
+  bids: { player: string; amount: number; at: number }[];
+  fixedPrice?: number;
+  /** Концы окон открытого торга и закрытых ставок по часам ярмарки; на паузе сдвигаются. */
+  openUntil?: number; sealedUntil?: number;
+  /** Кому ушёл лот и за сколько (ставка или выкуп). */
+  winner?: string; price?: number;
+}
 export interface Contribution { id: string; player: string; item?: string; gold?: number }
 export interface Altar { side: AltarSide; contributions: Contribution[] }
 export interface Announcement { at: number; title: string; text: string }

@@ -29,6 +29,11 @@ export type Command =
   | { type: 'shop.buy'; ingredient: Ingredient; count?: number }
   | { type: 'shop.craft'; recipeId: string }
   | { type: 'altar.contribute'; side: AltarSide; itemId?: string; gold?: number }
+  | { type: 'lot.openBidding'; id: string }
+  | { type: 'lot.sealedBids'; id: string }
+  | { type: 'lot.bid'; id: string; amount: number }
+  | { type: 'lot.close'; id: string }
+  | { type: 'lot.buyout'; id: string }
   | { type: 'altar.withdraw'; contributionId: string };
 
 export type CommandType = Command['type'];
