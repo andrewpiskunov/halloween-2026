@@ -29,6 +29,26 @@ test('отчёт без воспроизведения журнала говор
   const md = renderReport(result, meta(true), content);
   expect(md).toContain('Воспроизведение журнала: пропущено');
   // Без источников replay и gold помечены «пропущено», а не «ок».
-  const skipped = renderReport({ ...result, checks: [{ name: 'replay', ok: true, details: ['пропущено: воспроизведение журнала не передано'] }] }, meta(true), content);
+  const skipped = renderReport({
+    ...result,
+    checks: [{ name: 'replay', ok: true, details: ['пропущено: воспроизведение журнала не передано'] }],
+    skipped: ['replay: пропущено: воспроизведение журнала не передано'],
+  }, meta(true), content);
   expect(skipped).toContain('- **replay**: пропущено');
+});
+
+test('предупреждения — в разделе 6, вопросы — только в разделе 7', () => {
+  const md = renderReport({ ...result, warnings: ['p95 400 мс выше 300 мс'], questions: ['o16: нет защитника'] }, meta(false), content);
+  const s6 = md.slice(md.indexOf('## 6.'), md.indexOf('## 7.'));
+  const s7 = md.slice(md.indexOf('## 7.'));
+  expect(s6).toContain('- Предупреждение: p95 400 мс выше 300 мс');
+  expect(s7).not.toContain('p95');
+  expect(s7).toContain('- o16: нет защитника');
+});
+
+test('лоты нумеруются, способность названа по-русски с ключом', () => {
+  const md = renderReport(result, meta(false), content);
+  expect(md).toMatch(/- Лот 1: /);
+  expect(md).not.toMatch(/Лот акта/);
+  expect(md).toContain(`${content.roleByKey.o1.skill} (payAshWithGold): `);
 });

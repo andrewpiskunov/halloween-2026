@@ -37,7 +37,12 @@ export interface EveningResult {
   timing: { p50: number; p95: number; max: number; totalMs: number };
   sizes: { player: number; gm: number };
   coverage: { missingCommands: string[]; missingAbilities: string[]; missingItems: string[] };
+  /** Вопросы владельцу к правилам (раздел 7 отчёта). */
   questions: string[];
+  /** Превышения порогов §3.5: предупреждения, не падение (раздел 6). */
+  warnings: string[];
+  /** Пропущенные проверки без источника: «replay: …», «gold: …» (раздел 5). */
+  skipped: string[];
 }
 
 /** userId ведущего и основа userId игроков (§2.1); повторный вход после gm.rebind — от REBIND_USER_BASE. */
@@ -76,6 +81,10 @@ export class Ctx {
   readonly missedProbes: string[] = [];
   /** id вещи → вид на момент item.use: применённая вещь из состояния исчезает. */
   readonly itemKinds: Record<string, string> = {};
+  /** Роли, которым оркестратор уже изготовил изделие для способности (ensureCraftedOnce). */
+  readonly craftedFor = new Set<string>();
+  /** Лоты, выкуп которых уже пробовали (buyoutOnce): один лот — одна попытка. */
+  readonly buyoutTried = new Set<string>();
   /** Роли, чья способность в прошлом ходу получила отказ: в следующем ходу способность пропускается. */
   private readonly abilityRefused = new Set<string>();
   /** Все соединения за вечер, включая закрытые после gm.rebind: для размера проекций. */
@@ -305,9 +314,10 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
     };
     const sizes = ctx.sizes();
     const questions = [...ctx.questions, ...coverage.notes];
-    if (timing.p95 > P95_LIMIT_MS) questions.push(`Предупреждение: p95 ${timing.p95} мс выше ${P95_LIMIT_MS} мс`);
-    if (sizes.player > PLAYER_VIEW_LIMIT) questions.push(`Предупреждение: проекция игрока ${sizes.player} байт больше ${PLAYER_VIEW_LIMIT}`);
-    for (const c of checks) if (c.details.some(d => /пропущ/.test(d))) questions.push(`${c.name}: ${c.details.join('; ')}`);
+    const warnings: string[] = [];
+    if (timing.p95 > P95_LIMIT_MS) warnings.push(`p95 ${timing.p95} мс выше ${P95_LIMIT_MS} мс`);
+    if (sizes.player > PLAYER_VIEW_LIMIT) warnings.push(`проекция игрока ${sizes.player} байт больше ${PLAYER_VIEW_LIMIT}`);
+    const skipped = checks.flatMap(c => c.details.filter(d => d.startsWith('пропущено')).map(d => `${c.name}: ${d}`));
 
     return {
       ok: checks.every(c => c.ok),
@@ -319,6 +329,8 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
       sizes,
       coverage: { missingCommands: coverage.missingCommands, missingAbilities: coverage.missingAbilities, missingItems: coverage.missingItems },
       questions,
+      warnings,
+      skipped,
     };
   } finally {
     ctx.closeAll();

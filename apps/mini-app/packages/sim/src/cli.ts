@@ -65,7 +65,9 @@ function summary(result: EveningResult, durationMs: number, reportPath: string):
     `Время ответа: p50 ${result.timing.p50} мс, p95 ${result.timing.p95} мс, максимум ${result.timing.max} мс`,
     `Проекции: игрок ${(result.sizes.player / 1024).toFixed(1)} КБ, ведущий ${(result.sizes.gm / 1024).toFixed(1)} КБ`,
     `Не покрыто: ${missing.length ? missing.join(', ') : 'нет'}`,
-    `Вопросы: ${result.questions.length ? result.questions.length : 'нет'}`,
+    `Предупреждения: ${result.warnings.length ? result.warnings.join('; ') : 'нет'}`,
+    `Пропущено: ${result.skipped.length ? result.skipped.join('; ') : 'нет'}`,
+    `Вопросы владельцу: ${result.questions.length ? result.questions.length : 'нет'}`,
     ...result.questions.map(q => `  - ${q}`),
     `Отчёт: ${reportPath}`,
   ].join('\n');

@@ -1,9 +1,11 @@
 // Сценарий вечера (спецификация этапа 6, §2.3): подготовка, три акта по шесть кругов, закрытие и показ итогов.
-import { ABILITY_BY_ROLE, type AltarSide, type Command, type PlayerView } from '@fair/shared';
+import { ABILITY_BY_ROLE, type AbilityKind, type AltarSide, type Command, type Ingredient, type Item, type PlayerView } from '@fair/shared';
 import { actNextLabel } from './checks';
 import { fetchCodes } from './client';
 import { PLAYER_USER_BASE, REBIND_USER_BASE, type Ctx } from './evening';
-import { freeItems } from './items';
+import { BUY_PRICE, CRAFTED, INGREDIENTS, REFORGEABLE, RECIPE_BY_KIND, freeItems } from './items';
+
+const KIND_BY_RECIPE = Object.fromEntries(Object.entries(RECIPE_BY_KIND).map(([k, r]) => [r, k])) as Record<string, Item['kind']>;
 import { bidFor, type Act } from './policy';
 
 /** Кругов в акте (§9, решение 1). */
@@ -107,6 +109,7 @@ async function act1(ctx: Ctx): Promise<void> {
             return true;
           }
           if (round === 3 && role === canceller) return createAndCancel(ctx, role);
+          if (round >= 3 && await ensureCraftedOnce(ctx, role, view)) return true;
           if (round === 4 && role === withdrawer) return withdrawAndReturn(ctx, role, view);
           return false;
         },
@@ -116,6 +119,39 @@ async function act1(ctx: Ctx): Promise<void> {
   }
   if (!probed) ctx.missedProbes.push('акт I: чужой consent.accept (не было открытой просьбы)');
   await endAct(ctx, 1);
+}
+
+/** Способности, которым нужно своё изделие (§2.4): без него useFor возвращает null. */
+const NEEDS_CRAFTED: Partial<Record<AbilityKind, Item['kind'][]>> = { disassemble: CRAFTED, sellToBank: CRAFTED, reforge: REFORGEABLE };
+
+/**
+ * Изделие для способности: если к кругу 3 акта I у Грима, Хельги или Магды нет своего изделия, оркестратор
+ * в её ход покупает недостающие ингредиенты и изготавливает самое дешёвое из подходящих (раньше политики).
+ * Без этого способность могла не сработать за весь вечер: политика ведёт изготовление по целям роли.
+ * Раз за вечер на роль; если золота не хватает, пробует в следующих кругах.
+ */
+async function ensureCraftedOnce(ctx: Ctx, role: string, view: PlayerView): Promise<boolean> {
+  const kinds = NEEDS_CRAFTED[ABILITY_BY_ROLE[role]];
+  if (!kinds || ctx.craftedFor.has(role) || freeItems(view, kinds).length > 0) return false;
+  const have = view.me.available;
+  const plans = view.recipes
+    .filter(r => kinds.includes(KIND_BY_RECIPE[r.id] ?? 'relic'))
+    .map(r => {
+      const buys = INGREDIENTS.flatMap(k => Array<Ingredient>(Math.max(0, (r.cost[k] ?? 0) - have.ingredients[k])).fill(k));
+      return { r, buys, price: r.gold + BUY_PRICE * buys.length };
+    })
+    .filter(p => p.price <= have.gold && p.buys.every(k => view.workshop[k] >= p.buys.filter(x => x === k).length))
+    .sort((a, b) => a.price - b.price || a.r.id.localeCompare(b.r.id));
+  const plan = plans[0];
+  if (!plan) return false;
+  ctx.craftedFor.add(role);
+  for (const k of plan.buys) {
+    const r = await ctx.send(role, { type: 'shop.buy', ingredient: k });
+    if (!r.ok) return true;
+  }
+  await ctx.waitAll();
+  await ctx.send(role, { type: 'shop.craft', recipeId: plan.r.id });
+  return true;
 }
 
 /** Предложение соседу и его отмена в том же ходу, до ответа соседа. */
@@ -227,8 +263,10 @@ async function act3(ctx: Ctx): Promise<void> {
  */
 async function buyoutOnce(ctx: Ctx, role: string, view: PlayerView): Promise<boolean> {
   if (ctx.log.some(e => e.cmd.type === 'lot.buyout' && e.outcome.ok)) return false;
-  const fixed = view.lots.find(l => l.status === 'fixedPrice' && l.fixedPrice !== undefined && view.me.available.gold >= l.fixedPrice);
+  const fixed = view.lots.find(l => l.status === 'fixedPrice' && l.fixedPrice !== undefined && !ctx.buyoutTried.has(l.id)
+    && view.me.available.gold >= l.fixedPrice);
   if (!fixed) return false;
+  ctx.buyoutTried.add(fixed.id);
   await ctx.send(role, { type: 'lot.buyout', id: fixed.id });
   return true;
 }

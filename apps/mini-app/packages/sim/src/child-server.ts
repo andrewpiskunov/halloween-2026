@@ -29,10 +29,12 @@ export function freePort(): Promise<number> {
  * BOT_TOKEN и BOT_POLLING=0 дочерний сервер мог бы начать опрашивать настоящего бота.
  * Вывод сервера копится в памяти и печатается только при ошибке запуска.
  */
-export async function startChildServer(opts: { dbPath: string; port?: number }): Promise<ChildServer> {
+/** bin — для тестов: другой исполняемый файл вместо tsx. */
+export async function startChildServer(opts: { dbPath: string; port?: number; bin?: string }): Promise<ChildServer> {
   const port = opts.port ?? await freePort();
   const baseUrl = `http://127.0.0.1:${port}`;
-  const child = spawn(TSX, [SERVER_ENTRY], {
+  const bin = opts.bin ?? TSX;
+  const child = spawn(bin, [SERVER_ENTRY], {
     cwd: SERVER_DIR,
     env: {
       ...process.env,
@@ -43,11 +45,23 @@ export async function startChildServer(opts: { dbPath: string; port?: number }):
   let output = '';
   child.stdout.on('data', d => { output += String(d); });
   child.stderr.on('data', d => { output += String(d); });
-  const exited = new Promise<number | null>(resolve => child.once('exit', code => resolve(code)));
+  let spawnError: Error | undefined;
   let alive = true;
-  void exited.then(() => { alive = false; });
+  let stopping = false;
+  let started = false;
+  // Бинарник не запустился (нет tsx, нет прав): 'exit' может не прийти, поэтому выход разрешается и здесь.
+  const exited = new Promise<number | null>(resolve => {
+    child.once('exit', code => resolve(code));
+    child.once('error', err => { spawnError = err; resolve(null); });
+  });
+  void exited.then(code => {
+    alive = false;
+    // Падение посреди прогона: печатаем вывод сервера, иначе причина отказов ботов не видна.
+    if (started && !stopping) console.error(`Дочерний сервер завершился посреди прогона (код ${code}). Его вывод:\n${output}`);
+  });
 
   const stop = async () => {
+    stopping = true;
     if (!alive) return;
     child.kill('SIGTERM');
     const timer = setTimeout(() => { if (alive) child.kill('SIGKILL'); }, KILL_AFTER_MS);
@@ -57,10 +71,11 @@ export async function startChildServer(opts: { dbPath: string; port?: number }):
 
   const deadline = Date.now() + HEALTH_TIMEOUT_MS;
   while (Date.now() < deadline) {
+    if (spawnError) throw new Error(`не удалось запустить ${bin}: ${spawnError.message}`);
     if (!alive) throw new Error(`сервер завершился при запуске:\n${output}`);
     try {
       const res = await fetch(`${baseUrl}/api/health`);
-      if (res.ok) return { baseUrl, stop };
+      if (res.ok) { started = true; return { baseUrl, stop }; }
     } catch { /* ещё не слушает */ }
     await new Promise(r => setTimeout(r, 200));
   }

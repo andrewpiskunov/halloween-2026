@@ -26,6 +26,10 @@ test('вечер на 12: сценарий проходит, проверки з
   expect(byAct).toEqual([]);
 
   // Проверки с внешними источниками не пропущены.
+  // Пороги не превышены, проверки не пропущены, вопросов к правилам при полном составе ядра нет.
+  expect(result.warnings).toEqual([]);
+  expect(result.skipped).toEqual([]);
+  expect(result.questions).toEqual([]);
   expect(result.checks.find(c => c.name === 'replay')?.details.join(' ')).not.toMatch(/пропущ/);
   expect(result.checks.find(c => c.name === 'gold')?.details.join(' ')).not.toMatch(/пропущ/);
 });

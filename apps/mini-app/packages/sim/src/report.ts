@@ -31,6 +31,7 @@ const ACT_PHASES: { title: string; phases: Phase[]; act?: 1 | 2 | 3 }[] = [
   { title: 'После закрытия', phases: ['closed', 'revealed'] },
 ];
 
+const ACT_ROMAN: Record<string, string> = { act1: 'I', act2: 'II', act3: 'III' };
 const kb = (bytes: number) => `${(bytes / 1024).toFixed(1)} КБ`;
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} с`;
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
@@ -71,12 +72,15 @@ function actsSection(result: EveningResult, content: Content): string[] {
       okCount(log, phases, 'gm.correct'),
     ];
   });
-  const lots = Object.values(s.lots).sort((a, b) => a.act - b.act).map(l => {
+  // Лоты по порядку; акт торга — фаза первой ставки или выкупа в журнале (поле act содержимого не показывается).
+  const lots = Object.values(s.lots).map((l, i) => {
+    const touched = log.find(e => (e.cmd.type === 'lot.bid' || e.cmd.type === 'lot.buyout') && e.outcome.ok && (e.cmd as { id: string }).id === l.id);
+    const when = touched?.phase && /^act[123]$/.test(touched.phase) ? `, акт ${ACT_ROMAN[touched.phase]}` : '';
     if (l.status === 'sold' && l.winner) {
       const how = log.some(e => e.cmd.type === 'lot.buyout' && e.outcome.ok && (e.cmd as { id: string }).id === l.id) ? 'выкуп' : 'ставка';
-      return `- Лот акта ${l.act}: продан, ${roleName(content, l.winner)} за ${l.price ?? '?'} золота (${how}).`;
+      return `- Лот ${i + 1}: продан, ${roleName(content, l.winner)} за ${l.price ?? '?'} золота (${how}${when}).`;
     }
-    return `- Лот акта ${l.act}: ${l.status === 'unsold' ? 'не продан' : `статус ${l.status}`}.`;
+    return `- Лот ${i + 1}: ${l.status === 'unsold' ? 'не продан' : `статус ${l.status}`}${when ? ` (ставки${when})` : ''}.`;
   });
   return [
     REPORT_SECTIONS[1],
@@ -135,7 +139,7 @@ function playersSection(result: EveningResult, content: Content): string[] {
       setup?.players[k]?.gold ?? '?',
       s.players[k].gold,
       ownedCount(s, k),
-      `${ABILITY_BY_ROLE[k]}: ${abilityOutcome(result, k)}`,
+      `${content.roleByKey[k]?.skill ?? ABILITY_BY_ROLE[k]} (${ABILITY_BY_ROLE[k]}): ${abilityOutcome(result, k)}`,
       mine ? `${mine.goals.filter(Boolean).length} из 2` : '—',
       mine ? (mine.outcome ? 'да' : 'нет') : '—',
       mine?.truth ? 'да' : '—',
@@ -153,7 +157,7 @@ function checksSection(result: EveningResult, meta: ReportMeta): string[] {
   const lines = [REPORT_SECTIONS[4], ''];
   if (meta.replaySkipped) lines.push('Воспроизведение журнала: пропущено (прогон против внешнего сервера, база недоступна).', '');
   for (const c of result.checks) {
-    const skipped = c.ok && c.details.length > 0 && c.details.every(d => d.startsWith('пропущено'));
+    const skipped = c.ok && result.skipped.some(x => x.startsWith(`${c.name}: `));
     lines.push(`- **${c.name}**: ${skipped ? 'пропущено' : c.ok ? 'ок' : 'ошибка'}`);
     for (const d of c.details) lines.push(`  - ${d}`);
   }
@@ -164,7 +168,7 @@ function checksSection(result: EveningResult, meta: ReportMeta): string[] {
 /** Раздел 6: время ответов и размеры проекций; предупреждения по порогам §3.5. */
 function timingSection(result: EveningResult): string[] {
   const t = result.timing;
-  const warnings = result.questions.filter(q => q.startsWith('Предупреждение'));
+  const { warnings } = result;
   return [
     REPORT_SECTIONS[5],
     '',
@@ -173,7 +177,7 @@ function timingSection(result: EveningResult): string[] {
     `- Весь вечер: ${seconds(t.totalMs)}.`,
     `- Самая большая проекция игрока: ${kb(result.sizes.player)} (порог 256 КБ).`,
     `- Самая большая проекция ведущего: ${kb(result.sizes.gm)}; порога нет, это материал для отложенного пункта «содержимое в каждом событии».`,
-    ...(warnings.length ? ['', ...warnings.map(w => `- ${w}`)] : ['- Пороги не превышены.']),
+    ...(warnings.length ? ['', ...warnings.map(w => `- Предупреждение: ${w}`)] : ['- Пороги не превышены.']),
   ];
 }
 
