@@ -145,6 +145,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
   }
 
   const closing = closingFor(state, content, key);
+  // telegramId игроку не нужен: аккаунт Telegram остаётся только в проекции ведущего.
+  const { telegramId: _telegramId, ...player } = me;
 
   return {
     kind: 'player',
@@ -155,7 +157,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       ...(state.clock.pausedAt !== undefined ? { pausedAt: state.clock.pausedAt } : {}),
     },
     me: {
-      role, player: me,
+      role, player,
       items: items.filter(i => i.owner.type === 'player' && i.owner.key === key),
       available: available(state, key),
       ability: abilityView(state, content, key),

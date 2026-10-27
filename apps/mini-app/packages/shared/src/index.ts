@@ -7,3 +7,4 @@ export * from './commands';
 export * from './events';
 export * from './engine';
 export * from './views';
+export * from './invariants';

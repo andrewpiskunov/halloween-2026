@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { viewFor, type Actor, type Command, type GameState } from '@fair/shared';
+import { COMMAND_TYPES, viewFor, type Actor, type Command, type GameState } from '@fair/shared';
 import { verifyToken } from './auth';
 import type { ServerDeps } from './http';
 
@@ -12,18 +12,6 @@ const MAX_KEY = 64;
 const MAX_TEXT = 2000;
 const MAX_DEPTH = 5;
 
-/** Все типы команд объединения Command: компилятор проверит полноту списка. */
-const COMMAND_TYPES: Record<Command['type'], true> = {
-  'session.setN': true, 'session.toggleRole': true, 'player.bind': true, 'player.setPresent': true,
-  'session.open': true, 'session.reset': true, 'act.next': true, 'clock.pause': true, 'clock.resume': true, 'clock.extend': true,
-  'gm.announce': true, 'gm.correct': true, 'gm.rebind': true,
-  'offer.create': true, 'offer.accept': true, 'offer.decline': true, 'offer.cancel': true, 'offer.expire': true,
-  'shop.buy': true, 'shop.craft': true, 'altar.contribute': true, 'altar.withdraw': true,
-  'lot.openBidding': true, 'lot.sealedBids': true, 'lot.bid': true, 'lot.close': true, 'lot.buyout': true,
-  'ability.use': true, 'item.use': true,
-  'consent.accept': true, 'consent.decline': true, 'consent.cancel': true, 'consent.expire': true,
-  'player.chooseSide': true, 'session.close': true, 'session.reveal': true,
-};
 /** Поля, которые движок использует как ключи: если есть, обязаны быть короткими строками. */
 const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side', 'target'];
 /** Свободный текст ведущего, описания, вопрос Весты и облик Камня: длиннее ключей. */

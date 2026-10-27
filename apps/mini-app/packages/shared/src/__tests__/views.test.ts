@@ -3,7 +3,7 @@ import { viewFor, type GmView, type PlayerView } from '../views';
 import type { AbilityUse, Actor, Command } from '../commands';
 import type { GameState } from '../types';
 import { OUTCOME_TEXTS, OUTCOME_TITLES } from '../closing-texts';
-import { Fair, allBut, content, gm, makeGame, player, run, system, wakeReady } from './helpers';
+import { Fair, allBut, content, gm, makeGame, newGame, player, run, system, wakeReady } from './helpers';
 
 const pv = (v: unknown) => v as PlayerView;
 
@@ -354,4 +354,13 @@ describe('цели и итоги закрытия', () => {
     expect(g.state.closing).toEqual(s.closing);
     expect(g.state).toBe(s);
   });
+});
+
+test('проекция игрока не несёт telegramId, проекция ведущего несёт', () => {
+  let s = must(newGame(), { type: 'session.setN', n: 12 }, gm);
+  s = must(s, { type: 'player.bind', code: 'code-o1', telegramId: 777001 }, system);
+  const json = JSON.stringify(viewFor(s, content, player('o1'), 0));
+  expect(json).not.toContain('"telegramId"');
+  expect(json).not.toContain('777001');
+  expect(JSON.stringify(viewFor(s, content, gm, 0))).toContain('"telegramId":777001');
 });
