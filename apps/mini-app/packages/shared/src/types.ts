@@ -25,6 +25,8 @@ export interface Player {
   guise?: { name: string; at: number; by: string };
   side?: Side;
   hostileAttemptsAgainstInAct: number;
+  /** Исправления ведущего по личным целям: null или отсутствие — считать по журналу. */
+  goalOverrides?: [boolean | null, boolean | null];
 }
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export interface Offer { id: string; from: string; to: string; give: Bundle; get: Bundle; service: boolean; status: OfferStatus; createdAt: number; expiresAt: number; reason?: string }
@@ -108,6 +110,30 @@ export interface ConsentRequest {
   closedAt?: number;
 }
 
+/** Одна сторона принятой сделки: что отдал игрок. createdBy вещей снят до перемещения. */
+export interface TradeSide { gold: number; ingredients: Counts; items: { kind: ItemKind; ref: string; createdBy?: string }[] }
+/** Запись журнала сделок: give — отдал from, get — отдал to. Источник для целей «по истории». */
+export interface TradeRecord { id: string; at: number; from: string; to: string; service: boolean; give: TradeSide; get: TradeSide }
+/** Запись журнала изготовлений: обычное изготовление, изготовление способностью и перековка. */
+export interface CraftRecord { at: number; player: string; kind: ItemKind; itemId: string }
+
+/** Итог одного алтаря при закрытии. */
+export interface AltarResult { side: AltarSide; shards: number; focuses: number; gold: number; donors: number; ready: boolean }
+/** Итоги закрытия ярмарки: вычисляет обработчик команды, редьюсеры только копируют. */
+export interface Closing {
+  closedAt: number;
+  altars: AltarResult[];
+  outcome: AltarSide | 'sleep';
+  warnings: string[];
+  truthHolder?: string;                     // roleKey
+  players: Record<string, {                 // только присутствующие участники
+    goals: [boolean, boolean];
+    outcome: boolean;                       // достижение «исход»
+    truth: boolean;
+    side: Side;                             // сторона, по которой считали исход ('free' если не выбрал)
+  }>;
+}
+
 export interface GameState {
   phase: Phase; roster: string[]; nPresent: number;
   clock: { actStartedAt: number; pausedAt?: number; pausedTotal: number };
@@ -121,4 +147,10 @@ export interface GameState {
   requests: Record<string, ConsentRequest>;
   /** Журнал применений способностей и вещей. */
   actions: ActionRecord[];
+  /** Журнал принятых сделок. */
+  trades: TradeRecord[];
+  /** Журнал изготовлений, включая перековку. */
+  crafts: CraftRecord[];
+  /** Итоги закрытия: появляются в FairClosed, пересчитываются в Corrected. */
+  closing?: Closing;
 }

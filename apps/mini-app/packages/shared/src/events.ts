@@ -1,7 +1,7 @@
 import type { AbilityKind, CopyableKind } from './abilities';
 import type { Correction } from './commands';
 import type {
-  Altar, AltarSide, Announcement, Bundle, ConsentRequest, ConsentStatus, Contribution, Counts, Effect, Ingredient, Intel, Item, Lot, Offer,
+  Altar, AltarSide, Announcement, Bundle, Closing, ConsentRequest, ConsentStatus, Contribution, Counts, Effect, Ingredient, Intel, Item, Lot, Offer,
   OfferStatus, Player,
 } from './types';
 
@@ -50,7 +50,11 @@ export interface ClockResumed extends EventBase { type: 'ClockResumed'; pausedMs
 export interface ClockExtended extends EventBase { type: 'ClockExtended'; minutes: number }
 export interface Announced extends EventBase { type: 'Announced'; title: string; text: string }
 /** Исправление ведущего; для отметок и облика — эффекты, которые применяет редьюсер (облик со временем и автором). */
-export interface Corrected extends EventBase { type: 'Corrected'; playerKey: string; change: Correction; reason: string; effects?: Effect[] }
+export interface Corrected extends EventBase {
+  type: 'Corrected'; playerKey: string; change: Correction; reason: string; effects?: Effect[];
+  /** После закрытия: пересчитанные итоги, редьюсер копирует их в состояние. */
+  closing?: Closing;
+}
 export interface InviteRebound extends EventBase { type: 'InviteRebound'; roleKey: string; code: string }
 
 /** Игрок предложил сделку; его сторона give зарезервирована. */
@@ -133,10 +137,20 @@ export interface ConsentClosed extends EventBase {
   type: 'ConsentClosed'; id: string; status: Exclude<ConsentStatus, 'pending' | 'accepted'>; reason?: string;
 }
 
+/** Свободный выбрал сторону; видна только ему и ведущему. */
+export interface SideChosen extends EventBase { type: 'SideChosen'; player: string; side: AltarSide }
+/** Ярмарка закрыта: перечисленные предложения, запросы и лоты закрываются, итоги посчитаны обработчиком. */
+export interface FairClosed extends EventBase {
+  type: 'FairClosed'; closedOffers: string[]; closedRequests: string[]; closedLots: string[]; closing: Closing;
+}
+/** Ведущий раскрыл итоги игрокам. */
+export interface Revealed extends EventBase { type: 'Revealed' }
+
 // События следующих задач добавляются в объединение по мере реализации.
 export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
   | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought
-  | AbilityUsed | ItemUsed | ConsentRequested | ConsentGiven | ConsentClosed;
+  | AbilityUsed | ItemUsed | ConsentRequested | ConsentGiven | ConsentClosed
+  | SideChosen | FairClosed | Revealed;
 export type EventType = Event['type'];

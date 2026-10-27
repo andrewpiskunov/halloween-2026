@@ -104,6 +104,9 @@ export const shopReducers: EventReducers = {
       ...(thorns && thornsBy !== undefined ? { thornsBy } : {}),
       ...(discount && discountBy !== undefined ? { discountBy } : {}),
     };
-    return { ...state, items: { ...state.items, [e.item.id]: e.item }, players: { ...state.players, [e.player]: player } };
+    return {
+      ...state, items: { ...state.items, [e.item.id]: e.item }, players: { ...state.players, [e.player]: player },
+      crafts: [...state.crafts, { at: e.at, player: e.player, kind: e.item.kind, itemId: e.item.id }],
+    };
   },
 };

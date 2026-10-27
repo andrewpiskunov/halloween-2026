@@ -1,5 +1,7 @@
 export * from './content';
 export * from './abilities';
+export * from './goals';
+export * from './closing-texts';
 export * from './types';
 export * from './commands';
 export * from './events';

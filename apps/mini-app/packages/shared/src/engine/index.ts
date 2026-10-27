@@ -11,6 +11,7 @@ import { itemCommands, itemReducers } from './items';
 import { offerCommands, offerReducers } from './offers';
 import { lotCommands, lotReducers } from './lots';
 import { shopCommands, shopReducers } from './shop';
+import { sideCommands, sideReducers } from './sides';
 import { emptyState, sessionCommands, sessionReducers } from './session';
 
 export type { ErrorCode, Result, CommandHandlers, EventReducers } from './result';
@@ -19,8 +20,8 @@ export { available, hasBundle, isTradable, transfer } from './bundles';
 export { BUYOUT_PRICE, OPEN_BIDDING_MS, SEALED_BIDS_MS, itemTitle, lotTitle } from './lots';
 
 // Новые группы команд подключаются добавлением в эти списки.
-const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands };
-const eventReducers: EventReducers = { ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers };
+const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands };
+const eventReducers: EventReducers = { ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers, ...sideReducers };
 
 type AnyHandler = (state: GameState, content: Content, cmd: Command, ctx: Ctx) => Result;
 type AnyReducer = (state: GameState, content: Content, event: Event) => GameState;

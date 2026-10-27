@@ -17,7 +17,9 @@ export type Correction =
   | { field: 'discount'; value: boolean }
   | { field: 'abilityUsed'; value: boolean }         // false: вернуть применение в этом акте
   | { field: 'hostileAttempt'; value: boolean }      // false: снять отметку попытки
-  | { field: 'guise'; name: string | null };         // null: снять облик
+  | { field: 'guise'; name: string | null }          // null: снять облик
+  | { field: 'side'; side: AltarSide | null }        // сторона свободного; null: снять выбор
+  | { field: 'goal'; index: 0 | 1; value: boolean | null };   // null: считать цель по журналу
 
 /** Параметры применения: дискриминант kind совпадает с видом роли автора. */
 export type AbilityUse =
@@ -76,6 +78,9 @@ export type Command =
   | { type: 'consent.accept'; id: string }
   | { type: 'consent.decline'; id: string }
   | { type: 'consent.cancel'; id: string }          // автор или ведущий
-  | { type: 'consent.expire'; id: string };         // только actor system
+  | { type: 'consent.expire'; id: string }          // только actor system
+  | { type: 'player.chooseSide'; side: AltarSide }  // свободный, один раз, в act1 или act2
+  | { type: 'session.close' }                       // ведущий, act3
+  | { type: 'session.reveal' };                     // ведущий, closed
 
 export type CommandType = Command['type'];

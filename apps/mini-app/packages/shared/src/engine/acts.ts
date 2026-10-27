@@ -67,7 +67,7 @@ function markEffects(key: string, c: MarkCorrection): Effect[] {
  * Исправление отметки или облика (§6.7): игрок на ярмарке, пустые исправления запрещены.
  * Возвращает эффекты для события или отказ.
  */
-function correctMark(state: GameState, key: string, c: Exclude<Correction, { field: 'gold' | 'ingredient' | 'itemOwner' }>, ctx: Ctx): Effect[] | Result {
+function correctMark(state: GameState, key: string, c: Exclude<Correction, { field: 'gold' | 'ingredient' | 'itemOwner' | 'side' | 'goal' }>, ctx: Ctx): Effect[] | Result {
   if (!presentPlayer(state, key)) return fail('not_found', key);
   const p = state.players[key];
   if (c.field === 'guise') {
@@ -177,6 +177,9 @@ export const actCommands: CommandHandlers = {
       if (it.owner.type !== 'player') return fail('invalid', 'переносить можно только вещь у игрока');
       if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
       if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
+    } else if (c.field === 'side' || c.field === 'goal') {
+      // Исправления стороны и целей появятся вместе с закрытием ярмарки.
+      return fail('invalid', 'исправление пока не поддерживается');
     } else {
       const effects = correctMark(state, cmd.playerKey, c, ctx);
       if (!Array.isArray(effects)) return effects;

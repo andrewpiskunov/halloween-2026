@@ -11,6 +11,7 @@ export const emptyState = (): GameState => ({
   clock: { actStartedAt: 0, pausedTotal: 0 },
   players: {}, items: {}, workshop: { ash: 0, moon: 0, dew: 0 }, offers: {}, lots: {},
   altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0, requests: {}, actions: [],
+  trades: [], crafts: [],
 });
 
 const CODE_LENGTH = 12;

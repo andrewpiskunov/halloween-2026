@@ -328,6 +328,10 @@ export const abilityReducers: EventReducers = {
     const players = { ...s.players, [e.author]: { ...s.players[e.author], abilityUsedInAct: true } };
     // Враждебная попытка, исполненная или отражённая, расходует лимит цели на акт.
     if (e.hostile && e.target !== undefined) players[e.target] = { ...players[e.target], hostileAttemptsAgainstInAct: 1 };
-    return acceptRequest(recordAction({ ...s, players }, e, actOf(state)), e.requestId);
+    // Перековка считается изготовлением: новая вещь в журнал изготовлений.
+    const crafts = e.ability === 'reforge'
+      ? [...s.crafts, ...e.effects.flatMap(x => x.type === 'itemCreated' ? [{ at: e.at, player: e.author, kind: x.item.kind, itemId: x.item.id }] : [])]
+      : s.crafts;
+    return acceptRequest(recordAction({ ...s, players, crafts }, e, actOf(state)), e.requestId);
   },
 };

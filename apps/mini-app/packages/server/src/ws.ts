@@ -22,6 +22,7 @@ const COMMAND_TYPES: Record<Command['type'], true> = {
   'lot.openBidding': true, 'lot.sealedBids': true, 'lot.bid': true, 'lot.close': true, 'lot.buyout': true,
   'ability.use': true, 'item.use': true,
   'consent.accept': true, 'consent.decline': true, 'consent.cancel': true, 'consent.expire': true,
+  'player.chooseSide': true, 'session.close': true, 'session.reveal': true,
 };
 /** Поля, которые движок использует как ключи: если есть, обязаны быть короткими строками. */
 const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side', 'target'];

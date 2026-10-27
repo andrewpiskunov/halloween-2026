@@ -1,4 +1,4 @@
-import type { Bundle, GameState, Item, Offer, Want } from '../types';
+import type { Bundle, GameState, Item, Offer, TradeRecord, TradeSide, Want } from '../types';
 import { INGREDIENTS, available, isTradable, transfer } from './bundles';
 import { isActPhase, participant } from './guards';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
@@ -153,6 +153,18 @@ function release(state: GameState, o: Offer): GameState {
   return { ...state, items, players: { ...state.players, [o.from]: { ...p, reservedGold: p.reservedGold - o.give.gold } } };
 }
 
+/** Сторона сделки для журнала: вещи читаются до перемещения, чтобы сохранить createdBy. */
+function tradeSide(state: GameState, b: Bundle): TradeSide {
+  return {
+    gold: b.gold,
+    ingredients: { ...b.ingredients },
+    items: b.items.map(id => {
+      const it = state.items[id];
+      return { kind: it.kind, ref: it.ref, ...(it.createdBy !== undefined ? { createdBy: it.createdBy } : {}) };
+    }),
+  };
+}
+
 export const offerReducers: EventReducers = {
   OfferCreated: (state, _c, e) => {
     const o = e.offer;
@@ -167,7 +179,11 @@ export const offerReducers: EventReducers = {
   },
   OfferAccepted: (state, _c, e) => {
     const o = state.offers[e.id];
-    let s = release(state, o);
+    const trade: TradeRecord = {
+      id: e.id, at: e.at, from: e.from, to: e.to, service: e.service,
+      give: tradeSide(state, e.give), get: tradeSide(state, e.get),
+    };
+    let s: GameState = { ...release(state, o), trades: [...state.trades, trade] };
     s = transfer(s, e.from, e.to, e.give);
     s = transfer(s, e.to, e.from, e.get);
     return { ...s, offers: { ...s.offers, [e.id]: { ...o, status: 'accepted' } } };
