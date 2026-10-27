@@ -7,7 +7,7 @@ import { actPlan } from '../../gm/clock';
 import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
 import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
-import { correctableItems, untilRemainingMs } from '../../rules';
+import { correctableItems, remainingMs } from '../../rules';
 import { ask, now, run, showToast } from '../../store';
 
 type Field = 'gold' | 'ingredient' | 'itemOwner';
@@ -139,7 +139,7 @@ function Lots({ v }: { v: GmView }) {
       <h5>Лоты</h5>
       {lots.map(l => {
         const until = l.status === 'openBidding' ? l.openUntil : l.status === 'sealedBidding' ? l.sealedUntil : undefined;
-        const left = until === undefined ? 0 : Math.max(0, untilRemainingMs(until, clock, now.value));
+        const left = until === undefined ? 0 : Math.max(0, remainingMs(until, clock, now.value));
         return (
           <div class="lot gm-lot" key={l.id}>
             <div class="lot-title"><b>{title(l)}</b><small>акт {roman(l.act)}</small></div>

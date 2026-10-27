@@ -1,7 +1,13 @@
-import type { PlayerView } from '@fair/shared';
+import { useState } from 'preact/hooks';
+import type { ActionRecord, Intel, PlayerView } from '@fair/shared';
+import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
 import { Portrait } from '../components/Portrait';
-import { roleEmoji, roman } from '../labels';
+import { Thumb } from '../components/Thumb';
+import { GOLD, INGREDIENTS, goldText, ingredientName, itemLabel, mmss, ownActionText, roleEmoji, roleName, roman, waitingFor } from '../labels';
+import { remainingMs } from '../rules';
+import { abilityDraft, ask, now, run, tab } from '../store';
+import { AbilityForm } from './AbilityForm';
 
 /** Моя роль: карта-таро, сторона, цели, тайна, предыстория, способность, контакты, слух и подсказки по отыгрышу. */
 export function Role({ v }: { v: PlayerView }) {
@@ -15,6 +21,7 @@ export function Role({ v }: { v: PlayerView }) {
         <Portrait roleKey={r.key} emoji={r.emoji} size="card" tint />
         <h3>{r.name}</h3>
         <p>{r.title}</p>
+        {v.me.player.guise && <p class="guise">Ваш облик: {v.me.player.guise.name}</p>}
       </div>
       {side && (
         <div class="side-line" style={{ '--side': side.color }}>
@@ -42,12 +49,9 @@ export function Role({ v }: { v: PlayerView }) {
         <p class="text">{r.motivation}</p>
       </div>
 
-      <div class="m-card">
-        <h5>Способность</h5>
-        <h4>{r.skill}</h4>
-        <p class="text">{r.effect}</p>
-        <Button kind="sec" disabled>В следующей версии</Button>
-      </div>
+      <AbilityCard v={v} />
+      <IntelCard v={v} />
+      <UsesCard v={v} />
 
       <div class="m-card">
         <h5>Контакты</h5>
@@ -78,5 +82,115 @@ export function Role({ v }: { v: PlayerView }) {
         {r.joke && <p class="m-note">{r.joke}</p>}
       </div>
     </>
+  );
+}
+
+/** Строка состояния способности (§7.1). */
+function stateLine(v: PlayerView): string {
+  const ab = v.me.ability;
+  switch (ab.state) {
+    case 'available': return 'Доступна в этом акте';
+    case 'used': return `Применена в акте ${roman(v.act)}`;
+    case 'pending': {
+      const req = v.requests.find(q => q.id === ab.pendingRequest);
+      if (!req) return 'Ждёт ответа';
+      const who = waitingFor(req).map(k => roleName(k, v)).join(', ');
+      return `Ждёт ответа: ${who}, ${mmss(remainingMs(req.expiresAt, v.clock, now.value))}`;
+    }
+    default: return v.phase === 'setup' ? 'Откроется с началом акта' : 'Ярмарка закрыта';
+  }
+}
+
+/** Карточка способности: состояние, метки, кнопка и форма применения. */
+function AbilityCard({ v }: { v: PlayerView }) {
+  const ab = v.me.ability;
+  const [open, setOpen] = useState(false);
+  const toWorkshop = () => { abilityDraft.value = { kind: ab.kind }; tab.value = 'workshop'; };
+  const cancel = () => ask({
+    title: 'Отменить просьбу?', text: 'Способность останется неприменённой в этом акте.', okLabel: 'Отменить просьбу', danger: true,
+    onOk: () => { if (ab.pendingRequest) void run({ type: 'consent.cancel', id: ab.pendingRequest }); },
+  });
+  return (
+    <div class="m-card">
+      <h5>Способность</h5>
+      <h4>
+        {ab.name}
+        {ab.hostile && <span class="m-tag warn">враждебная</span>}
+        {ab.verbal && <span class="m-tag">словесная</span>}
+      </h4>
+      <p class="text">{ab.text}</p>
+      <p class={`ab-state ${ab.state}`}>{stateLine(v)}</p>
+      {ab.state === 'pending' && <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить просьбу</Button></div>}
+      {ab.state !== 'pending' && (ab.place === 'workshop'
+        ? <div class="m-btns"><Button disabled={ab.state !== 'available'} onClick={toWorkshop}>В мастерскую</Button></div>
+        : <div class="m-btns"><Button kind={open ? 'sec' : 'main'} disabled={ab.state !== 'available'} onClick={() => setOpen(!open)}>
+          {open ? 'Свернуть' : 'Применить'}
+        </Button></div>)}
+      {open && ab.state === 'available' && ab.place === 'role' && (
+        <div class="ab-form"><AbilityForm v={v} onDone={() => setOpen(false)} /></div>
+      )}
+    </div>
+  );
+}
+
+const isIntel = (a: ActionRecord): a is ActionRecord & { intel: Intel } => a.intel !== undefined;
+
+/** «Что вы узнали»: итоги наблюдений за всю игру, новые сверху. */
+function IntelCard({ v }: { v: PlayerView }) {
+  const me = v.me.role.key;
+  const list = v.actions.filter(a => a.author === me).filter(isIntel).sort((a, b) => b.at - a.at);
+  if (list.length === 0) return null;
+  return (
+    <div class="m-card">
+      <h5>Что вы узнали</h5>
+      {list.map(a => <IntelRow key={a.id} v={v} act={a.act} intel={a.intel} />)}
+    </div>
+  );
+}
+
+function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel }) {
+  const head = `Акт ${roman(act)}. `;
+  switch (intel.kind) {
+    case 'gold': return <div class="m-row"><span>{head}Золото {roleName(intel.target, v)}</span><b>{goldText(intel.gold)}</b></div>;
+    case 'side': {
+      const f = v.public.factions.find(x => x.id === intel.side);
+      return <div class="m-row"><span>{head}Сторона {roleName(intel.target, v)}</span><b>{f?.name ?? 'свободный, без стороны'}</b></div>;
+    }
+    case 'sniff': return (
+      <div class="m-row"><span>{head}{ingredientName(intel.ingredient)} есть у</span>
+        <b>{intel.holders.length ? intel.holders.map(k => roleName(k, v)).join(', ') : 'ни у кого'}</b></div>
+    );
+    case 'question': return (
+      <div class="m-row"><span>{head}Вопрос {roleName(intel.target, v)}{intel.question ? `: «${intel.question}»` : ''}</span><b>голосом</b></div>
+    );
+    case 'inventory': return (
+      <div class="intel-bag">
+        <p class="text"><b>{head}Сумка {roleName(intel.target, v)}</b></p>
+        <ul class="bl">
+          <li><Thumb src={resourceImageUrl('gold')} emoji={GOLD.emoji} size="sm" /><span>{goldText(intel.gold)}{intel.reservedGold ? `, ещё ${intel.reservedGold} обещано` : ''}</span></li>
+          {INGREDIENTS.filter(i => intel.ingredients[i.key]).map(i => (
+            <li key={i.key}><Thumb src={resourceImageUrl(i.key)} emoji={i.emoji} size="sm" /><span>{i.name} ×{intel.ingredients[i.key]}</span></li>
+          ))}
+          {intel.items.map((it, n) => {
+            const l = itemLabel(it, v);
+            return <li key={n}><Thumb src={itemImageUrl(it)} emoji={l.emoji} size="sm" /><span>{l.name}</span></li>;
+          })}
+        </ul>
+        <p class="m-note">Снимок на момент применения; дальше могло измениться.</p>
+      </div>
+    );
+  }
+}
+
+/** «Ваши применения»: свои записи способности с исходом, для целей «успешно применить». */
+function UsesCard({ v }: { v: PlayerView }) {
+  const me = v.me.role.key;
+  const list = v.actions.filter(a => a.author === me && a.source.type === 'ability').sort((a, b) => b.at - a.at);
+  if (list.length === 0) return null;
+  return (
+    <div class="m-card">
+      <h5>Ваши применения</h5>
+      <ul class="list">{list.map(a => <li key={a.id}>{ownActionText(a, v)}</li>)}</ul>
+    </div>
   );
 }

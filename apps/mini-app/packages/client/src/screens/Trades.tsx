@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Bundle, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
+import type { Bundle, ConsentRequestView, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
 import { Button } from '../components/Button';
 import { Portrait } from '../components/Portrait';
 import { Select } from '../components/Select';
 import { Stepper } from '../components/Stepper';
 import { Thumb } from '../components/Thumb';
-import { GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, offerItem, plural, roleEmoji, roleName, wantCatalog } from '../labels';
-import { canOffer, missingWants, offerRemainingMs } from '../rules';
+import {
+  GOLD, INGREDIENTS, bundleText, bundleWords, emptyBundle, goldText, itemLabel, mmss, nameCase, offerItem, plainName, plural,
+  requestText, roleEmoji, roleName, waitingFor, wantCatalog,
+} from '../labels';
+import { canOffer, missingWants, remainingMs } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
 
 /** Срок ответа на предложение; копия OFFER_TTL_MS из engine/offers.ts (клиент берёт из shared только типы). */
 const OFFER_TTL_MS = 300_000;
+/** Срок ответа на просьбу; копия CONSENT_TTL_MS из engine/consent.ts. */
+const CONSENT_TTL_MS = 300_000;
 
 const STATUS_TEXT: Record<Offer['status'], string> = {
   pending: 'ждёт ответа', accepted: 'принято', declined: 'отклонено', cancelled: 'отменено', expired: 'истекло',
@@ -39,6 +44,10 @@ export function Trades({ v }: { v: PlayerView }) {
     onOk: () => void run({ type: 'offer.cancel', id: o.id }),
   });
 
+  const reqIn = v.requests.filter(r => r.status === 'pending' && r.approvers.includes(me) && r.author !== me);
+  const reqOut = v.requests.filter(r => r.status === 'pending' && r.author === me);
+  const reqDone = v.requests.filter(r => r.status !== 'pending').sort((a, b) => b.createdAt - a.createdAt);
+
   const waiting = incoming.length
     ? `${incoming.length} ${plural(incoming.length, 'ждёт', 'ждут', 'ждут')} ответа`
     : outgoing.length ? `${outgoing.length} отправлено` : '';
@@ -46,6 +55,10 @@ export function Trades({ v }: { v: PlayerView }) {
   return (
     <>
       <h2 class="scr-h">Сделки {waiting && <small>{waiting}</small>}</h2>
+
+      {(reqIn.length > 0 || reqOut.length > 0) && <h5 class="sec-h">Просьбы</h5>}
+      {reqIn.map(r => <RequestIn key={r.id} v={v} r={r} />)}
+      {reqOut.map(r => <RequestOut key={r.id} v={v} r={r} />)}
 
       {incoming.map(o => {
         const missing = missingWants(o.get, v);
@@ -84,7 +97,13 @@ export function Trades({ v }: { v: PlayerView }) {
 
       <div class="m-card">
         <h5>История</h5>
-        {history.length === 0 && <p class="m-note">Закрытых сделок пока нет.</p>}
+        {history.length === 0 && reqDone.length === 0 && <p class="m-note">Закрытых сделок пока нет.</p>}
+        {reqDone.map(r => (
+          <div class="m-row" key={r.id}>
+            <span>Просьба: {requestText(r, v)}{r.author === me ? '' : ` (от ${nameCase(plainName(r.author, v), 'gen')})`}{r.status === 'failed' && r.reason ? `. ${r.reason}` : ''}</span>
+            <b class={r.status === 'accepted' ? 'm-ok' : 'm-no'}>{REQUEST_STATUS[r.status]}</b>
+          </div>
+        ))}
         {history.map(o => (
           <div class="m-row" key={o.id}>
             <span>
@@ -98,11 +117,69 @@ export function Trades({ v }: { v: PlayerView }) {
   );
 }
 
+const REQUEST_STATUS: Record<ConsentRequestView['status'], string> = {
+  pending: 'ждёт ответа', accepted: 'исполнено', declined: 'отказ', cancelled: 'отменено', expired: 'истекло', failed: 'не выполнено',
+};
+
+/** Входящая просьба: описание, отсчёт, «Согласен» и «Нет». Перенос своей защиты — с подтверждением. */
+function RequestIn({ v, r }: { v: PlayerView; r: ConsentRequestView }) {
+  const me = v.me.role.key;
+  const mine = r.approved.includes(me);
+  const a = r.action;
+  const accept = () => {
+    const send = () => void run({ type: 'consent.accept', id: r.id });
+    const kind = a.type === 'ability' ? (a.copied ?? a.ability) : null;
+    if (kind === 'transferProtection' && a.type === 'ability' && a.from === me) {
+      ask({ title: `Отдать свою защиту ${nameCase(plainName(a.to ?? '', v), 'dat')}?`, okLabel: 'Отдать', onOk: send });
+    } else send();
+  };
+  const decline = () => void run({ type: 'consent.decline', id: r.id });
+  return (
+    <div class={`m-card ${mine ? '' : 'hot'}`}>
+      <Head v={v} expiresAt={r.expiresAt} ttl={CONSENT_TTL_MS} roleKey={r.author} label="Просьба от" />
+      <p class="text">{requestText(r, v)}</p>
+      {mine
+        ? <p class="m-note">Вы согласились. Ждём: {waitingFor(r).map(k => roleName(k, v)).join(', ')}.</p>
+        : (
+          <>
+            <p class="m-note">Сначала договоритесь голосом, потом нажимайте.</p>
+            <div class="m-btns two">
+              <Button onClick={accept}>Согласен</Button>
+              <Button kind="sec" onClick={decline}>Нет</Button>
+            </div>
+          </>
+        )}
+    </div>
+  );
+}
+
+/** Исходящая просьба: кто ещё не ответил, отсчёт, «Отменить». */
+function RequestOut({ v, r }: { v: PlayerView; r: ConsentRequestView }) {
+  const wait = waitingFor(r);
+  const cancel = () => ask({
+    title: 'Отменить просьбу?', okLabel: 'Отменить', danger: true,
+    onOk: () => void run({ type: 'consent.cancel', id: r.id }),
+  });
+  return (
+    <div class="m-card">
+      <Head v={v} expiresAt={r.expiresAt} ttl={CONSENT_TTL_MS} roleKey={wait[0] ?? r.approvers[0]} label="Ваша просьба к" />
+      <p class="text">{requestText(r, v)}</p>
+      <p class="m-note">Ещё не ответили: {wait.map(k => roleName(k, v)).join(', ')}.</p>
+      <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить</Button></div>
+    </div>
+  );
+}
+
 /** Шапка сделки: цветной аватар, имя капителью и кольцо-таймер. */
 function OfferHead({ v, o, roleKey, label }: { v: PlayerView; o: Offer; roleKey: string; label: string }) {
+  return <Head v={v} expiresAt={o.expiresAt} ttl={OFFER_TTL_MS} roleKey={roleKey} label={label} />;
+}
+
+/** Шапка сделки или просьбы: аватар, имя и кольцо-таймер до срока. */
+function Head({ v, expiresAt, ttl, roleKey, label }: { v: PlayerView; expiresAt: number; ttl: number; roleKey: string; label: string }) {
   const other = v.others.find(x => x.roleKey === roleKey);
-  const left = offerRemainingMs(o, v.clock, now.value);
-  const share = Math.min(1, Math.max(0, left / OFFER_TTL_MS));
+  const left = remainingMs(expiresAt, v.clock, now.value);
+  const share = Math.min(1, Math.max(0, left / ttl));
   const p = `${(share * 100).toFixed(1)}%`;
   return (
     <div class="offer-head">
@@ -197,7 +274,7 @@ function OfferForm({ v }: { v: PlayerView }) {
       <div class="line">
         <small>Кому</small>
         <Select label="Кому" value={to} onChange={setTo} placeholder="выберите участника"
-          options={v.others.map(o => ({ value: o.roleKey, label: o.name, hint: o.title, icon: o.emoji, avatar: o.roleKey }))} />
+          options={v.others.map(o => ({ value: o.roleKey, label: roleName(o.roleKey, v), hint: o.title, icon: o.emoji, avatar: o.roleKey }))} />
       </div>
 
       <div class="line"><small>Отдаю</small><span class={`hand ${giveWords ? '' : 'none'}`}>{giveWords || 'ничего'}</span></div>

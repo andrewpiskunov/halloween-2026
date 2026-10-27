@@ -1,4 +1,5 @@
-import type { Bundle, GameState, Item, Offer, Phase, PlayerView, Want } from '@fair/shared';
+import type { Bundle, GameState, Item, Phase, PlayerView, TargetMode, Want } from '@fair/shared';
+import { roleName } from './labels';
 
 const PHASE_LABEL: Record<Phase, string> = {
   setup: 'Подготовка', act1: 'Акт 1', act2: 'Акт 2', act3: 'Акт 3', closed: 'Закрыто', revealed: 'Закрыто',
@@ -6,13 +7,11 @@ const PHASE_LABEL: Record<Phase, string> = {
 /** Фаза по-русски для верхней полосы. */
 export const phaseLabel = (phase: Phase) => PHASE_LABEL[phase];
 
-/** Сколько осталось на ответ; на паузе отсчёт стоит (сервер сдвинет срок при продолжении). */
-export function offerRemainingMs(o: Pick<Offer, 'expiresAt'>, clock: { paused: boolean; pausedAt?: number }, now: number): number {
-  return o.expiresAt - (clock.paused && clock.pausedAt !== undefined ? clock.pausedAt : now);
-}
-
-/** Остаток окна торга по часам ярмарки: на паузе стоит. Копия логики offerRemainingMs для лотов. */
-export function untilRemainingMs(until: number, clock: { paused: boolean; pausedAt?: number }, now: number): number {
+/**
+ * Сколько осталось до срока по часам ярмарки: ответ на сделку или просьбу, окно торга.
+ * На паузе отсчёт стоит (сервер сдвинет срок при продолжении).
+ */
+export function remainingMs(until: number, clock: { paused: boolean; pausedAt?: number }, now: number): number {
   return until - (clock.paused && clock.pausedAt !== undefined ? clock.pausedAt : now);
 }
 
@@ -45,3 +44,35 @@ export const canPutOnAltar = (item: Item, v: PlayerView) => canOffer(item, v) &&
 
 /** Вещи, которые ведущий может передать исправлением: только находящиеся у игроков. */
 export const correctableItems = (state: GameState) => Object.values(state.items).filter(it => it.owner.type === 'player');
+
+/** Длина облика Камня: копия MAX_GUISE из engine/items.ts. */
+export const GUISE_MAX = 40;
+
+/** Вещи, которые применяют из сумки: копия USABLE из engine/items.ts. */
+const USABLE: Item['kind'][] = ['potion', 'ward', 'shape'];
+
+/** Можно ли нажать «Использовать»: повторяет проверки сервера, why — подсказка под кнопкой. */
+export function canUseItem(item: Item, v: PlayerView): { ok: true } | { ok: false; why: string } {
+  if (item.kind === 'focus') return { ok: false, why: 'Кладётся на алтарь' };
+  if (!USABLE.includes(item.kind)) return { ok: false, why: 'Не применяется' };
+  if (item.reservedFor !== undefined) {
+    return { ok: false, why: v.requests.some(r => r.id === item.reservedFor) ? 'обещано в просьбе' : 'обещано в сделке' };
+  }
+  if (v.act === 0 || v.phase === 'closed' || v.phase === 'revealed') return { ok: false, why: 'Только во время акта' };
+  if (!v.me.available.items.includes(item.id)) return { ok: false, why: 'Вещь занята' };
+  if (item.kind === 'ward' && v.me.player.protection) return { ok: false, why: 'Защита уже есть' };
+  return { ok: true };
+}
+
+/**
+ * Кого можно выбрать целью: «other» — присутствующие без себя, «any» — «Себе» первым.
+ * Подпись с обликом: «Тётушка Мэй (Грета)». Для «protectedAndOther» список «кому».
+ */
+export function abilityTargets(v: PlayerView, mode: TargetMode = v.me.ability.target): { roleKey: string; label: string }[] {
+  const others = v.others.map(o => ({ roleKey: o.roleKey, label: roleName(o.roleKey, v) }));
+  switch (mode) {
+    case 'other': case 'protectedAndOther': return others;
+    case 'any': return [{ roleKey: v.me.role.key, label: 'Себе' }, ...others];
+    default: return [];
+  }
+}

@@ -460,3 +460,18 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .lot-bid .m-btn { flex: 0 0 auto; min-width: 120px; }
 .lot-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 6px 0 2px; font-size: 16px; }
 .lot-title small { color: var(--ink-soft); white-space: nowrap; }
+
+/* Этап 3: способности, вещи, просьбы */
+.badge.dot-only { min-width: 10px; width: 10px; height: 10px; padding: 0; top: -2px; border-radius: 50%; }
+.tarot p.guise { margin-top: 6px; font-style: normal; font-weight: 700; color: var(--ink); }
+.m-card h4 .m-tag { margin-left: 8px; vertical-align: middle; }
+.ab-state { margin: 8px 0 0; font-style: italic; color: var(--note); }
+.ab-state.available { color: #3f6b2a; }
+.ab-state.pending { color: var(--acc); }
+.ab-form { margin-top: 10px; }
+.ab-form .choice .m-btn { text-align: left; }
+.ab-craft { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0; }
+.ab-craft .m-note { margin: 0; flex: 1 1 160px; }
+.sec-h { margin: 4px 6px -6px; color: var(--dim); }
+.intel-bag { padding: 6px 0 8px; border-bottom: 1px solid var(--rule); }
+.intel-bag:last-child { border-bottom: 0; }

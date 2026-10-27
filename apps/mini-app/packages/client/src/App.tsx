@@ -12,7 +12,8 @@ import { Roster } from './screens/gm/Roster';
 import { Role } from './screens/Role';
 import { Trades } from './screens/Trades';
 import { Workshop } from './screens/Workshop';
-import { backToGm, gmTab, now, playingAs, status, tab, toast, view, viewAt } from './store';
+import { useEffect } from 'preact/hooks';
+import { backToGm, bagSeenMarks, gmTab, now, playingAs, status, tab, toast, view, viewAt, type Tab } from './store';
 
 /** Корень: экран статуса до первой проекции, дальше маршрут по view.kind. */
 export function App() {
@@ -86,7 +87,16 @@ function TopBar({ v, gold }: { v: PlayerView | GmView; gold?: number }) {
 
 function PlayerApp({ v }: { v: PlayerView }) {
   const me = v.me.role.key;
-  const incoming = v.offers.filter(o => o.to === me && o.status === 'pending').length;
+  const incoming = v.offers.filter(o => o.to === me && o.status === 'pending').length
+    + v.requests.filter(r => r.status === 'pending' && r.approvers.includes(me) && !r.approved.includes(me)).length;
+  // Точка у «Сумки»: отметки изменились с последнего открытия вкладки.
+  const p = v.me.player;
+  const marks = p.protection || p.thorns || p.curse || p.discount
+    ? [p.protection?.by ?? '', p.protection?.source ?? '', p.thorns, p.curse, p.discount].join('|') : '';
+  useEffect(() => { if (tab.value === 'bag') bagSeenMarks.value = marks; }, [tab.value, marks]);
+  const dots: Tab[] = [];
+  if (v.me.ability.state === 'available') dots.push('role');
+  if (marks && marks !== bagSeenMarks.value && tab.value !== 'bag') dots.push('bag');
   const screen = (() => {
     switch (tab.value) {
       case 'bag': return <Bag v={v} />;
@@ -101,7 +111,7 @@ function PlayerApp({ v }: { v: PlayerView }) {
     <>
       <TopBar v={v} gold={v.me.available.gold} />
       <main class="cnt">{screen}</main>
-      <Tabs badges={{ trades: incoming }} />
+      <Tabs badges={{ trades: incoming }} dots={dots} />
     </>
   );
 }

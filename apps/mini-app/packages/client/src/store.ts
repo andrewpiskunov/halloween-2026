@@ -1,6 +1,7 @@
 import { computed, signal } from '@preact/signals';
 import type { Command } from '@fair/shared';
 import { auth, authAs, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
+import { collectNotices, noticeToast, type Seen } from './notices';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
@@ -25,6 +26,10 @@ export const botName = signal('');
 export const playingAs = signal<{ roleKey: string; name: string } | null>(null);
 /** Вещь, с которой надо открыть форму сделки (кнопка «Предложить» в сумке). */
 export const tradeDraft = signal<{ itemId: string } | null>(null);
+/** Кнопка «В мастерскую» на карточке способности: Мастерская открывается на блоке способности. */
+export const abilityDraft = signal<{ kind: string } | null>(null);
+/** Отметки на игроке, которые он уже видел в сумке: точка на вкладке «Сумка» до открытия. */
+export const bagSeenMarks = signal<string | null>(null);
 
 /** Запрос подтверждения для модального окна Confirm. */
 export interface ConfirmRequest { title: string; text?: string; okLabel?: string; danger?: boolean; onOk: () => void }
@@ -61,16 +66,44 @@ export async function run(cmd: Command): Promise<CmdResult> {
     return { ok: false, error: 'internal' };
   }
   const result = await connection.send(cmd);
-  if (!result.ok) showToast(ERROR_TEXT[result.error] ?? ERROR_TEXT.internal);
+  if (!result.ok) showToast(refusalText(result.error, result.detail));
   return result;
+}
+
+/** Отказ словами: общий текст по коду и пояснение сервера, если оно написано по-русски. */
+export function refusalText(error: ErrorCode, detail?: string): string {
+  const base = ERROR_TEXT[error] ?? ERROR_TEXT.internal;
+  return detail && /[а-яё]/i.test(detail) ? `${base}: ${detail}` : base;
+}
+
+let seen: Seen | null = null;
+
+/** Новая проекция: уведомления о чужих действиях и просьбах (§7.5), затем сама проекция. */
+function onView(v: View): void {
+  if (v.kind === 'player') {
+    const r = collectNotices(seen, v);
+    seen = r.seen;
+    const text = noticeToast(r.texts);
+    if (text) showToast(text);
+  }
+  view.value = v;
+  viewAt.value = Date.now();
+}
+
+/** Соединение рвётся или меняется: первая проекция после него только запоминается. */
+function onStatus(s: Status): void {
+  if (s !== 'open') seen = null;
+  status.value = s;
 }
 
 /** Закрывает текущее соединение и открывает новое с другим токеном; проекция сбрасывается до первой новой. */
 function reconnect(token: string): void {
   connection?.close();
   view.value = null;
+  seen = null;
+  bagSeenMarks.value = null;
   status.value = 'connecting';
-  connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
+  connection = connect(token, onView, onStatus);
 }
 
 /** Ведущий открывает экраны игрока и действует от его имени. */
@@ -99,7 +132,7 @@ export async function start(): Promise<void> {
     const { token, botName: bot } = await auth();
     botName.value = bot;
     ownToken = token;
-    connection = connect(token, v => { view.value = v; viewAt.value = Date.now(); }, s => { status.value = s; });
+    connection = connect(token, onView, onStatus);
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
     if (msg === 'no_auth') status.value = 'no_auth';

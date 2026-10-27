@@ -5,7 +5,7 @@ import { Button } from '../components/Button';
 import { ItemCard } from '../components/ItemCard';
 import { Stepper } from '../components/Stepper';
 import { goldText, itemLabel, lotTitle, mmss, plural, roleName, roman } from '../labels';
-import { bidBounds, untilRemainingMs } from '../rules';
+import { bidBounds, remainingMs } from '../rules';
 import { ask, now, run } from '../store';
 
 const LOT_STATUS: Record<Lot['status'], string> = {
@@ -50,7 +50,7 @@ function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
   const me = v.me.role.key;
   const title = lotTitle(l.items, v);
   const until = l.status === 'openBidding' ? l.openUntil : l.status === 'sealedBidding' ? l.sealedUntil : undefined;
-  const left = until === undefined ? 0 : Math.max(0, untilRemainingMs(until, v.clock, now.value));
+  const left = until === undefined ? 0 : Math.max(0, remainingMs(until, v.clock, now.value));
   const bounds = bidBounds(l, v);
   const [amount, setAmount] = useState(0);
   const chosen = Math.min(bounds.max, Math.max(bounds.min, amount || bounds.min));

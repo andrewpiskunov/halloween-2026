@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import type { PlayerView } from '@fair/shared';
-import { countsText, goldText, offerItem, plural, roman } from '../labels';
+import type { ActionRecord, PlayerView } from '@fair/shared';
+import { actionText, countsText, goldText, nameCase, offerItem, plural, roleName, roman } from '../labels';
 
 test('римские номера карт', () => {
   expect([1, 4, 9, 14, 19, 24, 28, 30].map(roman)).toEqual(['I', 'IV', 'IX', 'XIV', 'XIX', 'XXIV', 'XXVIII', 'XXX']);
@@ -26,4 +26,52 @@ test('ресурсы словами для подтверждений', () => {
   expect(countsText({ gold: 2, ingredients: { ash: 1, moon: 1, dew: 1 } })).toBe('2 золотых, 1 пепел, 1 пыль, 1 роса');
   expect(countsText({ gold: 1, ingredients: { moon: 0 } })).toBe('1 золотой');
   expect(countsText({})).toBe('');
+});
+
+/** Проекция Брама (o2): вокруг Никс, Ива, Эльмар, Ада, Веста и Сив в облике. */
+const pv = {
+  me: { role: { key: 'o2', name: 'Брам' }, player: {} },
+  others: [
+    { roleKey: 'o8', name: 'Никс' }, { roleKey: 'o12', name: 'Ива' }, { roleKey: 'o9', name: 'Эльмар' },
+    { roleKey: 'o10', name: 'Ада' }, { roleKey: 'r5', name: 'Веста' },
+    { roleKey: 'o15', name: 'Сив', guise: 'Человек по имени Сивер' },
+  ],
+  contacts: [],
+  public: { factions: [] },
+  recipes: [],
+} as unknown as PlayerView;
+
+const rec = (over: Partial<ActionRecord>): ActionRecord => ({
+  id: '1', at: 0, act: 1, author: 'o8', source: { type: 'ability', ability: 'stealGold' },
+  outcome: 'done', hostile: false, effects: [], ...over,
+});
+
+test('имя с обликом: «облик (имя)»', () => {
+  expect(roleName('o15', pv)).toBe('Человек по имени Сивер (Сив)');
+  expect(roleName('o8', pv)).toBe('Никс');
+});
+
+test('падежи имён для подтверждений и уведомлений', () => {
+  expect(nameCase('Брам', 'gen')).toBe('Брама');
+  expect(nameCase('Ива', 'gen')).toBe('Ивы');
+  expect(nameCase('Хельга', 'gen')).toBe('Хельги');
+  expect(nameCase('Серафина', 'dat')).toBe('Серафине');
+  expect(nameCase('Корвин', 'dat')).toBe('Корвину');
+  expect(nameCase('Грета', 'acc')).toBe('Грету');
+  expect(nameCase('Эльмар', 'acc')).toBe('Эльмара');
+  expect(nameCase('Бубен', 'gen')).toBe('Бубна');
+  expect(nameCase('Магда Вейн', 'dat')).toBe('Магде Вейн');
+});
+
+test('уведомления цели о чужих действиях (§7.5)', () => {
+  expect(actionText(rec({ target: 'o2', hostile: true, effects: [{ type: 'goldMove', from: 'o2', to: 'o8', amount: 1 }] }), pv))
+    .toBe('Никс забрал у вас 1 золото');
+  expect(actionText(rec({ author: 'o12', target: 'o2', hostile: true, outcome: 'blocked', source: { type: 'ability', ability: 'thorns' } }), pv))
+    .toBe('Ваша защита отразила попытку Ивы');
+  expect(actionText(rec({ author: 'o9', target: 'o2', source: { type: 'ability', ability: 'protectOther' } }), pv))
+    .toBe('Эльмар дал вам защиту до конца акта');
+  expect(actionText(rec({ author: 'o10', target: 'o2', source: { type: 'ability', ability: 'cleanseOther' }, removed: { curse: true, thorns: false } }), pv))
+    .toBe('Ада сняла с вас проклятие');
+  expect(actionText(rec({ author: 'r5', target: 'o2', source: { type: 'ability', ability: 'askYesNo' } }), pv))
+    .toBe('Веста задаёт вопрос о ваших целях. Ответьте честно, голосом');
 });
