@@ -1,13 +1,7 @@
 // Применения способностей для ботов (спецификация этапа 6, §2.4): параметры строятся только по проекции игрока.
-import type { AbilityKind, AbilityUse, Ingredient, Item, PlayerView, Recipe } from '@fair/shared';
+import type { AbilityKind, AbilityUse, Ingredient, PlayerView, Recipe } from '@fair/shared';
+import { CRAFTED, INGREDIENTS, REFORGEABLE, REFORGE_INTO, freeItems } from './items';
 import type { Rng } from './rng';
-
-const INGREDIENTS: Ingredient[] = ['ash', 'moon', 'dew'];
-/** Изделия мастерской: их разбирают и продают в банк. */
-const CRAFTED: Item['kind'][] = ['potion', 'ward', 'focus', 'shape'];
-/** Перековка берёт вещи по 1 золоту и делает вещь другого вида. */
-const REFORGEABLE: Item['kind'][] = ['potion', 'ward', 'focus'];
-const REFORGE_INTO = { cleanse: 'potion', ward: 'ward', focus: 'focus' } as const;
 
 /** Враждебные виды: в акте I боты их пропускают. */
 export const HOSTILE: ReadonlySet<AbilityKind> = new Set<AbilityKind>(['stealGold', 'stealIngredient', 'thorns']);
@@ -36,14 +30,6 @@ export const ALLOWED_INVALID: Record<AbilityKind, string[]> = {
 function pickOther(view: PlayerView, rng: Rng): string | null {
   const keys = view.others.map(o => o.roleKey).filter(k => k !== view.me.role.key).sort();
   return keys.length > 0 ? rng.pick(keys) : null;
-}
-
-/** Мои свободные вещи нужных видов, по стабильному ключу (вид, ref, id). */
-function freeItems(view: PlayerView, kinds: Item['kind'][]): Item[] {
-  const free = new Set(view.me.available.items);
-  return view.me.items
-    .filter(i => free.has(i.id) && kinds.includes(i.kind))
-    .sort((a, b) => a.kind.localeCompare(b.kind) || a.ref.localeCompare(b.ref) || a.id.localeCompare(b.id));
 }
 
 /** Предпочтительно из подходящих, иначе из всех: отказ insufficient для бота допустим. */

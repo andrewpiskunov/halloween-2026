@@ -56,6 +56,53 @@ describe('useFor', () => {
     expect(r.ok).toBe(true);
   });
 
+  test('Грим: disassemble null без изделия, после shop.craft разбор проходит', () => {
+    const g = new Game(30);
+    const rng = new Rng(6);
+    expect(useFor('disassemble', g.view('o13'), rng)).toBeNull();
+    g.must({ type: 'shop.craft', recipeId: 'focus' }, 'o13');
+    const use = useFor('disassemble', g.view('o13'), rng);
+    expect(use?.kind).toBe('disassemble');
+    expect(g.run({ type: 'ability.use', use: use! }, 'o13').ok).toBe(true);
+    expect(Object.values(g.s.items).some(i => i.kind === 'focus' && i.createdBy === 'o13')).toBe(false);
+  });
+
+  test('Магда: sellToBank null без изделия, после shop.craft продажа в банк проходит', () => {
+    const g = new Game(30);
+    const rng = new Rng(8);
+    expect(useFor('sellToBank', g.view('t1'), rng)).toBeNull();
+    g.must({ type: 'shop.craft', recipeId: 'ward' }, 't1');
+    const gold = g.s.players.t1.gold;
+    const use = useFor('sellToBank', g.view('t1'), rng);
+    expect(use?.kind).toBe('sellToBank');
+    expect(g.run({ type: 'ability.use', use: use! }, 't1').ok).toBe(true);
+    expect(g.s.players.t1.gold).toBe(gold + 2);
+  });
+
+  test('вещи одного вида и ref: выбор не зависит от серверных id', () => {
+    const g = new Game(30);
+    g.must({ type: 'shop.buy', ingredient: 'ash', count: 2 }, 'n20');
+    g.must({ type: 'shop.craft', recipeId: 'cleanse' }, 'n20');
+    g.must({ type: 'shop.craft', recipeId: 'cleanse' }, 'n20');
+    const view = g.view('n20');
+    const potions = view.me.items.filter(i => i.kind === 'potion');
+    expect(potions).toHaveLength(2);
+    // те же вещи с переставленными id: выбор должен остаться на той же позиции
+    const [a, b] = potions.map(p => p.id);
+    const swap = (id: string) => (id === a ? 'zzz' : id === b ? 'aaa' : id);
+    const swapped: typeof view = {
+      ...view,
+      me: { ...view.me, items: view.me.items.map(i => ({ ...i, id: swap(i.id) })), available: { ...view.me.available, items: view.me.available.items.map(swap) } },
+    };
+    for (let seed = 1; seed <= 10; seed++) {
+      const x = useFor('reforge', view, new Rng(seed));
+      const y = useFor('reforge', swapped, new Rng(seed));
+      if (x?.kind !== 'reforge' || y?.kind !== 'reforge') throw new Error('ожидалась перековка');
+      expect(y.itemId).toBe(swap(x.itemId));
+      expect(y.into).toBe(x.into);
+    }
+  });
+
   test('Астра копирует grow с ингредиентом, который у неё есть', () => {
     const g = new Game(30);
     const view = g.view('o17');

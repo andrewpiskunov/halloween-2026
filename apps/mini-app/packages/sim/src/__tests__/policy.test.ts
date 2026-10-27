@@ -101,7 +101,8 @@ describe('answerIncoming', () => {
     const gold = g.view('o1').me.available.gold;
     g.must({ type: 'offer.create', to: 'o1', give: { gold: 0, ingredients: zero, items: [] }, get: { gold, ingredients: zero, items: [] } }, 'o2');
     g.must({ type: 'offer.create', to: 'o1', give: { gold: 0, ingredients: zero, items: [] }, get: { gold: gold - 1, ingredients: zero, items: [] } }, 'o5');
-    g.must({ type: 'offer.create', to: 'o1', give: { gold: 2, ingredients: zero, items: [] }, get: { gold: gold + 1, ingredients: zero, items: [] } }, 'o9');
+    g.must({ type: 'offer.create', to: 'o1', give: { gold: 2, ingredients: zero, items: [] }, get: { gold: 2, ingredients: zero, items: [] } }, 'o9');
+    // после принятия o5 остаётся 1 золото; обмен 2 на 2 его не уменьшает
     const offers = Object.values(g.s.offers);
     const byFrom = (k: string) => offers.find(o => o.from === k)!.id;
     const cmds = answerIncoming(g.view('o1'), new Rng(1));
@@ -109,6 +110,15 @@ describe('answerIncoming', () => {
     expect(cmds).toContainEqual({ type: 'offer.accept', id: byFrom('o5') });
     expect(cmds).toContainEqual({ type: 'offer.accept', id: byFrom('o9') });
     expect(cmds).toHaveLength(3);
+  });
+
+  test('остаток золота ведётся по циклу: второе предложение оценивается после первого', () => {
+    const g = new Game(30);
+    const gold = g.view('o1').me.available.gold;
+    g.must({ type: 'offer.create', to: 'o1', give: { gold: 0, ingredients: zero, items: [] }, get: { gold: gold - 2, ingredients: zero, items: [] } }, 'o2');
+    g.must({ type: 'offer.create', to: 'o1', give: { gold: 0, ingredients: zero, items: [] }, get: { gold: 2, ingredients: zero, items: [] } }, 'o5');
+    const cmds = answerIncoming(g.view('o1'), new Rng(1));
+    expect(cmds.map(c => c.type)).toEqual(['offer.accept', 'offer.decline']);
   });
 
   test('просьбу о способности принимает всегда, свои и одобренные не трогает', () => {

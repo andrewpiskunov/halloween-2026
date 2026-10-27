@@ -1,6 +1,7 @@
 // Политика бота-игрока (спецификация этапа 6, §2.3): одно действие за ход и ответы на входящие.
 // Решения принимаются только по проекции игрока; выбор через rng по стабильным ключам.
-import { GOALS, type AltarSide, type Bundle, type Command, type GoalCondition, type Ingredient, type Item, type PlayerView, type Want } from '@fair/shared';
+import { GOALS, type AltarSide, type Bundle, type Command, type GoalCondition, type Item, type PlayerView, type Want } from '@fair/shared';
+import { ALTAR_KINDS, BUY_PRICE, INGREDIENTS, MAX_GUISE, RECIPE_BY_KIND, freeItems as ownFree } from './items';
 import type { Rng } from './rng';
 import { HOSTILE, useFor } from './uses';
 
@@ -22,16 +23,12 @@ export interface TurnMemory {
   bids: Record<string, number>;
 }
 
-const INGREDIENTS: Ingredient[] = ['ash', 'moon', 'dew'];
 const RECIPE_IDS = ['cleanse', 'focus', 'shape', 'ward'];
-const RECIPE_BY_KIND: Record<string, string> = { potion: 'cleanse', ward: 'ward', focus: 'focus', shape: 'shape' };
-const BUY_PRICE = 2;
+/** Вклад золотом на алтарь по §2.3. */
 const ALTAR_GOLD = 2;
-const MAX_GUISE = 40;
 
 const empty = (): Bundle => ({ gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] });
 const goalsOf = (roleKey: string): GoalCondition[] => GOALS[roleKey] ?? [];
-const byKey = (a: Item, b: Item) => a.kind.localeCompare(b.kind) || a.ref.localeCompare(b.ref) || a.id.localeCompare(b.id);
 
 /** Рецепт по целям роли: изготовление любых видов — любой, конкретный вид — его рецепт; иначе случайный. */
 export function recipeFor(roleKey: string, rng: Rng): string {
@@ -39,7 +36,7 @@ export function recipeFor(roleKey: string, rng: Rng): string {
   for (const g of goalsOf(roleKey)) {
     switch (g.type) {
       case 'craftedKinds': case 'holdCraftedKinds': case 'soldCrafted': needed.push(...RECIPE_IDS); break;
-      case 'gaveKind': case 'holdKind': needed.push(RECIPE_BY_KIND[g.kind]); break;
+      case 'gaveKind': case 'holdKind': needed.push(RECIPE_BY_KIND[g.kind] ?? 'cleanse'); break;
       case 'contributedFocus': needed.push('focus'); break;
       case 'potionOnOther': needed.push('cleanse'); break;
       case 'shapeSelf': needed.push('shape'); break;
@@ -50,13 +47,8 @@ export function recipeFor(roleKey: string, rng: Rng): string {
   return rng.pick(list.length > 0 ? list : RECIPE_IDS);
 }
 
-/** Мои свободные вещи (не в резерве; скрытый осколок до акта III не трогаем), по стабильному ключу. */
-function freeItems(view: PlayerView, act: Act, kinds?: Item['kind'][]): Item[] {
-  const free = new Set(view.me.available.items);
-  return view.me.items
-    .filter(i => free.has(i.id) && (i.hiddenUntilAct === undefined || act === 3) && (!kinds || kinds.includes(i.kind)))
-    .sort(byKey);
-}
+/** Мои свободные вещи; скрытый осколок до акта III не трогаем. */
+const freeItems = (view: PlayerView, act: Act, kinds?: Item['kind'][]): Item[] => ownFree(view, kinds, act === 3);
 
 /** Следующий присутствующий по составу после меня (по кругу). */
 function neighbour(view: PlayerView, roster: string[]): string | null {
@@ -89,10 +81,13 @@ export function bidFor(view: PlayerView, lotId: string, mem: TurnMemory, rng: Rn
 export function answerIncoming(view: PlayerView, rng: Rng): Command[] {
   const me = view.me.role.key;
   const out: Command[] = [];
+  // Остаток золота ведётся по циклу: следующее предложение оценивается после принятых.
+  let gold = view.me.available.gold;
   for (const o of view.offers) {
     if (o.to !== me || o.status !== 'pending') continue;
     // Я отдаю get и получаю give.
-    const after = view.me.available.gold - o.get.gold + o.give.gold;
+    const after = gold - o.get.gold + o.give.gold;
+    if (after >= 1) gold = after;
     out.push({ type: after >= 1 ? 'offer.accept' : 'offer.decline', id: o.id });
   }
   for (const r of view.requests) {
@@ -179,18 +174,21 @@ function trade(view: PlayerView, act: Act, mem: TurnMemory, rng: Rng, roster: st
   const keep = new Set(goalsOf(view.me.role.key).flatMap(g => (g.type === 'holdItem' ? [g.ref] : [])));
   const items = freeItems(view, act).filter(i => !keep.has(i.ref) && i.kind !== 'clue');
   const gold = view.me.available.gold;
-  if (items.length > 0 && rng.chance(1 / 3)) {
-    return offer({ ...empty(), items: [rng.pick(items).id] }, { ...empty(), gold: rng.int(1, 2) });
+  // Три вида сделки равновероятны; невыполнимый вид — ход переходит к алтарю.
+  switch (rng.int(0, 2)) {
+    case 0:
+      return items.length > 0 ? offer({ ...empty(), items: [rng.pick(items).id] }, { ...empty(), gold: rng.int(1, 2) }) : null;
+    case 1: {
+      if (items.length === 0) return null;
+      const want = wantFor(view, rng);
+      return want ? offer({ ...empty(), items: [rng.pick(items).id] }, { ...empty(), wants: [want] }) : null;
+    }
+    default: {
+      if (gold < 2) return null;
+      const want = wantFor(view, rng);
+      return want ? offer({ ...empty(), gold: 1 }, { ...empty(), wants: [want] }) : null;
+    }
   }
-  if (items.length > 0 && rng.chance(1 / 3)) {
-    const want = wantFor(view, rng);
-    if (want) return offer({ ...empty(), items: [rng.pick(items).id] }, { ...empty(), wants: [want] });
-  }
-  if (gold >= 2 && rng.chance(1 / 3)) {
-    const want = wantFor(view, rng);
-    if (want) return offer({ ...empty(), gold: 1 }, { ...empty(), wants: [want] });
-  }
-  return null;
 }
 
 /** Пункт 4: вклад на алтарь своей стороны; свободная роль сначала выбирает сторону (акты I–II). */
@@ -202,7 +200,7 @@ function altar(view: PlayerView, act: Act, rng: Rng): Command | null {
     return act !== 3 && sides.length > 0 ? { type: 'player.chooseSide', side: rng.pick(sides) } : null;
   }
   if (!sides.includes(side)) return null;
-  const items = freeItems(view, act, ['shard', 'focus']);
+  const items = freeItems(view, act, ALTAR_KINDS);
   if (items.length > 0) return { type: 'altar.contribute', side, itemId: items[0].id };
   // Золото не всегда: иначе до пункта 5 политика не доходит; 1 золото оставляем себе.
   if (view.me.available.gold >= ALTAR_GOLD + 1 && rng.chance(0.5)) return { type: 'altar.contribute', side: side as AltarSide, gold: ALTAR_GOLD };
