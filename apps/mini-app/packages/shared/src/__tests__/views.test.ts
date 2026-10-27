@@ -78,11 +78,11 @@ test('контакт на отсутствующую роль: absent=true, name
   expect(c.name).toBeUndefined();
 });
 
-test('ведущий видит state целиком и коды', () => {
+test('ведущий видит state (без закрытых сделок прошлых актов) и коды', () => {
   const s = makeGame(12, { present: allBut(12, ['o13']) });
   const v = viewFor(s, content, gm, 0) as GmView;
   expect(v.kind).toBe('gm');
-  expect(v.state).toBe(s);
+  expect(v.state).toEqual(s);
   // Содержимое уходит отдельным сообщением при подключении: в проекции только версия.
   expect(v).not.toHaveProperty('content');
   expect(v.contentVersion).toBe(content.version);
@@ -356,7 +356,7 @@ describe('цели и итоги закрытия', () => {
     }
     const g = viewFor(s, content, gm, 0) as GmView;
     expect(g.state.closing).toEqual(s.closing);
-    expect(g.state).toBe(s);
+    expect(g.state).toEqual(s);
   });
 });
 
@@ -367,4 +367,58 @@ test('проекция игрока не несёт telegramId, проекция
   expect(json).not.toContain('"telegramId"');
   expect(json).not.toContain('777001');
   expect(JSON.stringify(viewFor(s, content, gm, 0))).toContain('"telegramId":777001');
+});
+
+test('закрытые сделки прошлого акта пропадают из проекций ведущего и игрока; ожидающие и закрытые в этом акте остаются', () => {
+  const at = (st: GameState, cmd: Command, actor: Actor, now: number) => {
+    const r = run(st, cmd, actor, now);
+    if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
+    return r.state;
+  };
+  const none = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
+  const coin = { ...none, gold: 1 };
+  const lastOffer = (st: GameState) => Object.values(st.offers).sort((a, b) => a.createdAt - b.createdAt).at(-1)!.id;
+  let s = makeGame(12);
+  // Акт I: o2 предлагает o4 и отменяет, o2 предлагает o4 и тот принимает (обмен), o2 оставляет третье висеть.
+  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 1000);
+  const cancelledOld = lastOffer(s);
+  s = at(s, { type: 'offer.cancel', id: cancelledOld }, player('o2'), 2000);
+  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 3000);
+  const acceptedOld = lastOffer(s);
+  s = at(s, { type: 'offer.accept', id: acceptedOld }, player('o4'), 4000);
+  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 600_000);
+  const pendingOld = lastOffer(s);
+  expect(s.trades).toHaveLength(1);
+
+  s = at(s, { type: 'act.next' }, gm, 700_000);
+  s = at(s, { type: 'offer.create', to: 'o4', give: coin, get: none }, player('o2'), 701_000);
+  const cancelledNow = lastOffer(s);
+  s = at(s, { type: 'offer.cancel', id: cancelledNow }, player('o2'), 702_000);
+
+  const g = (viewFor(s, content, gm, 703_000) as GmView).state;
+  expect(Object.keys(g.offers).sort()).toEqual([pendingOld, cancelledNow].sort());
+  expect(g.trades).toEqual([]);
+  // Полное состояние не тронуто.
+  expect(Object.keys(s.offers)).toHaveLength(4);
+  for (const k of ['o2', 'o4']) {
+    expect(pv(viewFor(s, content, player(k), 703_000)).offers.map(o => o.id).sort(), k).toEqual([pendingOld, cancelledNow].sort());
+  }
+  // Обмен текущего акта виден ведущему.
+  s = at(s, { type: 'offer.accept', id: pendingOld }, player('o4'), 704_000);
+  expect((viewFor(s, content, gm, 705_000) as GmView).state.trades).toHaveLength(1);
+});
+
+test('просьбы в проекции ведущего: закрытая сменой акта видна следующий акт, потом пропадает', () => {
+  const at = (st: GameState, cmd: Command, actor: Actor, now: number) => {
+    const r = run(st, cmd, actor, now);
+    if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
+    return r.state;
+  };
+  let s = at(makeGame(30), use({ kind: 'cleanseOther', target: 'o9' }), player('o10'), 1000);
+  const id = s.players.o10.abilityPending!;
+  s = at(s, { type: 'act.next' }, gm, 5000);
+  expect(Object.keys((viewFor(s, content, gm, 6000) as GmView).state.requests)).toEqual([id]);
+  s = at(s, { type: 'act.next' }, gm, 9000);
+  expect((viewFor(s, content, gm, 10000) as GmView).state.requests).toEqual({});
+  expect(s.requests[id].status).toBe('expired');
 });

@@ -1,5 +1,5 @@
 // CLI нагрузочного прогона (спецификация этапа 7, §9):
-// pnpm sim:load -- --players 30 --minutes 10 --seed 1 [--url адрес] [--out папка] [--interval 10].
+// pnpm sim:load -- --players 30 --minutes 10 --seed 1 [--url адрес] [--out папка] [--interval 10] [--keep].
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -7,7 +7,7 @@ import { startChildServer, type ChildServer } from './child-server';
 import { runLoad, type LoadResult } from './load';
 import { loadVerdict, renderLoadReport, type LoadMeta } from './load-report';
 
-interface LoadArgs { players: number; minutes: number; seed: number; intervalS: number; url?: string; out: string }
+interface LoadArgs { players: number; minutes: number; seed: number; intervalS: number; url?: string; out: string; keep: boolean }
 
 function parseCli(argv: string[]): LoadArgs {
   const { values } = parseArgs({
@@ -19,6 +19,7 @@ function parseCli(argv: string[]): LoadArgs {
       interval: { type: 'string', default: '10' },
       url: { type: 'string' },
       out: { type: 'string', default: './sim-out' },
+      keep: { type: 'boolean', default: false },
     },
     strict: true,
   });
@@ -30,7 +31,7 @@ function parseCli(argv: string[]): LoadArgs {
   if (!Number.isInteger(seed)) throw new Error(`--seed: целое число, получено ${values.seed}`);
   const intervalS = Number(values.interval);
   if (!(intervalS > 0)) throw new Error(`--interval: секунды больше нуля, получено ${values.interval}`);
-  return { players, minutes, seed, intervalS, url: values.url?.replace(/\/+$/, ''), out: resolve(values.out!) };
+  return { players, minutes, seed, intervalS, url: values.url?.replace(/\/+$/, ''), out: resolve(values.out!), keep: values.keep! };
 }
 
 /** Выжимка в stdout: итог, таблица по минутам в строках, нарушенные критерии. */
@@ -69,7 +70,11 @@ async function main(): Promise<number> {
     result = await runLoad({ ...meta });
   } finally {
     await server?.stop();
-    if (server) for (const suffix of ['', '-wal', '-shm']) rmSync(dbPath + suffix, { force: true });
+    // Без --keep база и папка выгрузок дочернего сервера (exports рядом с базой) удаляются, как в pnpm sim.
+    if (server && !args.keep) {
+      for (const suffix of ['', '-wal', '-shm']) rmSync(dbPath + suffix, { force: true });
+      rmSync(resolve(args.out, 'exports'), { recursive: true, force: true });
+    }
   }
   writeFileSync(reportPath, renderLoadReport(result, meta));
   console.log(summary(result, meta, reportPath));

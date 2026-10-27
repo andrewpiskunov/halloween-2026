@@ -77,7 +77,7 @@ test('критерии §9: p95 за любую минуту, рост памя�
 test('отчёт: таблица по минутам и итог', () => {
   const meta = { ...OPTS, baseUrl: clean.baseUrl };
   const md = renderLoadReport(clean.result, meta);
-  expect(md).toContain('| Минута | Команд | p50, мс | p95, мс | max, мс | Игрок, КБ | Ведущий, КБ | rss, МБ |');
+  expect(md).toContain('| Минута | Команд | p50, мс | p95, мс | max, мс | Игрок, КБ (макс.) | Ведущий, КБ (макс.) | rss, МБ |');
   expect(md).toMatch(/\n\| 1 \| \d+ \|/);
   expect(md).toContain('Итог: критерии выполнены.');
   const bad = renderLoadReport(dropped.result, { ...meta });

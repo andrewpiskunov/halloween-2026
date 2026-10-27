@@ -93,11 +93,34 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
 }
 
 /** Проекция состояния для актора. Чистая функция: `now` передаётся снаружи. */
+/**
+ * Предложение видно в проекциях, пока ожидает или могло закрыться в текущем акте (этап 7, раунд 1 ревью):
+ * у предложения нет времени закрытия, но закрыто оно не позже срока, поэтому срок до начала акта —
+ * значит, закрыто в прошлом акте. Иначе проекции растут весь вечер.
+ */
+export const offerInAct = (state: GameState, o: Offer): boolean =>
+  o.status === 'pending' || o.expiresAt >= state.clock.actStartedAt;
+
+/**
+ * Состояние для проекции ведущего: предложения по offerInAct, просьбы ожидающие и закрытые в текущем акте
+ * (как requestsFor), обмены текущего акта. Журнал действий, вещи, игроки и итоги — целиком.
+ */
+export function gmStateView(state: GameState): GameState {
+  const since = state.clock.actStartedAt;
+  return {
+    ...state,
+    offers: Object.fromEntries(Object.entries(state.offers).filter(([, o]) => offerInAct(state, o))),
+    requests: Object.fromEntries(Object.entries(state.requests)
+      .filter(([, r]) => r.status === 'pending' || Math.max(r.createdAt, r.closedAt ?? r.createdAt) >= since)),
+    trades: state.trades.filter(t => t.at >= since),
+  };
+}
+
 export function viewFor(state: GameState, content: Content, actor: Actor, now: number): PlayerView | GmView {
   if (actor.type === 'system') throw new Error('system actor has no view');
   if (actor.type === 'gm') {
     return {
-      kind: 'gm', state, contentVersion: content.version,
+      kind: 'gm', state: gmStateView(state), contentVersion: content.version,
       invites: state.roster.map(roleKey => ({
         roleKey,
         code: state.invites[roleKey],
@@ -135,7 +158,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     }];
   });
 
-  const offers = Object.values(state.offers).filter(o => o.from === key || o.to === key);
+  const offers = Object.values(state.offers).filter(o => (o.from === key || o.to === key) && offerInAct(state, o));
   const offerItems: PlayerView['offerItems'] = {};
   for (const o of offers) {
     for (const id of [...o.give.items, ...o.get.items]) {

@@ -1,6 +1,7 @@
 // Оркестратор прогона вечера (спецификация этапа 6, §2): боты, строгая очередь ходов, журнал прогона, проверки.
 import {
-  loadContent, type Command, type Content, type Event, type GameState, type GmView, type Phase, type PlayerView,
+  gmStateView, loadContent, type Command, type ConsentRequest, type Content, type Event, type GameState, type GmView, type Phase, type PlayerView,
+  type TradeRecord,
 } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn, type CmdOutcome } from './client';
 import {
@@ -32,6 +33,10 @@ export interface EveningResult {
   ok: boolean;
   checks: CheckResult[];
   commands: CommandLog[];
+  /**
+   * Состояние ведущего в конце, где просьбы и обмены накоплены за весь вечер: проекция ведущего отдаёт только
+   * текущий акт (этап 7, раунд 1 ревью), а итоги, покрытие и причины отказов считаются по всем актам.
+   */
   finalState: GameState;
   snapshots: { label: string; state: GameState }[];
   timing: { p50: number; p95: number; max: number; totalMs: number };
@@ -98,6 +103,9 @@ export class Ctx {
   /** Все соединения за вечер, включая закрытые после gm.rebind: для размера проекций. */
   private readonly everyBot: BotConn[] = [];
   private lastSeq = 0;
+  /** Просьбы и обмены из всех проекций ведущего: последняя увиденная версия по id, порядок первого появления. */
+  private readonly seenRequests = new Map<string, ConsentRequest>();
+  private readonly seenTrades = new Map<string, TradeRecord>();
   turnNo = 0;
   act: Act = 1;
 
@@ -182,6 +190,23 @@ export class Ctx {
   /** Все соединения получили проекцию с seq последнего результата: сверять можно только после этого (§3.3). */
   async waitAll(): Promise<void> {
     await Promise.all([this.gm, ...Object.values(this.bots)].map(b => b.waitSeq(this.lastSeq)));
+    this.absorb();
+  }
+
+  /**
+   * Запоминает просьбы и обмены текущей проекции ведущего. Закрытая просьба видна до конца следующего акта,
+   * обмен — до конца своего, а waitAll идёт после каждого хода, поэтому ни одно закрытие не теряется.
+   */
+  private absorb(): void {
+    const s = this.gmState();
+    for (const r of Object.values(s.requests)) this.seenRequests.set(r.id, r);
+    for (const t of s.trades) this.seenTrades.set(t.id, t);
+  }
+
+  /** Текущее состояние ведущего с просьбами и обменами за весь вечер. */
+  fullState(): GameState {
+    this.absorb();
+    return { ...this.gmState(), requests: Object.fromEntries(this.seenRequests), trades: [...this.seenTrades.values()] };
   }
 
   /** Ход ведущего: команды по порядку, затем ожидание проекций. */
@@ -269,8 +294,9 @@ export class Ctx {
     for (let i = 0; i < 3; i++) {
       const target = Math.max(this.gm.seq(), ...Object.values(this.bots).map(b => b.seq()));
       await Promise.all([this.gm, ...Object.values(this.bots)].map(b => b.waitSeq(target)));
-      if ([this.gm, ...Object.values(this.bots)].every(b => b.seq() === this.gm.seq())) return;
+      if ([this.gm, ...Object.values(this.bots)].every(b => b.seq() === this.gm.seq())) break;
     }
+    this.absorb();
   }
 
   /** Боты присутствующих ролей: ушедший остаётся подключённым, но в сверку не входит. */
@@ -288,7 +314,7 @@ export class Ctx {
 
   /** Итоги в revealed: совпадают с computeClosing; после сбора алтаря исход wake, после передачи улик есть «Правда». */
   verifyClosing(): void {
-    this.viewChecks.push(checkClosing(this.gmState(), this.content, { outcome: this.altarAssembled ? 'wake' : undefined, truth: this.truthFor }));
+    this.viewChecks.push(checkClosing(this.fullState(), this.content, { outcome: this.altarAssembled ? 'wake' : undefined, truth: this.truthFor }));
   }
 
   /** Стартовые наборы после открытия; late — роли, не отмеченные при открытии (этап 7, §2.6). */
@@ -324,7 +350,7 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
   try {
     await playEvening(ctx);
     await ctx.waitAll();
-    const finalState = ctx.gmState();
+    const finalState = ctx.fullState();
 
     const coverage = coverageOf(ctx.log, opts.players, finalState, ctx.itemKinds);
     const replayed = opts.replay ? await opts.replay() : undefined;
@@ -335,7 +361,7 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
       ...ctx.viewChecks,
       checkCoverage(ctx.log, opts.players, finalState, ctx.itemKinds),
       { name: 'probes', ok: ctx.missedProbes.length === 0, details: ctx.missedProbes.map(p => `проба не сделана: ${p}`) },
-      checkReplay(finalState, replayed),
+      checkReplay(ctx.gmState(), replayed && gmStateView(replayed), finalState, replayed),
       checkGoldLog(events, finalState),
     ];
 

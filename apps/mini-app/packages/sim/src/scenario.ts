@@ -404,7 +404,8 @@ export async function assembleAltarOnce(ctx: Ctx): Promise<void> {
 
 /**
  * «Правда» (§2.3, акт III, после сбора алтаря), один раз за вечер: ведущий исправлением отдаёт одному
- * присутствующему все три улики. Держатель — тот, у кого улик больше (при равенстве первый по составу).
+ * присутствующему все три улики. Держатель — тот, у кого улик больше (при равенстве первый по составу),
+ * кроме опоздавшего и ушедшего.
  * Улика в лоте (не продана) или вне игры — шаг пропускается с пометкой.
  */
 export async function tellTruthOnce(ctx: Ctx): Promise<void> {
@@ -419,7 +420,9 @@ export async function tellTruthOnce(ctx: Ctx): Promise<void> {
     return;
   }
   const count = (k: string) => clues.filter(c => c.item!.owner.type === 'player' && c.item!.owner.key === k).length;
-  const holder = [...present].sort((a, b) => count(b) - count(a) || present.indexOf(a) - present.indexOf(b))[0];
+  // Опоздавший и ушедший в сценах этапа 6 не участвуют (§2.6): держатель из постоянных участников.
+  const steady = present.filter(k => !STAGE7_ROLES.includes(k));
+  const holder = [...steady].sort((a, b) => count(b) - count(a) || steady.indexOf(a) - steady.indexOf(b))[0];
   const cmds = clues
     .filter(c => !(c.item!.owner.type === 'player' && c.item!.owner.key === holder))
     .map(c => correctOwner(holder, c.item!.id, TRUTH_REASON));

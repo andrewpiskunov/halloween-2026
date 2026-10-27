@@ -146,6 +146,10 @@ describe('снимки, воспроизведение, золото', () => {
     const r = checkReplay(g.s, { ...g.s, seq: g.s.seq + 1 });
     expect(r.ok).toBe(false);
     expect(r.details[0]).toContain('seq');
+    // Накопленные симулятором просьбы и обмены сверяются с полным состоянием из журнала.
+    expect(checkReplay(g.s, g.s, g.s, structuredClone(g.s)).ok).toBe(true);
+    const lost = checkReplay(g.s, g.s, { ...g.s, trades: [] }, { ...g.s, trades: [{ id: 't', at: 1, from: 'o1', to: 'o2', service: false, give: { gold: 1, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] }, get: { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] } }] });
+    expect(lost.details).toEqual(['накопленные за вечер просьбы и обмены расходятся с журналом: trades']);
   });
 });
 
