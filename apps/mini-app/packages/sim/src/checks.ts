@@ -133,7 +133,7 @@ export function checkViews(bots: Record<string, BotConn>, gmState: GameState, co
 
 /**
  * Итоги после показа: closing в состоянии ведущего совпадает с computeClosing на том же состоянии.
- * expect.outcome — исход, которого ждёт сценарий (после сбора алтаря); expect.truth — держатель «Правды».
+ * expect.outcome: исход, которого ждёт сценарий после сбора алтаря. expect.truth: держатель «Правды».
  */
 export function checkClosing(state: GameState, content: Content, expect: { outcome?: AltarSide; truth?: string } = {}): CheckResult {
   const c = state.closing;
@@ -142,7 +142,7 @@ export function checkClosing(state: GameState, content: Content, expect: { outco
   const recomputed = JSON.parse(JSON.stringify(computeClosing(state, content, c.closedAt))) as unknown;
   if (!isDeepStrictEqual(JSON.parse(JSON.stringify(c)), recomputed)) bad.push('итоги в состоянии расходятся с computeClosing');
   if (expect.outcome !== undefined && c.outcome !== expect.outcome) bad.push(`исход ${c.outcome}, ожидался ${expect.outcome} (алтари: ${JSON.stringify(c.altars)})`);
-  if (expect.truth !== undefined && c.truthHolder !== expect.truth) bad.push(`«Правда» у ${c.truthHolder ?? 'никого'}, ожидалась у ${expect.truth}`);
+  if (expect.truth !== undefined && c.truthHolder !== expect.truth) bad.push(`«Правда» ${c.truthHolder ? `у ${c.truthHolder}` : 'ни у кого'}, ожидалась у ${expect.truth}`);
   return result('closing', bad);
 }
 

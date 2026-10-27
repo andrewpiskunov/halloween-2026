@@ -164,7 +164,7 @@ describe('checkClosing', () => {
     const r = checkClosing(s, content, { outcome: 'wake', truth: 'o10' });
     expect(r.ok).toBe(false);
     expect(r.details.join('\n')).toMatch(/исход sleep, ожидался wake/);
-    expect(r.details.join('\n')).toMatch(/«Правда» у никого, ожидалась у o10/);
+    expect(r.details.join('\n')).toMatch(/«Правда» ни у кого, ожидалась у o10/);
   });
 
   test('подменённые итоги и отсутствие итогов падают', () => {
