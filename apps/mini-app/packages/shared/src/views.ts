@@ -1,13 +1,37 @@
+import type { AbilityKind, CopyableKind, TargetMode } from './abilities';
 import type { Clue, Content, ContentData, Faction, Recipe, Resource, Role } from './content';
 import type { Actor } from './commands';
 import { available } from './engine';
-import type { AltarSide, Announcement, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player } from './types';
+import type {
+  ActionRecord, AltarSide, Announcement, ConsentStatus, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player,
+} from './types';
+import { abilityView, actionsFor, gmAbilities, requestsFor } from './views-abilities';
+
+export interface AbilityView {
+  name: string; text: string;            // из роли: skill, effect
+  kind: AbilityKind; hostile: boolean; verbal: boolean;
+  target: TargetMode; place: 'role' | 'workshop';
+  /** Для Астры: какие виды можно скопировать и чьё согласие нужно (null, если владельца нет на ярмарке). */
+  copy?: { kind: CopyableKind; owner: string | null; name: string }[];
+  state: 'available' | 'used' | 'pending' | 'closed';   // closed: не акт
+  pendingRequest?: string;
+}
+
+export interface ConsentRequestView {
+  id: string; author: string; approvers: string[]; approved: string[];
+  status: ConsentStatus; createdAt: number; expiresAt: number; reason?: string;
+  /** Описание словами собирает клиент по этим полям. */
+  action:
+    | { type: 'ability'; ability: AbilityKind; copied?: CopyableKind; target?: string; from?: string; to?: string }
+    | { type: 'item'; kind: 'potion' | 'shape'; target: string; guise?: string };
+}
 
 export interface PlayerView {
   kind: 'player'; phase: Phase; act: 0 | 1 | 2 | 3; clock: { elapsedMs: number; paused: boolean; pausedAt?: number };
-  me: { role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] } };
+  me: { role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] }; ability: AbilityView };
   contacts: { role: string | null; name?: string; text: string; absent: boolean }[];
-  others: { roleKey: string; name: string; title: string; emoji: string }[];
+  /** guise: облик присутствующего после Камня, виден всем. */
+  others: { roleKey: string; name: string; title: string; emoji: string; guise?: string }[];
   offers: Offer[];
   /** Вид и ref вещей из моих предложений (в обе стороны): адресат должен видеть, что ему предлагают. Без владельца. */
   offerItems: Record<string, { kind: Item['kind']; ref: string }>;
@@ -21,11 +45,17 @@ export interface PlayerView {
     /** Каталог реликвий для просьб по названию: без стартовых владельцев. */
     relics: { name: string; emoji: string; lore: string }[];
   };
+  /** Запросы, где я автор или одобряющий; pending и закрытые этого акта. */
+  requests: ConsentRequestView[];
+  /** Записи журнала применений, где я автор или цель (или from/to переноса). */
+  actions: ActionRecord[];
 }
 
 export interface GmView {
   kind: 'gm'; state: GameState; content: ContentData;
   invites: { roleKey: string; code: string; bound: boolean; present: boolean }[];
+  /** state содержит requests и actions целиком; здесь каталог способностей всех ролей. */
+  abilities: Record<string, { kind: AbilityKind; hostile: boolean; verbal: boolean; name: string }>;
 }
 
 const ALTAR_ORDER: AltarSide[] = ['wake', 'bind', 'break', 'ship'];
@@ -65,6 +95,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
         bound: state.players[roleKey]?.telegramId !== undefined,
         present: !!state.players[roleKey]?.present,
       })),
+      abilities: gmAbilities(content),
     };
   }
 
@@ -116,6 +147,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       role, player: me,
       items: items.filter(i => i.owner.type === 'player' && i.owner.key === key),
       available: available(state, key),
+      ability: abilityView(state, content, key),
     },
     contacts: role.contacts.map(c => ({
       role: c.role,
@@ -125,7 +157,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     })),
     others: state.roster.filter(k => k !== key && presentInGame(k)).map(k => {
       const r = content.roleByKey[k];
-      return { roleKey: k, name: r.name, title: r.title, emoji: r.emoji };
+      const guise = state.players[k].guise?.name;
+      return { roleKey: k, name: r.name, title: r.title, emoji: r.emoji, ...(guise !== undefined ? { guise } : {}) };
     }),
     offers,
     offerItems,
@@ -148,5 +181,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       story: content.story.public,
       relics: content.relics.map(r => ({ name: r.name, emoji: r.emoji, lore: r.lore })),
     },
+    requests: requestsFor(state, key),
+    actions: actionsFor(state, key),
   };
 }

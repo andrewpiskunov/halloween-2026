@@ -193,6 +193,35 @@ test('некорректное сообщение → invalid без событ�
   expect(store.all().length).toBe(count);
 });
 
+test('ability.use с мусором в use → invalid, сокет жив, событий нет', async () => {
+  const count = store.all().length;
+  const bad = [
+    { type: 'ability.use', use: 'мусор' },
+    { type: 'ability.use', use: {} },
+    { type: 'ability.use' },
+    { type: 'ability.use', use: ['protectSelf'] },
+    { type: 'ability.use', use: { kind: 42 } },
+    { type: 'ability.use', use: { kind: 'stealGold', target: { toString: 1 } } },
+    { type: 'ability.use', use: { kind: 'copyAbility', copy: 'grow' } },
+    { type: 'ability.use', use: { kind: 'copyAbility', copy: { kind: 'discountOther', target: 7 } } },
+    { type: 'ability.use', use: { kind: 'askYesNo', target: 'o1', question: 'в'.repeat(2001) } },
+    { type: 'ability.use', use: { kind: 'protectSelf', guise: 'г'.repeat(2001) } },
+  ];
+  for (const [i, cmd] of bad.entries()) {
+    const r = await o6.cmd(`bad-use-${i}`, cmd);
+    expect(r).toMatchObject({ kind: 'result', ok: false, error: 'invalid' });
+  }
+  // В use допускаются только поля AbilityUse: облик Камня туда не входит при любой длине.
+  const guise = await o6.cmd('long-guise', { type: 'ability.use', use: { kind: 'substituteIngredient', recipeId: 'cleanse', from: 'ash', to: 'dew', guise: 'г'.repeat(2000) } });
+  expect(guise).toMatchObject({ ok: false, error: 'invalid', detail: 'bad message' });
+  expect(o6.ws.readyState).toBe(WebSocket.OPEN);
+  expect(store.all().length).toBe(count);
+  // Сокет жив: следующая команда выполняется.
+  const ok = await o6.cmd('after-bad', { type: 'ability.use', use: { kind: 'substituteIngredient', recipeId: 'cleanse', from: 'ash', to: 'moon' } });
+  expect(ok).toMatchObject({ ok: false, error: 'insufficient' });
+  expect(o6.ws.readyState).toBe(WebSocket.OPEN);
+});
+
 test('ведущий по WS получает GmView', async () => {
   const { token } = await devAuth(1000);
   const c = connect(token);

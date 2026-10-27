@@ -49,7 +49,8 @@ export interface ClockPaused extends EventBase { type: 'ClockPaused' }
 export interface ClockResumed extends EventBase { type: 'ClockResumed'; pausedMs: number }
 export interface ClockExtended extends EventBase { type: 'ClockExtended'; minutes: number }
 export interface Announced extends EventBase { type: 'Announced'; title: string; text: string }
-export interface Corrected extends EventBase { type: 'Corrected'; playerKey: string; change: Correction; reason: string }
+/** Исправление ведущего; для отметок и облика — эффекты, которые применяет редьюсер (облик со временем и автором). */
+export interface Corrected extends EventBase { type: 'Corrected'; playerKey: string; change: Correction; reason: string; effects?: Effect[] }
 export interface InviteRebound extends EventBase { type: 'InviteRebound'; roleKey: string; code: string }
 
 /** Игрок предложил сделку; его сторона give зарезервирована. */

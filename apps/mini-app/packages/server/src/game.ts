@@ -113,7 +113,7 @@ export class Game {
     return () => { this.subscribers.delete(fn); };
   }
 
-  /** Закрывает просроченные предложения; вызывать раз в секунду. На паузе сроки стоят (спек §10). */
+  /** Закрывает просроченные предложения, запросы согласия и окна ставок; вызывать раз в секунду. На паузе сроки стоят (спек §10). */
   tick(): void {
     if (this.current.clock.pausedAt !== undefined) return;
     const now = this.opts.now();
@@ -121,6 +121,12 @@ export class Game {
       if (o.status === 'pending' && o.expiresAt <= now) {
         this.submit('expire:' + o.id, { type: 'offer.expire', id: o.id }, { type: 'system' })
           .catch(err => console.error('Ошибка истечения предложения', err));
+      }
+    }
+    for (const r of Object.values(this.current.requests)) {
+      if (r.status === 'pending' && r.expiresAt <= now) {
+        this.submit('expire:consent:' + r.id, { type: 'consent.expire', id: r.id }, { type: 'system' })
+          .catch(err => console.error('Ошибка истечения запроса согласия', err));
       }
     }
     for (const l of Object.values(this.current.lots)) {

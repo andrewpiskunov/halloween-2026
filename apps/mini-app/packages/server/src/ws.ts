@@ -24,9 +24,11 @@ const COMMAND_TYPES: Record<Command['type'], true> = {
   'consent.accept': true, 'consent.decline': true, 'consent.cancel': true, 'consent.expire': true,
 };
 /** Поля, которые движок использует как ключи: если есть, обязаны быть короткими строками. */
-const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side'];
-/** Свободный текст ведущего и описания: длиннее ключей. */
-const TEXT_FIELDS = new Set(['text', 'reason', 'rumor']);
+const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side', 'target'];
+/** Свободный текст ведущего, описания, вопрос Весты и облик Камня: длиннее ключей. */
+const TEXT_FIELDS = new Set(['text', 'reason', 'rumor', 'question', 'guise']);
+/** Поля параметров способности (AbilityUse); прочие в use не принимаются. */
+const USE_FIELDS = new Set(['kind', 'recipeId', 'from', 'to', 'ingredient', 'take', 'give', 'itemId', 'into', 'target', 'copy', 'question']);
 
 const isPlain = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
@@ -42,6 +44,20 @@ function validValue(v: unknown, field: string, depth: number): boolean {
   return false;
 }
 
+/** Ключевые поля объекта, если есть, — строки. */
+const keysAreStrings = (o: Record<string, unknown>) => KEY_FIELDS.every(key => !(key in o) || typeof o[key] === 'string');
+
+/**
+ * Параметры ability.use: непустой объект с видом-строкой, только поля AbilityUse, ключи строками;
+ * у копии Астры то же для вложенного copy. Длины строк проверяет validValue.
+ */
+function validUse(use: unknown, depth = 0): boolean {
+  if (!isPlain(use) || typeof use.kind !== 'string' || !keysAreStrings(use)) return false;
+  if (!Object.keys(use).every(k => USE_FIELDS.has(k))) return false;
+  if ('copy' in use) return depth === 0 && validUse(use.copy, depth + 1);
+  return true;
+}
+
 /** Разбор входящего сообщения; без cmd — сообщение некорректно и в игру не попадает (id, если он корректен). */
 export function parseCommandMessage(raw: string): { id: string; cmd: Command } | { id?: string } {
   let msg: unknown;
@@ -51,9 +67,8 @@ export function parseCommandMessage(raw: string): { id: string; cmd: Command } |
   const { cmd } = msg;
   if (msg.kind !== 'cmd' || !id || !isPlain(cmd)) return { id };
   if (typeof cmd.type !== 'string' || !Object.hasOwn(COMMAND_TYPES, cmd.type)) return { id };
-  for (const key of KEY_FIELDS) {
-    if (key in cmd && typeof cmd[key] !== 'string') return { id };
-  }
+  if (!keysAreStrings(cmd)) return { id };
+  if (cmd.type === 'ability.use' && !validUse(cmd.use)) return { id };
   if (!validValue(cmd, 'cmd', 0)) return { id };
   return { id, cmd: cmd as unknown as Command };
 }

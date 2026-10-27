@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { allBut, content, gm, makeGame, player, run } from './helpers';
 import type { ConsentRequest, GameState, Item, Offer } from '../types';
+import type { Command } from '../commands';
 
 const next = (s: GameState, now = 0) => {
   const r = run(s, { type: 'act.next' }, gm, now);
@@ -252,5 +253,110 @@ describe('ведущий', () => {
     expect(r.state.invites[key]).not.toBe(s.invites[key]);
     expect(run(s, { type: 'gm.rebind', roleKey: 'zzz' }, gm)).toMatchObject({ ok: false, error: 'not_found' });
     expect(run(s, { type: 'gm.rebind', roleKey: key }, player(key))).toMatchObject({ ok: false, error: 'forbidden' });
+  });
+});
+
+describe('исправления ведущего: отметки способностей (§6.7)', () => {
+  type Change = Extract<Command, { type: 'gm.correct' }>['change'];
+  const correct = (s: GameState, key: string, change: Change, now = 0) =>
+    run(s, { type: 'gm.correct', playerKey: key, change, reason: 'по ходу игры' }, gm, now);
+  const must = (s: GameState, key: string, change: Change, now = 0) => {
+    const r = correct(s, key, change, now);
+    if (!r.ok) throw new Error(`${r.error} ${r.detail ?? ''}`);
+    expect(r.state.actions).toEqual(s.actions);
+    return r;
+  };
+  const steal = (s: GameState) => {
+    const r = run(s, { type: 'ability.use', use: { kind: 'stealGold', target: 'o2' } }, player('o8'));
+    if (!r.ok) throw new Error(r.error);
+    return r.state;
+  };
+  const err = (s: GameState, key: string, change: Change) => {
+    const r = correct(s, key, change);
+    return r.ok ? 'ok' : r.error;
+  };
+
+  test('защита: ставится от ведущего, вторая → invalid, снимается, снять отсутствующую → invalid', () => {
+    const s = makeGame(30);
+    const on = must(s, 'o1', { field: 'protection', value: true });
+    expect(on.state.players.o1.protection).toEqual({ by: 'gm', source: 'gm' });
+    expect(on.events[0]).toMatchObject({ type: 'Corrected', effects: [{ type: 'protection', player: 'o1', value: { by: 'gm', source: 'gm' } }] });
+    expect(err(on.state, 'o1', { field: 'protection', value: true })).toBe('invalid');
+    const off = must(on.state, 'o1', { field: 'protection', value: false });
+    expect(off.state.players.o1).not.toHaveProperty('protection');
+    expect(err(off.state, 'o1', { field: 'protection', value: false })).toBe('invalid');
+  });
+
+  test('шипы, проклятие, скидка: ставятся и снимаются; повтор и снятие отсутствующей → invalid', () => {
+    let s = makeGame(30);
+    for (const field of ['thorns', 'curse', 'discount'] as const) {
+      expect(s.players.o2[field]).toBe(false);
+      expect(err(s, 'o2', { field, value: false })).toBe('invalid');
+      s = must(s, 'o2', { field, value: true }).state;
+      expect(s.players.o2[field]).toBe(true);
+      expect(err(s, 'o2', { field, value: true })).toBe('invalid');
+    }
+    expect(s.players.o2).toMatchObject({ thornsBy: 'gm', discountBy: 'gm' });
+    for (const field of ['thorns', 'curse', 'discount'] as const) {
+      s = must(s, 'o2', { field, value: false }).state;
+      expect(s.players.o2[field]).toBe(false);
+    }
+    expect(s.players.o2).not.toHaveProperty('thornsBy');
+    expect(s.players.o2).not.toHaveProperty('discountBy');
+    // Старое проклятие Эльмара снимается исправлением.
+    expect(must(s, 'o9', { field: 'curse', value: false }).state.players.o9.curse).toBe(false);
+  });
+
+  test('abilityUsed: снимается и ставится; false при ожидающем запросе → invalid', () => {
+    let s = makeGame(30);
+    s = steal(s);
+    expect(s.players.o8.abilityUsedInAct).toBe(true);
+    const back = must(s, 'o8', { field: 'abilityUsed', value: false });
+    expect(back.state.players.o8.abilityUsedInAct).toBe(false);
+    expect(err(back.state, 'o8', { field: 'abilityUsed', value: false })).toBe('invalid');
+    expect(must(back.state, 'o8', { field: 'abilityUsed', value: true }).state.players.o8.abilityUsedInAct).toBe(true);
+
+    const pending = run(s, { type: 'ability.use', use: { kind: 'cleanseOther', target: 'o9' } }, player('o10'));
+    if (!pending.ok) throw new Error(pending.error);
+    expect(err(pending.state, 'o10', { field: 'abilityUsed', value: false })).toBe('invalid');
+    expect(err(pending.state, 'o10', { field: 'abilityUsed', value: true })).toBe('invalid');
+  });
+
+  test('hostileAttempt: снимается и ставится, повтор → invalid', () => {
+    let s = makeGame(30);
+    s = steal(s);
+    expect(s.players.o2.hostileAttemptsAgainstInAct).toBe(1);
+    const off = must(s, 'o2', { field: 'hostileAttempt', value: false });
+    expect(off.state.players.o2.hostileAttemptsAgainstInAct).toBe(0);
+    expect(err(off.state, 'o2', { field: 'hostileAttempt', value: false })).toBe('invalid');
+    // Лимит снят: следующая враждебная попытка по цели снова проходит.
+    expect(run(off.state, { type: 'ability.use', use: { kind: 'stealGold', target: 'o2' } }, player('r4')).ok).toBe(true);
+    const on = must(off.state, 'o2', { field: 'hostileAttempt', value: true });
+    expect(on.state.players.o2.hostileAttemptsAgainstInAct).toBe(1);
+    expect(err(on.state, 'o2', { field: 'hostileAttempt', value: true })).toBe('invalid');
+  });
+
+  test('облик: ставится от ведущего, 41 символ → invalid, пустой и null снимают, снять отсутствующий → invalid', () => {
+    const s = makeGame(30);
+    const on = must(s, 'o1', { field: 'guise', name: '  Странник  ' }, 500);
+    expect(on.state.players.o1.guise).toEqual({ name: 'Странник', at: 500, by: 'gm' });
+    expect(err(s, 'o1', { field: 'guise', name: 'я'.repeat(41) })).toBe('invalid');
+    expect(err(s, 'o1', { field: 'guise', name: 'две\nстроки' })).toBe('invalid');
+    expect(must(s, 'o1', { field: 'guise', name: 'я'.repeat(40) }).state.players.o1.guise?.name).toBe('я'.repeat(40));
+    expect(must(on.state, 'o1', { field: 'guise', name: '   ' }).state.players.o1).not.toHaveProperty('guise');
+    expect(must(on.state, 'o1', { field: 'guise', name: null }).state.players.o1).not.toHaveProperty('guise');
+    expect(err(s, 'o1', { field: 'guise', name: null })).toBe('invalid');
+    expect(err(s, 'o1', { field: 'guise', name: '' })).toBe('invalid');
+  });
+
+  test('общие проверки: value не булево → invalid, игрок вне состава или не пришёл → not_found, setup → phase', () => {
+    const s = makeGame(12, { present: allBut(12, ['o13']) });
+    expect(err(s, 'o1', { field: 'curse', value: 'да' as unknown as boolean })).toBe('invalid');
+    expect(err(s, 'o1', { field: 'нет такого', value: true } as unknown as Change)).toBe('invalid');
+    expect(err(s, 'o1', { field: 'guise' } as unknown as Change)).toBe('invalid');
+    expect(err(s, 'o13', { field: 'protection', value: true })).toBe('not_found');
+    expect(err(s, 'o17', { field: 'protection', value: true })).toBe('not_found');
+    expect(err(s, 'o17', { field: 'gold', delta: 1 })).toBe('not_found');
+    expect(err({ ...s, phase: 'setup' }, 'o1', { field: 'protection', value: true })).toBe('phase');
   });
 });

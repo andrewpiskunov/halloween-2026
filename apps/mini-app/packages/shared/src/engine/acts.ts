@@ -1,6 +1,8 @@
-import type { Actor } from '../commands';
-import type { Counts, GameState, Item, Lot } from '../types';
-import { fail, ok, type CommandHandlers, type EventReducers } from './result';
+import type { Actor, Correction, Ctx } from '../commands';
+import type { Counts, Effect, GameState, Item, Lot, Player } from '../types';
+import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
+import { applyEffects } from './effects';
+import { presentPlayer } from './guards';
 import { biddingInProgress, shiftLots } from './lots';
 
 const isGm = (a: Actor) => a.type === 'gm';
@@ -31,6 +33,59 @@ function expireRequests(state: GameState): Pick<GameState, 'requests' | 'items'>
 }
 
 const EVENT_WHEN = { 2: 'Акт II', 3: 'Акт III' } as const;
+const MAX_GUISE = 40;
+/** Ведущий как автор отметки в by. */
+const GM = 'gm';
+
+type MarkCorrection = Extract<Correction, { field: 'protection' | 'thorns' | 'curse' | 'discount' | 'abilityUsed' | 'hostileAttempt' }>;
+const MARK_FIELDS: string[] = ['protection', 'thorns', 'curse', 'discount', 'abilityUsed', 'hostileAttempt'];
+
+/** Текущее значение булевой отметки, которую правит ведущий. */
+function markOf(p: Player, field: MarkCorrection['field']): boolean {
+  switch (field) {
+    case 'protection': return p.protection !== undefined;
+    case 'thorns': return p.thorns;
+    case 'curse': return p.curse;
+    case 'discount': return p.discount;
+    case 'abilityUsed': return p.abilityUsedInAct;
+    case 'hostileAttempt': return p.hostileAttemptsAgainstInAct > 0;
+  }
+}
+
+/** Эффект отметки; abilityUsed и hostileAttempt правит редьюсер напрямую. */
+function markEffects(key: string, c: MarkCorrection): Effect[] {
+  switch (c.field) {
+    case 'protection': return [{ type: 'protection', player: key, value: c.value ? { by: GM, source: 'gm' } : null }];
+    case 'thorns': return [{ type: 'thorns', player: key, value: c.value, ...(c.value ? { by: GM } : {}) }];
+    case 'curse': return [{ type: 'curse', player: key, value: c.value }];
+    case 'discount': return [{ type: 'discount', player: key, value: c.value, ...(c.value ? { by: GM } : {}) }];
+    default: return [];
+  }
+}
+
+/**
+ * Исправление отметки или облика (§6.7): игрок на ярмарке, пустые исправления запрещены.
+ * Возвращает эффекты для события или отказ.
+ */
+function correctMark(state: GameState, key: string, c: Exclude<Correction, { field: 'gold' | 'ingredient' | 'itemOwner' }>, ctx: Ctx): Effect[] | Result {
+  if (!presentPlayer(state, key)) return fail('not_found', key);
+  const p = state.players[key];
+  if (c.field === 'guise') {
+    if (c.name !== null && (typeof c.name !== 'string' || /[\r\n]/.test(c.name))) return fail('invalid', 'облик: одна строка');
+    const name = (c.name ?? '').trim();
+    if (name.length > MAX_GUISE) return fail('invalid', `облик: не длиннее ${MAX_GUISE} символов`);
+    // Пустой облик снимает текущий.
+    if (!name) return p.guise ? [{ type: 'guise', player: key, value: null }] : fail('invalid', 'облика нет');
+    return [{ type: 'guise', player: key, value: { name, at: ctx.now, by: GM } }];
+  }
+  if (!MARK_FIELDS.includes(c.field)) return fail('invalid', 'неизвестное поле исправления');
+  if (typeof c.value !== 'boolean') return fail('invalid', 'value должно быть булевым');
+  const has = markOf(p, c.field);
+  if (c.value && has) return fail('invalid', c.field === 'protection' ? 'защита уже есть: одна защита' : 'отметка уже есть');
+  if (!c.value && !has) return fail('invalid', 'отметки нет');
+  if (c.field === 'abilityUsed' && p.abilityPending !== undefined) return fail('invalid', 'способность ждёт ответа: сначала отмените запрос');
+  return markEffects(key, c);
+}
 
 export const actCommands: CommandHandlers = {
   'act.next': (state, content, _cmd, ctx) => {
@@ -105,8 +160,9 @@ export const actCommands: CommandHandlers = {
     if (state.phase === 'setup') return fail('phase');
     if (!cmd.reason.trim()) return fail('invalid', 'нужна причина');
     const p = state.players[cmd.playerKey];
-    if (!p) return fail('not_found', cmd.playerKey);
+    if (!p || !state.roster.includes(cmd.playerKey)) return fail('not_found', cmd.playerKey);
     const c = cmd.change;
+    const base = { type: 'Corrected' as const, at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() };
     if (c.field === 'gold') {
       if (!Number.isInteger(c.delta)) return fail('invalid');
       if (p.gold + c.delta < p.reservedGold) return fail('insufficient', 'ниже зарезервированного золота');
@@ -121,9 +177,11 @@ export const actCommands: CommandHandlers = {
       if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
       if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
     } else {
-      return fail('invalid', `исправление пока не поддерживается: ${c.field}`);
+      const effects = correctMark(state, cmd.playerKey, c, ctx);
+      if (!Array.isArray(effects)) return effects;
+      return ok({ ...base, ...(effects.length ? { effects } : {}) });
     }
-    return ok({ type: 'Corrected', at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() });
+    return ok(base);
   },
 
   'gm.rebind': (state, _content, cmd, ctx) => {
@@ -182,8 +240,12 @@ export const actReducers: EventReducers = {
       const ingredients = { ...p.ingredients, [c.ingredient]: p.ingredients[c.ingredient] + c.delta };
       return { ...state, players: { ...state.players, [e.playerKey]: { ...p, ingredients } } };
     }
-    // Исправления отметок команда пока отклоняет, поэтому таких событий нет.
-    if (c.field !== 'itemOwner') return state;
+    // Исправления не пишут записей в actions: цели считаются только за действия игроков.
+    if (c.field === 'abilityUsed') return { ...state, players: { ...state.players, [e.playerKey]: { ...p, abilityUsedInAct: c.value } } };
+    if (c.field === 'hostileAttempt') {
+      return { ...state, players: { ...state.players, [e.playerKey]: { ...p, hostileAttemptsAgainstInAct: c.value ? 1 : 0 } } };
+    }
+    if (c.field !== 'itemOwner') return applyEffects(state, e.effects ?? []);
     // Резерв снимается: вещь ушла от автора, его предложение закроется при попытке принять.
     const { reservedFor: _r, ...item } = state.items[c.itemId];
     return { ...state, items: { ...state.items, [c.itemId]: { ...item, owner: c.owner } } };

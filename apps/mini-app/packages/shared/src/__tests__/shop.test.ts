@@ -143,3 +143,13 @@ describe('мастерская: редьюсеры событий способн
     expect(bought().workshop.dew).toBe(s.workshop.dew - 1);
   });
 });
+
+test('рецепт с именем свойства прототипа (constructor, toString) → not_found, а не исключение', () => {
+  const s = makeGame(30);
+  for (const recipeId of ['constructor', 'toString', '__proto__']) {
+    expect(run(s, { type: 'shop.craft', recipeId }, player('o1'))).toMatchObject({ ok: false, error: 'not_found' });
+    expect(run(s, { type: 'ability.use', use: { kind: 'payAshWithGold', recipeId } }, player('o1'))).toMatchObject({ ok: false, error: 'not_found' });
+    expect(run(s, { type: 'ability.use', use: { kind: 'substituteIngredient', recipeId, from: 'ash', to: 'dew' } }, player('o6')))
+      .toMatchObject({ ok: false, error: 'not_found' });
+  }
+});

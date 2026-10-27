@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest';
 import { viewFor, type GmView, type PlayerView } from '../views';
+import type { AbilityUse, Actor, Command } from '../commands';
+import type { GameState } from '../types';
 import { allBut, content, gm, makeGame, player, run, system } from './helpers';
 
 const pv = (v: unknown) => v as PlayerView;
@@ -132,4 +134,135 @@ test('offerItems: адресат видит вид и ref предложенно
   const third = pv(viewFor(s, content, player('o1'), 0));
   expect(third.offerItems).toEqual({});
   expect(JSON.stringify(third)).not.toContain(`"${item.id}"`);
+});
+
+// --- Этап 3: способности, запросы согласия, журнал применений ---
+
+/** Успешная команда: новое состояние. */
+function must(s: GameState, cmd: Command, actor: Actor): GameState {
+  const r = run(s, cmd, actor);
+  if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
+  return r.state;
+}
+const use = (u: AbilityUse): Command => ({ type: 'ability.use', use: u });
+
+test('me.ability: available в акте, closed в setup, pending с id запроса, used после применения', () => {
+  const s = makeGame(30);
+  const v = pv(viewFor(s, content, player('o8'), 0)).me.ability;
+  expect(v).toEqual({
+    name: content.roleByKey.o8.skill, text: content.roleByKey.o8.effect,
+    kind: 'stealGold', hostile: true, verbal: false, target: 'other', place: 'role', state: 'available',
+  });
+  expect(pv(viewFor({ ...s, phase: 'setup' }, content, player('o8'), 0)).me.ability.state).toBe('closed');
+  expect(pv(viewFor({ ...s, phase: 'closed' }, content, player('o8'), 0)).me.ability.state).toBe('closed');
+  expect(pv(viewFor(s, content, player('r5'), 0)).me.ability).toMatchObject({ kind: 'askYesNo', verbal: true });
+
+  const pending = must(s, use({ kind: 'cleanseOther', target: 'o9' }), player('o10'));
+  const id = pending.players.o10.abilityPending!;
+  expect(pv(viewFor(pending, content, player('o10'), 0)).me.ability).toMatchObject({ state: 'pending', pendingRequest: id });
+
+  const used = must(s, use({ kind: 'stealGold', target: 'o2' }), player('o8'));
+  const after = pv(viewFor(used, content, player('o8'), 0)).me.ability;
+  expect(after.state).toBe('used');
+  expect(after).not.toHaveProperty('pendingRequest');
+});
+
+test('Астра видит три копируемых вида; владелец вне ярмарки — owner null', () => {
+  const s = makeGame(30, { present: allBut(30, ['o6']) });
+  const v = pv(viewFor(s, content, player('o17'), 0)).me.ability;
+  expect(v.kind).toBe('copyAbility');
+  expect(v.copy).toEqual([
+    { kind: 'grow', owner: 'o2', name: content.roleByKey.o2.skill },
+    { kind: 'substituteIngredient', owner: null, name: content.roleByKey.o6.skill },
+    { kind: 'discountOther', owner: 'o14', name: content.roleByKey.o14.skill },
+  ]);
+  expect(pv(viewFor(s, content, player('o8'), 0)).me.ability).not.toHaveProperty('copy');
+});
+
+test('actions: автор и цель видят запись, intel только у автора, третий не видит ничего', () => {
+  let s = makeGame(30);
+  s = must(s, use({ kind: 'stealGold', target: 'o2' }), player('o8'));
+  s = must(s, use({ kind: 'inspectInventory', target: 'o5' }), player('o11'));
+  s = must(s, use({ kind: 'askYesNo', target: 'o10', question: 'Ты ищешь корону?' }), player('r5'));
+
+  const victim = pv(viewFor(s, content, player('o2'), 0)).actions;
+  expect(victim).toHaveLength(1);
+  expect(victim[0]).toMatchObject({ author: 'o8', target: 'o2', outcome: 'done', hostile: true });
+  expect(victim[0]).not.toHaveProperty('intel');
+
+  const corvin = pv(viewFor(s, content, player('o11'), 0)).actions;
+  expect(corvin).toHaveLength(1);
+  expect(corvin[0].intel).toMatchObject({ kind: 'inventory', target: 'o5' });
+  const inspected = pv(viewFor(s, content, player('o5'), 0)).actions;
+  expect(inspected).toHaveLength(1);
+  expect(inspected[0]).not.toHaveProperty('intel');
+
+  // Вопрос Весты видит только она.
+  expect(pv(viewFor(s, content, player('r5'), 0)).actions[0].intel).toEqual({ kind: 'question', target: 'o10', question: 'Ты ищешь корону?' });
+  const asked = pv(viewFor(s, content, player('o10'), 0));
+  expect(asked.actions).toHaveLength(1);
+  expect(JSON.stringify(asked.actions)).not.toContain('корону');
+
+  expect(pv(viewFor(s, content, player('o1'), 0)).actions).toEqual([]);
+});
+
+test('actions: перенос защиты видят автор, from и to', () => {
+  let s = makeGame(30);
+  s = must(s, use({ kind: 'protectOther', target: 'o11' }), player('t3'));
+  s = must(s, use({ kind: 'transferProtection', from: 'o11', to: 't2' }), player('o16'));
+  const id = s.players.o16.abilityPending!;
+  s = must(s, { type: 'consent.accept', id }, player('o11'));
+  for (const k of ['o16', 'o11', 't2']) {
+    expect(pv(viewFor(s, content, player(k), 0)).actions.some(a => a.source.type === 'ability' && a.source.ability === 'transferProtection')).toBe(true);
+  }
+  expect(pv(viewFor(s, content, player('o1'), 0)).actions).toEqual([]);
+});
+
+test('requests: видят автор и одобряющий, третий нет; у вещи нет itemId', () => {
+  let s = makeGame(30);
+  s = must(s, use({ kind: 'cleanseOther', target: 'o9' }), player('o10'));
+  const id = s.players.o10.abilityPending!;
+  const expected = {
+    id, author: 'o10', approvers: ['o9'], approved: [], status: 'pending', createdAt: 0, expiresAt: 300000,
+    action: { type: 'ability', ability: 'cleanseOther', target: 'o9' },
+  };
+  expect(pv(viewFor(s, content, player('o10'), 0)).requests).toEqual([expected]);
+  expect(pv(viewFor(s, content, player('o9'), 0)).requests).toEqual([expected]);
+  expect(pv(viewFor(s, content, player('o1'), 0)).requests).toEqual([]);
+
+  // Копия Астры: вид оригинала в copied, цель вложенного применения.
+  s = must(s, use({ kind: 'copyAbility', copy: { kind: 'discountOther', target: 'r2' } }), player('o17'));
+  const copyReq = pv(viewFor(s, content, player('r2'), 0)).requests;
+  expect(copyReq).toHaveLength(1);
+  expect(copyReq[0].approvers).toEqual(['o14', 'r2']);
+  expect(copyReq[0].action).toEqual({ type: 'ability', ability: 'copyAbility', copied: 'discountOther', target: 'r2' });
+
+  // Камень облика на другого: вид и облик видны, id вещи нет.
+  s = must(s, { type: 'shop.craft', recipeId: 'shape' }, player('r5'));
+  const stone = Object.values(s.items).find(i => i.kind === 'shape' && i.owner.type === 'player' && i.owner.key === 'r5')!;
+  s = must(s, { type: 'item.use', itemId: stone.id, target: 'o1', guise: 'Странник' }, player('r5'));
+  const seen = pv(viewFor(s, content, player('o1'), 0)).requests;
+  expect(seen).toHaveLength(1);
+  expect(seen[0].action).toEqual({ type: 'item', kind: 'shape', target: 'o1', guise: 'Странник' });
+  expect(JSON.stringify(seen)).not.toContain(stone.id);
+});
+
+test('others[].guise: облик после Камня виден всем', () => {
+  let s = makeGame(30);
+  s = must(s, { type: 'shop.craft', recipeId: 'shape' }, player('r5'));
+  const stone = Object.values(s.items).find(i => i.kind === 'shape' && i.owner.type === 'player' && i.owner.key === 'r5')!;
+  s = must(s, { type: 'item.use', itemId: stone.id, guise: 'Странник' }, player('r5'));
+  for (const k of ['o1', 'o8', 't4']) {
+    const other = pv(viewFor(s, content, player(k), 0)).others.find(o => o.roleKey === 'r5');
+    expect(other?.guise).toBe('Странник');
+  }
+  expect(pv(viewFor(s, content, player('o1'), 0)).others.find(o => o.roleKey === 'o8')).not.toHaveProperty('guise');
+});
+
+test('GmView.abilities: все роли содержимого с видом, враждебностью и названием', () => {
+  const s = makeGame(12);
+  const v = viewFor(s, content, gm, 0) as GmView;
+  expect(Object.keys(v.abilities).sort()).toEqual(content.roles.map(r => r.key).sort());
+  expect(v.abilities.o8).toEqual({ kind: 'stealGold', hostile: true, verbal: false, name: content.roleByKey.o8.skill });
+  expect(v.abilities.r5).toMatchObject({ kind: 'askYesNo', verbal: true, hostile: false });
 });

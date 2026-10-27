@@ -1,4 +1,4 @@
-import type { Recipe } from '../content';
+import type { Content, Recipe } from '../content';
 import type { Counts, GameState, Ingredient, Item, ItemKind, Player } from '../types';
 import { INGREDIENTS, available } from './bundles';
 import { isActPhase, participant } from './guards';
@@ -6,6 +6,15 @@ import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers } fr
 
 const BUY_PRICE = 2;
 export const KIND_BY_RECIPE: Record<string, ItemKind> = { cleanse: 'potion', ward: 'ward', focus: 'focus', shape: 'shape' };
+
+/**
+ * Рецепт и вид изделия по id из команды. Только собственные ключи: 'constructor' или 'toString'
+ * иначе нашлись бы в прототипе объекта.
+ */
+export function recipeOf(content: Content, recipeId: string): { recipe: Recipe; kind: ItemKind } | undefined {
+  if (!Object.hasOwn(content.recipeById, recipeId) || !Object.hasOwn(KIND_BY_RECIPE, recipeId)) return undefined;
+  return { recipe: content.recipeById[recipeId], kind: KIND_BY_RECIPE[recipeId] };
+}
 
 /** Поправки способностей к изготовлению: Пепел золотом, работа бесплатно, замена ингредиента. */
 export interface CraftModifier { ashByGold?: boolean; freeWork?: boolean; substitute?: { from: Ingredient; to: Ingredient } }
@@ -61,9 +70,9 @@ export const shopCommands: CommandHandlers = {
     const key = participant(state, ctx.actor);
     if (!key) return fail('forbidden');
     if (!isActPhase(state)) return fail('phase');
-    const recipe = content.recipeById[cmd.recipeId];
-    const kind = KIND_BY_RECIPE[cmd.recipeId];
-    if (!recipe || !kind) return fail('not_found', cmd.recipeId);
+    const found = recipeOf(content, cmd.recipeId);
+    if (!found) return fail('not_found', cmd.recipeId);
+    const { recipe, kind } = found;
     const q = craftQuote(state, key, recipe);
     if ('error' in q) return fail(q.error, q.detail);
     const item: Item = { id: ctx.newId(), kind, ref: cmd.recipeId, owner: { type: 'player', key }, createdBy: key };

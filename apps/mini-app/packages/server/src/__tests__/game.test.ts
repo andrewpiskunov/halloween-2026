@@ -234,3 +234,56 @@ test('пауза останавливает истечение: +6 минут н
   await game.submit('flush-r', { type: 'session.setN', n: 12 }, gm);
   expect(game.state().offers[offer.id].status).toBe('pending');
 });
+
+test('tick закрывает просроченный запрос согласия как expired; на паузе нет; повтор не дублирует', async () => {
+  const { game, opts, store } = memoryGame();
+  await openFair(game);
+  const o10 = { type: 'player' as const, roleKey: 'o10' };
+  const r = await game.submit('cleanse', { type: 'ability.use', use: { kind: 'cleanseOther', target: 'o9' } }, o10);
+  expect(r.ok).toBe(true);
+  const [req] = Object.values(game.state().requests);
+  expect(req.status).toBe('pending');
+  expect(game.state().players.o10.abilityPending).toBe(req.id);
+
+  opts.clock.now = req.expiresAt - 1;
+  game.tick();
+  await game.submit('flush-1', { type: 'session.setN', n: 12 }, gm);
+  expect(game.state().requests[req.id].status).toBe('pending');
+
+  // На паузе срок стоит, даже если часы ушли далеко вперёд.
+  expect((await game.submit('pause', { type: 'clock.pause' }, gm)).ok).toBe(true);
+  opts.clock.now = req.expiresAt + 60_000;
+  game.tick();
+  await game.submit('flush-2', { type: 'session.setN', n: 12 }, gm);
+  expect(game.state().requests[req.id].status).toBe('pending');
+  expect((await game.submit('resume', { type: 'clock.resume' }, gm)).ok).toBe(true);
+  const shifted = game.state().requests[req.id].expiresAt;
+  expect(shifted).toBeGreaterThan(req.expiresAt);
+
+  opts.clock.now = shifted;
+  game.tick();
+  game.tick();
+  await game.submit('flush-3', { type: 'session.setN', n: 12 }, gm);
+  expect(game.state().requests[req.id]).toMatchObject({ status: 'expired', reason: 'timeout' });
+  expect(game.state().players.o10.abilityPending).toBeUndefined();
+  expect(game.state().players.o10.abilityUsedInAct).toBe(false);
+  expect(store.getResult('expire:consent:' + req.id)).toMatchObject({ ok: true });
+  expect(store.all().filter(e => e.type === 'ConsentClosed')).toHaveLength(1);
+});
+
+test('повтор cmdId для ability.use не применяет способность второй раз', async () => {
+  const { game, store } = memoryGame();
+  await openFair(game);
+  const o8 = { type: 'player' as const, roleKey: 'o8' };
+  const cmd: Command = { type: 'ability.use', use: { kind: 'stealGold', target: 'o2' } };
+  const before = { o8: game.state().players.o8.gold, o2: game.state().players.o2.gold };
+  const r1 = await game.submit('steal-1', cmd, o8);
+  expect(r1.ok).toBe(true);
+  const count = store.all().length;
+  const r2 = await game.submit('steal-1', cmd, o8);
+  expect(r2).toEqual(r1);
+  expect(store.all()).toHaveLength(count);
+  expect(game.state().players.o8.gold).toBe(before.o8 + 1);
+  expect(game.state().players.o2.gold).toBe(before.o2 - 1);
+  expect(game.state().actions).toHaveLength(1);
+});

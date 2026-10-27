@@ -9,7 +9,7 @@ import { consentedKind } from './consented-kinds';
 import { actOf, applyEffects, recordAction } from './effects';
 import { isActPhase, otherTarget, participant } from './guards';
 import { buildIntel, isObservation, type ObservationUse } from './intel';
-import { KIND_BY_RECIPE, craftQuote, type CraftModifier } from './shop';
+import { KIND_BY_RECIPE, craftQuote, recipeOf, type CraftModifier } from './shop';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
 
 /** Изделия мастерской; реликвии, осколки и улики способностями не превращаются. */
@@ -95,9 +95,9 @@ function craftWith(
   state: GameState, content: Content, author: string, kind: AbilityKind, recipeId: string,
   mod: CraftModifier, ctx: Ctx, requestId?: string,
 ): Result {
-  const recipe = content.recipeById[recipeId];
-  const itemKind = KIND_BY_RECIPE[recipeId];
-  if (!recipe || !itemKind) return fail('not_found', recipeId);
+  const found = recipeOf(content, recipeId);
+  if (!found) return fail('not_found', recipeId);
+  const { recipe, kind: itemKind } = found;
   const q = craftQuote(state, author, recipe, mod);
   if ('error' in q) return fail(q.error, q.detail);
   const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, createdBy: author };
@@ -250,6 +250,7 @@ export function performAbility(
     case 'reforge': {
       const it = ownFreeItem(state, author, use.itemId, REFORGEABLE);
       if (isResult(it)) return it;
+      // into уже сверен со списком REFORGE_INTO в validForm.
       const kind = KIND_BY_RECIPE[use.into];
       if (kind === it.kind) return fail('invalid', 'новая вещь должна быть другого вида');
       if (a.gold < REFORGE_PRICE) return fail('insufficient', 'не хватает золота');
