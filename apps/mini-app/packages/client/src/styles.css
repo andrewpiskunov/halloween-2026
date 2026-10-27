@@ -475,3 +475,20 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .sec-h { margin: 4px 6px -6px; color: var(--dim); }
 .intel-bag { padding: 6px 0 8px; border-bottom: 1px solid var(--rule); }
 .intel-bag:last-child { border-bottom: 0; }
+
+/* Пульт: блок «Способности и вещи» */
+.gm-abilities .check { min-height: 40px; }
+.gm-journal { margin: 4px 0 8px; }
+.gm-act { padding: 6px 0 6px 10px; border-bottom: 1px solid var(--rule); border-left: 3px solid transparent; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.gm-act:last-child { border-bottom: 0; }
+.gm-act.hostile { border-left-color: var(--rule); }
+.gm-act.blocked { border-left-color: var(--acc); color: var(--acc); font-style: italic; }
+.gm-req { padding: 4px 0 10px; border-bottom: 1px solid var(--rule); }
+.gm-req:last-child { border-bottom: 0; }
+.gm-req .m-note { margin: 0 0 8px; }
+.gm-marks { margin: 4px 0; }
+.gm-mark-row { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--rule); }
+.gm-mark-row:last-child { border-bottom: 0; }
+.gm-mark-row > b { flex: 0 0 86px; overflow-wrap: anywhere; }
+.gm-mark-row > span { flex: 1; min-width: 0; }
+button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: pointer; min-height: 28px; }

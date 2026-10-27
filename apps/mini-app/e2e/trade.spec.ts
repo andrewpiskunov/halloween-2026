@@ -139,6 +139,35 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(lot).toContainText('вам за 2 золотых');
     await serafina.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
     await expect(serafina.locator('.item-block', { hasText: 'Осколок IV' })).toBeVisible();
+
+    // 9. Способность и вещь: Грета «Заменой ингредиента» делает Защитный талисман из двух Рос и активирует его;
+    //    ведущий видит обе записи в журнале применений и защиту в отметках.
+    await greta.locator('nav.tabs').getByRole('button', { name: 'Мастерская' }).click();
+    const wardRecipe = greta.locator('.item-block', { hasText: 'Защитный талисман' });
+    await wardRecipe.getByRole('button', { name: 'Создать со способностью' }).click();
+    await wardRecipe.locator('.choice .m-btns').nth(0).getByRole('button', { name: /пыль/ }).click();
+    await wardRecipe.locator('.choice .m-btns').nth(1).getByRole('button', { name: /роса/ }).click();
+    await wardRecipe.locator('.ab-craft').getByRole('button', { name: 'Создать со способностью' }).click();
+    await greta.getByRole('dialog').getByRole('button', { name: 'Применить' }).click();
+    await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
+    const ward = greta.locator('.item-block', { hasText: 'Защитный талисман' });
+    await ward.getByRole('button', { name: 'Использовать' }).click();
+    await greta.getByRole('dialog').getByRole('button', { name: 'Активировать' }).click();
+    await expect(greta.locator('.item-block', { hasText: 'Защитный талисман' })).toHaveCount(0);
+
+    const block = gm.locator('.gm-abilities');
+    await expect(block.locator('.gm-act').first()).toHaveText(/^Акт II, \d\d:\d\d\. Грета: Защитный талисман, защита$/);
+    await expect(block.locator('.gm-act').nth(1)).toHaveText(/^Акт II, \d\d:\d\d\. Грета: Замена ингредиента$/);
+    await block.getByText('только враждебные').click();
+    await expect(block.locator('.gm-act')).toHaveCount(0);
+    await block.getByText('только враждебные').click();
+    const mark = block.locator('.gm-mark-row', { hasText: 'Грета' }).getByRole('button', { name: /защита \(талисман\)/ });
+    await expect(mark).toBeVisible();
+    // «Снять» из отметок открывает исправление с выбранными игроком и полем.
+    await mark.click();
+    const fix = gm.locator('.m-card', { has: gm.getByRole('heading', { name: 'Исправление', exact: true }) });
+    await expect(fix.getByRole('combobox', { name: 'Игрок' })).toHaveText(/Грета/);
+    await expect(fix.getByRole('combobox', { name: 'Что исправить' })).toHaveText(/Защита/);
   } finally {
     await Promise.all([gmCtx.close(), gretaCtx.close(), serafinaCtx.close()]);
   }

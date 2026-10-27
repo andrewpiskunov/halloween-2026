@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
-import type { GmView, Ingredient } from '@fair/shared';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import type { Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
 import { Stepper } from '../../components/Stepper';
+import { Abilities, type FixPreset, type MarkField } from './Abilities';
 import { actPlan } from '../../gm/clock';
 import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
@@ -10,7 +11,17 @@ import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
 import { correctableItems, remainingMs } from '../../rules';
 import { ask, now, run, showToast } from '../../store';
 
-type Field = 'gold' | 'ingredient' | 'itemOwner';
+type Field = 'gold' | 'ingredient' | 'itemOwner' | MarkField;
+
+/** Подписи отметок для формы исправления и подтверждения. */
+const MARK_LABEL: Record<MarkField, string> = {
+  protection: 'Защита', thorns: 'Шипы', curse: 'Проклятие', discount: 'Скидка',
+  abilityUsed: 'Применение в акте', hostileAttempt: 'Попытка по игроку', guise: 'Облик',
+};
+const MARK_ICON: Record<MarkField, string> = {
+  protection: '🛡', thorns: '🌵', curse: '☠', discount: '🏷', abilityUsed: '✋', hostileAttempt: '⚔', guise: '🎭',
+};
+const isMark = (f: Field): f is MarkField => f in MARK_LABEL;
 
 /** Пульт: часы, акты, объявления и исправление ошибок. */
 export function Console({ v }: { v: GmView }) {
@@ -34,6 +45,7 @@ export function Console({ v }: { v: GmView }) {
   const current = running ? state.phase : setup ? null : 'final';
 
   const [text, setText] = useState('');
+  const [fix, setFix] = useState<FixPreset | null>(null);
   const announce = async () => {
     const r = await run({ type: 'gm.announce', text: text.trim() });
     if (r.ok) { setText(''); showToast('Объявлено'); }
@@ -85,6 +97,8 @@ export function Console({ v }: { v: GmView }) {
 
       <Lots v={v} />
 
+      <Abilities v={v} onFix={setFix} />
+
       <div class="m-card danger-zone">
         <h5>Сброс игры</h5>
         <p class="m-note">Удалит состав, явку, привязки игроков, вещи, сделки, алтари и журнал. Коды приглашений выдадутся заново, вы останетесь ведущим.</p>
@@ -111,7 +125,7 @@ export function Console({ v }: { v: GmView }) {
         )}
       </div>
 
-      <Correction v={v} />
+      <Correction v={v} preset={fix} />
     </>
   );
 }
@@ -184,7 +198,7 @@ const LOT_STATUS: Record<string, string> = {
   fixedPrice: 'выкуп', sold: 'продан', unsold: 'не продан',
 };
 
-function Correction({ v }: { v: GmView }) {
+function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
   const { state, content } = v;
   const name = (k: string) => content.roles.find(r => r.key === k)?.name ?? k;
   const [player, setPlayer] = useState(state.roster[0] ?? '');
@@ -195,6 +209,16 @@ function Correction({ v }: { v: GmView }) {
   const [itemId, setItemId] = useState('');
   const [newOwner, setNewOwner] = useState('');
   const [reason, setReason] = useState('');
+  const [on, setOn] = useState(true);
+  const [guise, setGuise] = useState('');
+  const card = useRef<HTMLDivElement>(null);
+
+  // «Снять» из таблицы отметок: игрок и поле уже выбраны, остаётся причина.
+  useEffect(() => {
+    if (!preset) return;
+    setPlayer(preset.player); setField(preset.field); setOn(preset.on);
+    card.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [preset]);
 
   const ownerLabel = (o: (typeof items)[number]['owner']) =>
     o.type === 'player' ? name(o.key) : o.type === 'altar' ? `алтарь ${o.side}` : 'лот';
@@ -205,24 +229,31 @@ function Correction({ v }: { v: GmView }) {
   const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';
   const curOwner = newOwner || state.roster[0] || '';
   const p = player || state.roster[0] || '';
-  const ready = reason.trim() !== '' && p !== '' && (field === 'itemOwner' ? curItem !== '' && curOwner !== '' : delta !== 0);
+  const ready = reason.trim() !== '' && p !== '' && (
+    field === 'itemOwner' ? curItem !== '' && curOwner !== ''
+      : field === 'guise' ? !on || guise.trim() !== ''
+        : isMark(field) ? true : delta !== 0);
 
   const submit = () => {
-    const change = field === 'gold' ? { field: 'gold' as const, delta }
-      : field === 'ingredient' ? { field: 'ingredient' as const, ingredient, delta }
-        : { field: 'itemOwner' as const, itemId: curItem, owner: { type: 'player' as const, key: curOwner } };
+    const change: CorrectionChange = field === 'gold' ? { field: 'gold', delta }
+      : field === 'ingredient' ? { field: 'ingredient', ingredient, delta }
+        : field === 'itemOwner' ? { field: 'itemOwner', itemId: curItem, owner: { type: 'player', key: curOwner } }
+          : field === 'guise' ? { field: 'guise', name: on ? guise.trim() : null }
+            : { field, value: on };
     const what = field === 'gold' ? `золото ${delta > 0 ? '+' : ''}${delta}`
       : field === 'ingredient' ? `${INGREDIENTS.find(i => i.key === ingredient)?.short} ${delta > 0 ? '+' : ''}${delta}`
-        : `вещь отдать: ${name(curOwner)}`;
+        : field === 'itemOwner' ? `вещь отдать: ${name(curOwner)}`
+          : field === 'guise' && on ? `облик «${guise.trim()}»`
+            : `${MARK_LABEL[field]}: ${on ? 'поставить' : 'снять'}`;
     ask({
       title: 'Исправить?', text: `${name(p)}: ${what}. Причина: ${reason.trim()}`, okLabel: 'Исправить', danger: true,
-      onOk: () => { void run({ type: 'gm.correct', playerKey: p, change, reason: reason.trim() }).then(r => { if (r.ok) { setReason(''); setDelta(0); } }); },
+      onOk: () => { void run({ type: 'gm.correct', playerKey: p, change, reason: reason.trim() }).then(r => { if (r.ok) { setReason(''); setDelta(0); setGuise(''); } }); },
     });
   };
 
 
   return (
-    <div class="m-card">
+    <div class="m-card" ref={card}>
       <h5>Исправление</h5>
       <div class="field"><span>Игрок</span>
         <Select label="Игрок" value={p} onChange={setPlayer} options={state.roster.map(roleOption)} />
@@ -232,6 +263,7 @@ function Correction({ v }: { v: GmView }) {
           { value: 'gold', label: 'Золото', icon: '🪙', image: resourceImageUrl('gold') },
           { value: 'ingredient', label: 'Ингредиент', icon: '🔥', image: resourceImageUrl('ash') },
           { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
+          ...(Object.keys(MARK_LABEL) as MarkField[]).map(f => ({ value: f, label: MARK_LABEL[f], icon: MARK_ICON[f] })),
         ]} />
       </div>
       {field === 'ingredient' && (
@@ -239,7 +271,20 @@ function Correction({ v }: { v: GmView }) {
           <Select label="Ингредиент" value={ingredient} onChange={s => setIngredient(s as Ingredient)} options={INGREDIENTS.map(i => ({ value: i.key, label: i.name, icon: i.emoji, image: resourceImageUrl(i.key) }))} />
         </div>
       )}
-      {field !== 'itemOwner' ? (
+      {isMark(field) ? (
+        <>
+          <div class="m-btns two" role="group" aria-label="Поставить или снять">
+            <Button kind={on ? 'main' : 'sec'} small onClick={() => setOn(true)}>Поставить</Button>
+            <Button kind={on ? 'sec' : 'main'} small onClick={() => setOn(false)}>Снять</Button>
+          </div>
+          {field === 'guise' && on && (
+            <label class="field"><span>Облик</span>
+              <input type="text" value={guise} maxLength={40} placeholder="Например: Странник в сером" onInput={e => setGuise((e.currentTarget as HTMLInputElement).value)} />
+            </label>
+          )}
+          <p class="m-note">Отметки правятся только у игрока на ярмарке. {field === 'abilityUsed' ? 'Снять — вернуть применение в этом акте; если просьба ждёт ответа, сначала отмените её.' : field === 'protection' ? 'Защита одна: поставить можно только тому, у кого её нет.' : ''}</p>
+        </>
+      ) : field !== 'itemOwner' ? (
         <div class="m-row"><span>Изменить на</span><Stepper value={delta} onChange={setDelta} min={-10} max={10} label="Изменение" /></div>
       ) : (
         <>
