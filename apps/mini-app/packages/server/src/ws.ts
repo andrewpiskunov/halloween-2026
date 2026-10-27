@@ -23,21 +23,28 @@ const isPlain = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
 
 /**
- * Поля исправления ведущего (change), где null — значимое значение: цель «по журналу» (value),
- * снять облик (name), снять сторону (side). В других местах null не принимается.
+ * Поля исправления ведущего, где null — значимое значение: цель «по журналу» (change.value),
+ * снять облик (change.name), снять сторону (change.side). Только в gm.correct и только прямо в change;
+ * в других командах и на других путях null не принимается.
  */
 const NULLABLE_FIELDS = new Set(['value', 'name', 'side']);
 
 /** Значения JSON допустимых видов: строки ограниченной длины, конечные числа, булевы, вложенность до MAX_DEPTH. */
-function validValue(v: unknown, field: string, depth: number): boolean {
+function validValue(v: unknown, field: string, depth: number, nullable: (path: string[]) => boolean, path: string[] = []): boolean {
   if (depth > MAX_DEPTH) return false;
-  if (v === null) return depth >= 2 && NULLABLE_FIELDS.has(field);
+  if (v === null) return nullable(path);
   if (typeof v === 'string') return v.length <= (TEXT_FIELDS.has(field) ? MAX_TEXT : MAX_KEY);
   if (typeof v === 'number') return Number.isFinite(v);
   if (typeof v === 'boolean') return true;
-  if (Array.isArray(v)) return v.length <= 100 && v.every(x => validValue(x, field, depth + 1));
-  if (isPlain(v)) return Object.entries(v).every(([k, x]) => validValue(x, k, depth + 1));
+  if (Array.isArray(v)) return v.length <= 100 && v.every((x, i) => validValue(x, field, depth + 1, nullable, [...path, String(i)]));
+  if (isPlain(v)) return Object.entries(v).every(([k, x]) => validValue(x, k, depth + 1, nullable, [...path, k]));
   return false;
+}
+
+/** Где команда допускает null: только change.value, change.name, change.side у gm.correct. */
+function nullableFor(type: string): (path: string[]) => boolean {
+  if (type !== 'gm.correct') return () => false;
+  return path => path.length === 2 && path[0] === 'change' && NULLABLE_FIELDS.has(path[1]);
 }
 
 /** Ключевые поля объекта, если есть, — строки. */
@@ -65,7 +72,7 @@ export function parseCommandMessage(raw: string): { id: string; cmd: Command } |
   if (typeof cmd.type !== 'string' || !Object.hasOwn(COMMAND_TYPES, cmd.type)) return { id };
   if (!keysAreStrings(cmd)) return { id };
   if (cmd.type === 'ability.use' && !validUse(cmd.use)) return { id };
-  if (!validValue(cmd, 'cmd', 0)) return { id };
+  if (!validValue(cmd, 'cmd', 0, nullableFor(cmd.type))) return { id };
   return { id, cmd: cmd as unknown as Command };
 }
 

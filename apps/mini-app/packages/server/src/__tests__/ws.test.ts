@@ -7,7 +7,7 @@ import type { Config } from '../config';
 import { EventStore } from '../store';
 import { Game } from '../game';
 import { buildApp } from '../http';
-import { attachWs, closeWs } from '../ws';
+import { attachWs, closeWs, parseCommandMessage } from '../ws';
 import { content, empty, nextCmd, gm } from './fixtures';
 
 const config: Config = {
@@ -306,6 +306,21 @@ test('исправление цели с value: null проходит разбо
   expect(game.state().players.o1.goalOverrides).toBeUndefined();
   // Вне исправления null по-прежнему некорректное сообщение.
   expect(await g.cmd('announce-null', { type: 'gm.announce', text: null })).toMatchObject({ ok: false, error: 'invalid', detail: 'bad message' });
+});
+
+test('null в разборе команды: только в gm.correct и только change.value, change.name, change.side', () => {
+  const parse = (cmd: unknown) => parseCommandMessage(JSON.stringify({ kind: 'cmd', id: 'n', cmd }));
+  const ok = (cmd: unknown) => expect('cmd' in parse(cmd), JSON.stringify(cmd)).toBe(true);
+  const bad = (cmd: unknown) => expect(parse(cmd), JSON.stringify(cmd)).toEqual({ id: 'n' });
+  ok({ type: 'gm.correct', playerKey: 'o13', change: { field: 'side', side: null }, reason: 'снять выбор' });
+  ok({ type: 'gm.correct', playerKey: 'o1', change: { field: 'guise', name: null }, reason: 'снять облик' });
+  ok({ type: 'gm.correct', playerKey: 'o1', change: { field: 'goal', index: 0, value: null }, reason: 'по журналу' });
+  bad({ type: 'gm.correct', playerKey: 'o1', change: { field: 'itemOwner', itemId: null, owner: { type: 'player', key: 'o2' } }, reason: 'x' });
+  bad({ type: 'gm.correct', playerKey: 'o1', change: { field: 'itemOwner', itemId: 'i1', owner: { type: 'player', key: 'o2', name: null } }, reason: 'x' });
+  bad({ type: 'gm.correct', playerKey: null, change: { field: 'gold', delta: 1 }, reason: 'x' });
+  // Вне gm.correct null не принимается даже в полях с теми же именами.
+  bad({ type: 'offer.create', to: 'o2', give: { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [], name: null }, get: { gold: 1, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] }, service: false });
+  bad({ type: 'offer.create', to: 'o2', give: { gold: 0, ingredients: { ash: 0, moon: 0, dew: null }, items: [] }, get: { gold: 1, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] }, service: false });
 });
 
 test('закрытие по сокету: session.close от игрока → forbidden; player.chooseSide с неизвестной стороной → not_found; событий нет', async () => {
