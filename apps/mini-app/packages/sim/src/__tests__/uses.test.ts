@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { ABILITY_BY_ROLE, ABILITY_SPECS, type AbilityKind } from '@fair/shared';
 import { Rng } from '../rng';
-import { ALLOWED_INVALID, HOSTILE, useFor } from '../uses';
+import { ALLOWED_INVALID, HOSTILE, retriesFor, useFor } from '../uses';
 import { Game } from './fixture';
 
 /** Виды, которым нужна вещь или защита: без неё useFor возвращает null. */
@@ -137,5 +137,15 @@ describe('useFor', () => {
     const dir = fileURLToPath(new URL('../../../shared/src/engine/', import.meta.url));
     const source = readdirSync(dir).filter(f => f.endsWith('.ts')).map(f => readFileSync(dir + f, 'utf8')).join('\n');
     for (const list of Object.values(ALLOWED_INVALID)) for (const s of list) expect(source, s).toContain(`'${s}'`);
+  });
+});
+
+describe('retriesFor', () => {
+  test('кража ингредиента: та же цель, два других ингредиента; другие виды без повторов', () => {
+    expect(retriesFor({ kind: 'stealIngredient', target: 'o1', ingredient: 'moon' })).toEqual([
+      { kind: 'stealIngredient', target: 'o1', ingredient: 'ash' },
+      { kind: 'stealIngredient', target: 'o1', ingredient: 'dew' },
+    ]);
+    expect(retriesFor({ kind: 'stealGold', target: 'o1' })).toEqual([]);
   });
 });

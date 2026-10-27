@@ -3,11 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import type { Command, GameState } from '@fair/shared';
 import {
-  ALLOWED_FAIL_PREFIXES, ALLOWED_FAIL_REASONS, actNextLabel, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay, checkResponses,
+  ALLOWED_FAIL_PREFIXES, ALLOWED_FAIL_REASONS, abilityWorked, actNextLabel, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay,
+  checkResponses, checkStart, checkViews,
 } from '../checks';
+import type { BotConn } from '../client';
 import type { CmdOutcome } from '../client';
 import type { CommandLog } from '../evening';
-import { Game } from './fixture';
+import { content, Game } from './fixture';
 
 const entry = (actor: string, cmd: Command, outcome: Partial<CmdOutcome>, expectedRefusal?: string): CommandLog =>
   ({ turn: 1, actor, cmd, outcome: { ok: false, ms: 1, ...outcome }, ...(expectedRefusal ? { expectedRefusal } : {}) });
@@ -34,6 +36,16 @@ describe('checkResponses', () => {
     ]);
     expect(r.ok).toBe(false);
     expect(r.details).toHaveLength(5);
+  });
+
+  test('ведущий строг: любой отказ ему — ошибка, кроме позднего lot.close', () => {
+    const r = checkResponses([
+      entry('gm', { type: 'gm.correct', playerKey: 'o1', change: { field: 'gold', delta: -99 }, reason: 'x' }, { error: 'insufficient' }),
+      entry('gm', { type: 'lot.close', id: 'l' }, { error: 'phase' }),
+      entry('gm', { type: 'lot.close', id: 'l' }, { error: 'invalid', detail: 'закрытые ставки не идут' }),
+    ]);
+    expect(r.details).toHaveLength(2);
+    expect(r.details.every(d => d.startsWith('отказ ведущему'))).toBe(true);
   });
 
   test('причины невыполненных просьб: допустимые проходят, прочие падают', () => {
@@ -76,12 +88,38 @@ describe('checkCoverage', () => {
     expect(checkCoverage(log, 30, g.s).details).not.toContain('команда без ok: lot.buyout');
   });
 
+  test('враждебная способность, отражённая защитой, засчитана; невраждебная blocked — нет', () => {
+    const g = new Game(12);
+    const rec = (author: string, ability: 'stealGold' | 'protectOther') => ({
+      id: '1', at: 1, act: 3 as const, author, source: { type: 'ability' as const, ability }, outcome: 'blocked' as const, hostile: true, effects: [],
+    });
+    const s = { ...g.s, actions: [rec('r4', 'stealGold'), rec('t3', 'protectOther')] };
+    expect(abilityWorked(s, 'r4', 'stealGold')).toBe(true);
+    expect(abilityWorked(s, 't3', 'protectOther')).toBe(false);
+  });
+
   test('перенос защиты без защитника — пояснение, а не пропуск покрытия', () => {
     const g = new Game(12);
     g.s = { ...g.s, players: { ...g.s.players, o9: { ...g.s.players.o9, present: false } } };
     const r = checkCoverage([], 12, g.s);
     expect(r.details).not.toContain('способность не сработала: o16:transferProtection');
     expect(r.details.some(d => d.includes('нет защитника'))).toBe(true);
+  });
+});
+
+describe('сверка проекций: набор ботов', () => {
+  const botOf = (g: Game, key: string): BotConn => ({
+    actor: { type: 'player', roleKey: key }, view: () => g.view(key), seq: () => g.s.seq,
+    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, maxViewBytes: () => 0, close: () => {},
+  });
+
+  test('бот без присутствующей роли или роль без бота — ошибка', () => {
+    const g = new Game(12);
+    const bots = Object.fromEntries(g.s.roster.map(k => [k, botOf(g, k)]));
+    expect(checkViews(bots, g.s, content).details.filter(d => d.startsWith('боты'))).toEqual([]);
+    const { o1: _drop, ...without } = bots;
+    expect(checkViews(without, g.s, content).ok).toBe(false);
+    expect(checkStart(without, g.s, content).details[0]).toMatch(/^боты .* не совпадают/);
   });
 });
 

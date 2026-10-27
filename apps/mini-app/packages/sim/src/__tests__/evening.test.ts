@@ -1,21 +1,12 @@
-import { afterAll, beforeAll, expect, test } from 'vitest';
-import { Game } from '@fair/server/src/game';
-import { runEvening } from '../evening';
-import { startServer, type TestServer } from './server-fixture';
+import { beforeAll, expect, test } from 'vitest';
+import type { EveningResult } from '../evening';
+import { runTwelve } from './evening-run';
 
-let server: TestServer;
+let result: EveningResult;
 
-beforeAll(async () => { server = await startServer(); });
-afterAll(async () => { await server.close(); });
+beforeAll(async () => { ({ result } = await runTwelve()); }, 60_000);
 
-test('вечер на 12: сценарий проходит, проверки зелёные, покрытие полное', async () => {
-  const { store, content, opts } = server;
-  const result = await runEvening({
-    baseUrl: server.base, players: 12, seed: 1,
-    replay: async () => Game.open(store, content, opts).state(),
-    events: async () => store.all(),
-  });
-
+test('вечер на 12: сценарий проходит, проверки зелёные, покрытие полное', () => {
   const failed = result.checks.filter(c => !c.ok).map(c => `${c.name}: ${c.details.join('; ')}`);
   expect(failed).toEqual([]);
   expect(result.ok).toBe(true);
@@ -37,4 +28,4 @@ test('вечер на 12: сценарий проходит, проверки з
   // Проверки с внешними источниками не пропущены.
   expect(result.checks.find(c => c.name === 'replay')?.details.join(' ')).not.toMatch(/пропущ/);
   expect(result.checks.find(c => c.name === 'gold')?.details.join(' ')).not.toMatch(/пропущ/);
-}, 60_000);
+});

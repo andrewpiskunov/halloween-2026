@@ -7,7 +7,7 @@ import {
 import type { BotConn } from './client';
 import type { CheckResult, CommandLog } from './evening';
 import { forbiddenStrings, privacyViolations } from './privacy';
-import { ALLOWED_INVALID } from './uses';
+import { ALLOWED_INVALID, HOSTILE } from './uses';
 
 /** Отказы, допустимые на любом шаге (§3.1): ресурсы, резерв, лимит, вещь ушла, фаза. */
 const ALLOWED_ERRORS = new Set(['insufficient', 'reserved', 'limit', 'not_found', 'not_owner', 'phase']);
@@ -55,11 +55,15 @@ export function checkResponses(log: CommandLog[], state?: GameState): CheckResul
       if (o.ok || o.error !== e.expectedRefusal) bad.push(`проба ожидала ${e.expectedRefusal}: ${describe(e)}`);
       continue;
     }
-    if (o.ok || ALLOWED_ERRORS.has(o.error ?? '')) continue;
-    if (o.error === 'invalid') {
-      if (e.cmd.type === 'ability.use' && ALLOWED_INVALID[e.cmd.use.kind].some(t => o.detail?.includes(t))) continue;
-      if (e.actor === 'gm' && e.cmd.type === 'lot.close' && o.detail === GM_LATE_CLOSE) continue;
+    if (o.ok) continue;
+    // Ведущий строг: его команды обязаны пройти, кроме позднего lot.close по уже закрытому торгу.
+    if (e.actor === 'gm') {
+      if (e.cmd.type === 'lot.close' && o.error === 'invalid' && o.detail === GM_LATE_CLOSE) continue;
+      bad.push(`отказ ведущему: ${describe(e)}`);
+      continue;
     }
+    if (ALLOWED_ERRORS.has(o.error ?? '')) continue;
+    if (o.error === 'invalid' && e.cmd.type === 'ability.use' && ALLOWED_INVALID[e.cmd.use.kind].some(t => o.detail?.includes(t))) continue;
     bad.push(`недопустимый отказ: ${describe(e)}`);
   }
   for (const r of Object.values(state?.requests ?? {})) {
@@ -94,12 +98,20 @@ export function checkInvariantsAt(snapshots: { label: string; state: GameState }
 const ownedCount = (state: GameState, role: string) =>
   Object.values(state.items).filter(i => i.owner.type === 'player' && i.owner.key === role).length;
 
+/** Боты ровно у присутствующих ролей состава: иначе сверка молча пропустила бы роль. */
+function rosterMismatch(bots: Record<string, BotConn>, gmState: GameState): string[] {
+  const present = gmState.roster.filter(k => gmState.players[k]?.present).sort();
+  const have = Object.keys(bots).sort();
+  if (isDeepStrictEqual(present, have)) return [];
+  return [`боты ${have.join(',')} не совпадают с присутствующими ролями ${present.join(',')}`];
+}
+
 /**
  * §3.3 при равных seq: золото и число вещей в проекции равны состоянию ведущего; приватность (privacy.ts);
  * текста «Правды» нет; в revealed есть итоги и две цели.
  */
 export function checkViews(bots: Record<string, BotConn>, gmState: GameState, content: Content): CheckResult {
-  const bad: string[] = [];
+  const bad: string[] = rosterMismatch(bots, gmState);
   const truth = [content.story.truth, content.story.truth_read].filter(t => t.trim().length > 0);
   for (const [role, bot] of Object.entries(bots)) {
     const view = bot.view() as PlayerView;
@@ -121,7 +133,7 @@ export function checkViews(bots: Record<string, BotConn>, gmState: GameState, co
 
 /** Подготовка (§2.3): у каждого стартовые золото, ингредиенты и вещи по содержимому. */
 export function checkStart(bots: Record<string, BotConn>, gmState: GameState, content: Content): CheckResult {
-  const bad: string[] = [];
+  const bad: string[] = rosterMismatch(bots, gmState);
   if (gmState.phase !== 'act1') bad.push(`фаза ${gmState.phase}, ожидалась act1`);
   for (const [role, bot] of Object.entries(bots)) {
     const view = bot.view() as PlayerView;
@@ -146,9 +158,13 @@ function excludedCommands(players: 12 | 30): Set<string> {
   return ex;
 }
 
-/** Способность роли сработала (§2.4): done-запись своего вида или принятая просьба. */
-function abilityWorked(state: GameState, role: string, kind: AbilityKind): boolean {
-  return state.actions.some(a => a.author === role && a.source.type === 'ability' && a.source.ability === kind && a.outcome === 'done')
+/**
+ * Способность роли сработала (§2.4): done-запись своего вида или принятая просьба. Враждебная способность,
+ * отражённая защитой (blocked), тоже засчитывается: попытка дошла до цели, а защита цели в проекции не видна.
+ */
+export function abilityWorked(state: GameState, role: string, kind: AbilityKind): boolean {
+  return state.actions.some(a => a.author === role && a.source.type === 'ability' && a.source.ability === kind
+      && (a.outcome === 'done' || (a.outcome === 'blocked' && HOSTILE.has(kind))))
     || Object.values(state.requests).some(r => r.author === role && r.action.type === 'ability' && r.status === 'accepted');
 }
 

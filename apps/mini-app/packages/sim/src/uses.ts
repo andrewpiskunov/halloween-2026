@@ -141,3 +141,13 @@ export function useFor(kind: AbilityKind, view: PlayerView, rng: Rng): AbilityUs
     case 'askYesNo': return target(t => ({ kind, target: t, question: 'Вы видели сегодня осколок?' }));
   }
 }
+
+/**
+ * Другие попытки в том же ходу после отказа «у цели нечего взять»: тот же человек, другие ингредиенты
+ * по порядку. Отказ движка ничего не тратит (ни применения, ни попытки по цели), а запасы цели в проекции
+ * не видны: иначе успех кражи ингредиента зависел бы от угадывания и покрытие плавало бы от прогона к прогону.
+ */
+export function retriesFor(use: AbilityUse): AbilityUse[] {
+  if (use.kind !== 'stealIngredient') return [];
+  return INGREDIENTS.filter(k => k !== use.ingredient).map(ingredient => ({ ...use, ingredient }));
+}

@@ -1,6 +1,6 @@
 // Оркестратор прогона вечера (спецификация этапа 6, §2): боты, строгая очередь ходов, журнал прогона, проверки.
 import {
-  loadContent, type Command, type Content, type Event, type GameState, type GmView, type PlayerView,
+  loadContent, type Command, type Content, type Event, type GameState, type GmView, type Phase, type PlayerView,
 } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn, type CmdOutcome } from './client';
 import {
@@ -8,6 +8,7 @@ import {
 } from './checks';
 import { answerIncoming, playerAction, type Act, type TurnMemory } from './policy';
 import { Rng } from './rng';
+import { retriesFor } from './uses';
 import { playEvening } from './scenario';
 
 export interface EveningOptions {
@@ -21,7 +22,11 @@ export interface EveningOptions {
   log?: (line: string) => void;
 }
 
-export interface CommandLog { turn: number; actor: string; cmd: Command; outcome: CmdOutcome; expectedRefusal?: string }
+export interface CommandLog {
+  turn: number; actor: string; cmd: Command; outcome: CmdOutcome; expectedRefusal?: string;
+  /** Фаза игры в момент отправки: для хода вечера по актам в отчёте. */
+  phase?: Phase;
+}
 export interface CheckResult { name: string; ok: boolean; details: string[] }
 export interface EveningResult {
   ok: boolean;
@@ -133,6 +138,7 @@ export class Ctx {
   }
 
   private record(entry: CommandLog): void {
+    entry.phase ??= this.gm ? this.gmState().phase : 'setup';
     this.log.push(entry);
     const o = entry.outcome;
     const res = o.ok ? 'ok' : `${o.error}${o.detail ? ` (${o.detail})` : ''}`;
@@ -147,9 +153,10 @@ export class Ctx {
       const it = actor === 'gm' ? undefined : this.view(actor).me.items.find(i => i.id === cmd.itemId);
       if (it) this.itemKinds[cmd.itemId] = it.kind;
     }
+    const phase = this.gmState().phase;
     const outcome = await bot.send(cmd);
     if (outcome.ok && outcome.seq !== undefined) this.lastSeq = Math.max(this.lastSeq, outcome.seq);
-    this.record({ turn: this.turnNo, actor, cmd, outcome, ...(expectedRefusal !== undefined ? { expectedRefusal } : {}) });
+    this.record({ turn: this.turnNo, actor, cmd, outcome, phase, ...(expectedRefusal !== undefined ? { expectedRefusal } : {}) });
     return outcome;
   }
 
@@ -213,8 +220,14 @@ export class Ctx {
     }
     const cmd = playerAction(view, this.act, mem, this.rng, this.gmState().roster);
     if (cmd && !t.veto?.(cmd)) {
-      const outcome = await this.send(role, cmd);
+      let outcome = await this.send(role, cmd);
       if (cmd.type === 'shop.buy' && !outcome.ok) mem.boughtPending = null;
+      if (cmd.type === 'ability.use' && !outcome.ok && outcome.error === 'insufficient') {
+        for (const use of retriesFor(cmd.use)) {
+          outcome = await this.send(role, { type: 'ability.use', use });
+          if (outcome.ok || outcome.error !== 'insufficient') break;
+        }
+      }
       if (cmd.type === 'ability.use' && !outcome.ok) this.abilityRefused.add(role);
       await t.after?.(cmd, outcome);
     }
@@ -225,15 +238,28 @@ export class Ctx {
     this.snapshots.push({ label, state: this.gmState() });
   }
 
+  /**
+   * Перед сверкой все соединения догоняют seq ведущего, а не только последнего результата: системные события
+   * (закрытие торга по сроку) могли продвинуть состояние. Ведущий мог за это время уйти дальше, поэтому до трёх попыток.
+   */
+  private async settle(): Promise<void> {
+    await this.waitAll();
+    for (let i = 0; i < 3; i++) {
+      const target = Math.max(this.gm.seq(), ...Object.values(this.bots).map(b => b.seq()));
+      await Promise.all([this.gm, ...Object.values(this.bots)].map(b => b.waitSeq(target)));
+      if ([this.gm, ...Object.values(this.bots)].every(b => b.seq() === this.gm.seq())) return;
+    }
+  }
+
   /** Сверка проекций игроков с состоянием ведущего (§3.3) при равных seq. */
   async verifyViews(label: string): Promise<void> {
-    await this.waitAll();
+    await this.settle();
     const r = checkViews(this.bots, this.gmState(), this.content);
     this.viewChecks.push({ ...r, name: `views:${label}` });
   }
 
   async verifyStart(): Promise<void> {
-    await this.waitAll();
+    await this.settle();
     this.viewChecks.push(checkStart(this.bots, this.gmState(), this.content));
   }
 

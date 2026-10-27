@@ -3,6 +3,7 @@ import { ABILITY_BY_ROLE, type AltarSide, type Command, type PlayerView } from '
 import { actNextLabel } from './checks';
 import { fetchCodes } from './client';
 import { PLAYER_USER_BASE, REBIND_USER_BASE, type Ctx } from './evening';
+import { freeItems } from './items';
 import { bidFor, type Act } from './policy';
 
 /** Кругов в акте (§9, решение 1). */
@@ -179,12 +180,7 @@ async function act2(ctx: Ctx): Promise<void> {
             const amount = bidFor(view, lotA.id, ctx.mem[role], ctx.rng);
             if (amount !== null) { await ctx.send(role, { type: 'lot.bid', id: lotA.id, amount }); return true; }
           }
-          const fixed = lotB && view.lots.find(l => l.id === lotB.id && l.status === 'fixedPrice');
-          if (round === 6 && fixed && buyer === undefined && view.me.available.gold >= (fixed.fixedPrice ?? Infinity)) {
-            buyer = role;
-            await ctx.send(role, { type: 'lot.buyout', id: lotB!.id });
-            return true;
-          }
+          if (round === 6 && buyer === undefined && await buyoutOnce(ctx, role, view)) { buyer = role; return true; }
           return false;
         },
         // Одна отмена своей просьбы за акт: сразу после создания, до ответа одобряющего.
@@ -214,9 +210,41 @@ async function act3(ctx: Ctx): Promise<void> {
     }
     // Пауза и снятие подряд: в промежутке ботов не вызывают.
     if (round === ROUNDS) await gmRound(ctx, [{ type: 'clock.pause' }, { type: 'clock.resume' }]);
-    for (const role of present) await ctx.turn(role, { before: view => declineOnce(ctx, role, view) });
+    for (const role of present) {
+      await ctx.turn(role, {
+        before: view => declineOnce(ctx, role, view),
+        special: async view => await buyoutOnce(ctx, role, view) || (round === ROUNDS && await useWardOnce(ctx, role, view)),
+      });
+    }
   }
   await endAct(ctx, 3);
+}
+
+/**
+ * Выкуп лота по цене (§2.3, акт II, круг 6), один за вечер: если в круге 6 ни у кого не хватило свободного
+ * золота, выкуп пробуется в акте III — лот продаётся по цене до закрытия ярмарки. Без этого покрытие
+ * lot.buyout при 12 зависело бы от того, кому достался лот акта II (ничья решается случайностью сервера).
+ */
+async function buyoutOnce(ctx: Ctx, role: string, view: PlayerView): Promise<boolean> {
+  if (ctx.log.some(e => e.cmd.type === 'lot.buyout' && e.outcome.ok)) return false;
+  const fixed = view.lots.find(l => l.status === 'fixedPrice' && l.fixedPrice !== undefined && view.me.available.gold >= l.fixedPrice);
+  if (!fixed) return false;
+  await ctx.send(role, { type: 'lot.buyout', id: fixed.id });
+  return true;
+}
+
+/**
+ * Покрытие вида ward (§3.6): если до последнего круга акта III талисман не применил никто, его применяет
+ * первый по составу держатель без защиты, даже когда талисман нужен его цели «держать». Иначе покрытие
+ * зависело бы от зерна: талисманов за вечер на 12 изготавливают один-два, и они могут уйти к такому игроку.
+ */
+async function useWardOnce(ctx: Ctx, role: string, view: PlayerView): Promise<boolean> {
+  const used = ctx.log.some(e => e.cmd.type === 'item.use' && e.outcome.ok && ctx.itemKinds[e.cmd.itemId] === 'ward');
+  if (used || view.me.player.protection !== undefined) return false;
+  const ward = freeItems(view, ['ward'])[0];
+  if (!ward) return false;
+  await ctx.send(role, { type: 'item.use', itemId: ward.id });
+  return true;
 }
 
 /**
