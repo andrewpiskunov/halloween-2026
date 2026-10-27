@@ -102,10 +102,9 @@ describe('сценарии Б–Г: N=12', () => {
     expect(s.phase).toBe('setup');
   });
 
-  test('open дважды → phase; setPresent и toggleRole после open → phase', () => {
+  test('open дважды → phase; toggleRole и setN после open → phase (setPresent после open — presence.test.ts)', () => {
     const s = makeGame(12);
     expect(run(s, { type: 'session.open' }, gm)).toMatchObject({ ok: false, error: 'phase' });
-    expect(run(s, { type: 'player.setPresent', roleKey: 'o1', present: false }, gm)).toMatchObject({ ok: false, error: 'phase' });
     expect(run(s, { type: 'session.toggleRole', roleKey: 'o1' }, gm)).toMatchObject({ ok: false, error: 'phase' });
     expect(run(s, { type: 'session.setN', n: 13 }, gm)).toMatchObject({ ok: false, error: 'phase' });
   });

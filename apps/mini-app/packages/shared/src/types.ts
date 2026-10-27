@@ -27,6 +27,8 @@ export interface Player {
   hostileAttemptsAgainstInAct: number;
   /** Исправления ведущего по личным целям: null или отсутствие — считать по журналу. */
   goalOverrides?: [boolean | null, boolean | null];
+  /** Когда выдан стартовый набор: при открытии или при первом приходе опоздавшего. */
+  startIssuedAt?: number;
 }
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export interface Offer { id: string; from: string; to: string; give: Bundle; get: Bundle; service: boolean; status: OfferStatus; createdAt: number; expiresAt: number; reason?: string }

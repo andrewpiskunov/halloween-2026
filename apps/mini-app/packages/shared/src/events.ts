@@ -20,6 +20,10 @@ export interface RoleToggled extends EventBase { type: 'RoleToggled'; roleKey: s
 export interface PlayerBound extends EventBase { type: 'PlayerBound'; roleKey: string | 'gm'; telegramId: number }
 /** Ведущий отметил явку игрока. */
 export interface PresenceSet extends EventBase { type: 'PresenceSet'; roleKey: string; present: boolean }
+/** Игрок пришёл после открытия; startSet — впервые, ему выдан стартовый набор. */
+export interface PlayerArrived extends EventBase { type: 'PlayerArrived'; roleKey: string; startSet: boolean }
+/** Ведущий отметил, что игрок ушёл после открытия: вещи и золото остаются у него. */
+export interface PlayerLeft extends EventBase { type: 'PlayerLeft'; roleKey: string }
 /** Ярмарка открыта: всё начальное состояние первого акта. */
 export interface FairOpened extends EventBase {
   type: 'FairOpened';
@@ -147,7 +151,7 @@ export interface FairClosed extends EventBase {
 export interface Revealed extends EventBase { type: 'Revealed' }
 
 // События следующих задач добавляются в объединение по мере реализации.
-export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
+export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | PlayerArrived | PlayerLeft | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
   | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought

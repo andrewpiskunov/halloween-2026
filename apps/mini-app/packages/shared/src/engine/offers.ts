@@ -1,3 +1,4 @@
+import type { OfferClosed } from '../events';
 import type { Bundle, GameState, Item, Offer, TradeRecord, TradeSide, Want } from '../types';
 import { INGREDIENTS, available, isTradable, transfer } from './bundles';
 import { isActPhase, participant } from './guards';
@@ -81,6 +82,7 @@ export const offerCommands: CommandHandlers = {
     const from = participant(state, ctx.actor);
     if (!from) return fail('forbidden');
     if (!isActPhase(state)) return fail('phase');
+    if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     if (!state.roster.includes(cmd.to) || !state.players[cmd.to]?.present) return fail('not_found', cmd.to);
     if (cmd.to === from) return fail('invalid', 'нельзя предлагать самому себе');
     if (!validShape(cmd.give) || !validShape(cmd.get)) return fail('invalid', 'некорректные количества');
@@ -97,6 +99,8 @@ export const offerCommands: CommandHandlers = {
 
   'offer.accept': (state, _content, cmd, ctx) => {
     if (!isActPhase(state)) return fail('phase');
+    // На паузе новые сделки не заключаются; отклонить и отозвать можно (спек этапа 7, §7).
+    if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
     if (participant(state, ctx.actor) !== o.to) return fail('forbidden');
@@ -139,6 +143,13 @@ export const offerCommands: CommandHandlers = {
     return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'timeout' });
   },
 };
+
+/** Отмена ожидающих предложений, где игрок автор или адресат: резервы снимет редьюсер OfferClosed. */
+export function cancelOffersOf(state: GameState, key: string, at: number): OfferClosed[] {
+  return Object.values(state.offers)
+    .filter(o => o.status === 'pending' && (o.from === key || o.to === key))
+    .map(o => ({ type: 'OfferClosed', at, id: o.id, status: 'cancelled', reason: 'left' }));
+}
 
 /** Снимает резерв автора: золото и метки reservedFor на вещах этого предложения. */
 export function release(state: GameState, o: Offer): GameState {

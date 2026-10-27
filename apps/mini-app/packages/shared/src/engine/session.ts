@@ -2,6 +2,9 @@ import type { Content } from '../content';
 import type { Actor, Ctx } from '../commands';
 import type { FairOpened } from '../events';
 import type { Altar, AltarSide, Counts, GameState, Item, Lot, Player } from '../types';
+import { cancelRequestsOf } from './consent';
+import { isActPhase } from './guards';
+import { cancelOffersOf } from './offers';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 import { defaultRoster, MAX_N, MIN_N } from './roster';
 
@@ -31,7 +34,7 @@ function codesFrom(content: Content, ctx: Ctx): Record<string, string> {
   return codes;
 }
 
-const START_GOLD = 6;
+export const START_GOLD = 6;
 const FIRST_ACT_LOTS = 4;
 const BASE_ALTARS: AltarSide[] = ['wake', 'bind', 'break'];
 // Стартовые владельцы улик; улика A приходит с осколком IV во втором акте и при открытии не создаётся.
@@ -81,7 +84,7 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
   for (const key of state.roster) {
     const p = state.players[key];
     players[key] = p.present
-      ? { ...p, gold: START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle }, curse: CURSED_AT_START.includes(key) }
+      ? { ...p, gold: START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle }, curse: CURSED_AT_START.includes(key), startIssuedAt: at }
       : { ...p, gold: 0, ingredients: zero() };
   }
   const nPresent = state.roster.filter(present).length;
@@ -175,9 +178,21 @@ export const sessionCommands: CommandHandlers = {
 
   'player.setPresent': (state, _content, cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
-    if (state.phase !== 'setup') return fail('phase');
-    if (!state.players[cmd.roleKey]) return fail('not_found', cmd.roleKey);
-    return ok({ type: 'PresenceSet', at: ctx.now, roleKey: cmd.roleKey, present: cmd.present });
+    if (state.phase === 'setup') {
+      if (!state.players[cmd.roleKey]) return fail('not_found', cmd.roleKey);
+      return ok({ type: 'PresenceSet', at: ctx.now, roleKey: cmd.roleKey, present: cmd.present });
+    }
+    // После открытия (спек этапа 7, §2): приход или уход, в closed и revealed нельзя.
+    if (!isActPhase(state)) return fail('phase');
+    const p = state.players[cmd.roleKey];
+    if (!state.roster.includes(cmd.roleKey) || !p) return fail('not_found', cmd.roleKey);
+    if (p.present === cmd.present) return ok();
+    if (cmd.present) return ok({ type: 'PlayerArrived', at: ctx.now, roleKey: cmd.roleKey, startSet: p.startIssuedAt === undefined });
+    return ok(
+      { type: 'PlayerLeft', at: ctx.now, roleKey: cmd.roleKey },
+      ...cancelOffersOf(state, cmd.roleKey, ctx.now),
+      ...cancelRequestsOf(state, cmd.roleKey, ctx.now),
+    );
   },
 
   'session.open': (state, content, _cmd, ctx) => {
@@ -217,6 +232,21 @@ export const sessionReducers: EventReducers = {
   },
   PresenceSet: (state, _content, e) => ({
     ...state, players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], present: e.present } },
+  }),
+  // Опоздавший впервые: стартовые золото и ингредиенты добавляются к тому, что уже есть (обычно нули).
+  PlayerArrived: (state, content, e) => {
+    const p = state.players[e.roleKey];
+    if (!e.startSet) return { ...state, players: { ...state.players, [e.roleKey]: { ...p, present: true } } };
+    const bundle: Counts = { ...zero(), ...content.roleByKey[e.roleKey].bundle };
+    const ingredients: Counts = { ash: p.ingredients.ash + bundle.ash, moon: p.ingredients.moon + bundle.moon, dew: p.ingredients.dew + bundle.dew };
+    const started: Player = {
+      ...p, present: true, gold: p.gold + START_GOLD, ingredients,
+      curse: p.curse || CURSED_AT_START.includes(e.roleKey), startIssuedAt: e.at,
+    };
+    return { ...state, players: { ...state.players, [e.roleKey]: started } };
+  },
+  PlayerLeft: (state, _content, e) => ({
+    ...state, players: { ...state.players, [e.roleKey]: { ...state.players[e.roleKey], present: false } },
   }),
   FairOpened: (state, _content, e) => ({
     ...state,

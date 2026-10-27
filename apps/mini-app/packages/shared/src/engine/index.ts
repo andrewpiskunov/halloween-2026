@@ -14,6 +14,7 @@ import { lotCommands, lotReducers } from './lots';
 import { shopCommands, shopReducers } from './shop';
 import { sideCommands, sideReducers } from './sides';
 import { emptyState, sessionCommands, sessionReducers } from './session';
+import { leftPlayer } from './guards';
 
 export type { ErrorCode, Result, CommandHandlers, EventReducers } from './result';
 export { defaultRoster } from './roster';
@@ -38,6 +39,8 @@ export function initialState(content: Content, codes: Record<string, string>): G
 export function decide(state: GameState, content: Content, cmd: Command, ctx: Ctx): Result {
   const handler = commandHandlers[cmd.type] as AnyHandler | undefined;
   if (!handler) return fail('invalid', `команда не поддерживается: ${cmd.type}`);
+  const left = leftPlayer(state, ctx.actor);
+  if (left) return left;
   return handler(state, content, cmd, ctx);
 }
 

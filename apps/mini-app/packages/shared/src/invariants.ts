@@ -4,6 +4,7 @@ import type { Event } from './events';
 import type { GameState } from './types';
 import { available } from './engine';
 import { isClosed } from './engine/guards';
+import { START_GOLD } from './engine/session';
 
 const ACT_BY_PHASE: Partial<Record<GameState['phase'], 1 | 2 | 3>> = { act1: 1, act2: 2, act3: 3, closed: 3, revealed: 3 };
 
@@ -20,6 +21,8 @@ export function checkInvariants(state: GameState): void {
   const current = act === undefined ? [] : state.actions.filter(a => a.act === act);
   const abilityRecords = current.filter(a => a.source.type === 'ability');
   for (const [key, p] of Object.entries(state.players)) {
+    // Этап 7, §2.2: присутствующий после открытия получил стартовый набор.
+    if (state.phase !== 'setup' && present(key) && p.startIssuedAt === undefined) fail(`у ${key} нет стартового набора`);
     // 1. Защита только у присутствующего.
     if (p.protection !== undefined && !present(key)) fail(`защита у отсутствующего ${key}`);
     // 5–6. Ресурсы не в минусе, резерв покрыт, кража не тронула обещанное.
@@ -132,6 +135,8 @@ function bankFlow(e: Event): number {
     case 'LotClosed': return e.winner !== undefined ? -(e.amount ?? 0) : 0;
     case 'LotBought': return -e.price;
     case 'Corrected': return e.change.field === 'gold' ? e.change.delta : 0;
+    // Стартовое золото опоздавшего: 6, как при открытии.
+    case 'PlayerArrived': return e.startSet ? START_GOLD : 0;
     case 'AbilityUsed': case 'ItemUsed':
       return e.effects.reduce((n, x) => n + (x.type === 'gold' ? x.delta : 0), 0);
     default: return 0;

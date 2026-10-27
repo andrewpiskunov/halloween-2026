@@ -126,6 +126,29 @@ export const consentCommands: CommandHandlers = {
   },
 };
 
+/** Роли, которых касается способность: цель, откуда и куда, в том числе у копии. */
+function useRoles(u: AbilityUse): string[] {
+  const own = [u, ...(u.kind === 'copyAbility' ? [u.copy] : [])];
+  return own.flatMap(x => [
+    ...('target' in x ? [x.target] : []),
+    ...('from' in x ? [x.from] : []),
+    ...('to' in x ? [x.to] : []),
+  ]);
+}
+
+/** Участвует ли игрок в запросе: автор, одобряющий или цель. */
+function involves(r: ConsentRequest, key: string): boolean {
+  if (r.author === key || r.approvers.includes(key)) return true;
+  return r.action.type === 'item' ? r.action.target === key : useRoles(r.action.use).includes(key);
+}
+
+/** Отмена ожидающих запросов с участием игрока: резервы снимет редьюсер ConsentClosed. */
+export function cancelRequestsOf(state: GameState, key: string, at: number): ConsentClosed[] {
+  return Object.values(state.requests)
+    .filter(r => r.status === 'pending' && involves(r, key))
+    .map(r => ({ type: 'ConsentClosed', at, id: r.id, status: 'cancelled', reason: 'left' }));
+}
+
 /** Снимает резервы запроса: abilityPending автора и reservedFor вещи, если они его. */
 export function release(state: GameState, req: ConsentRequest): GameState {
   let s = state;

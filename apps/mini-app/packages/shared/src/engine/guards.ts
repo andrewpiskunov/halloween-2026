@@ -7,6 +7,15 @@ export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'a
 /** Ярмарка закрыта: итоги посчитаны или уже показаны. */
 export const isClosed = (s: GameState) => s.phase === 'closed' || s.phase === 'revealed';
 
+/**
+ * Отказ игроку, которого ведущий отметил ушедшим (или который ещё не пришёл) после открытия.
+ * Проверяется для любой команды игрока до её обработчика.
+ */
+export function leftPlayer(state: GameState, a: Actor): Result | undefined {
+  if (a.type !== 'player' || state.phase === 'setup') return undefined;
+  return state.players[a.roleKey]?.present === false ? fail('phase', 'ведущий отметил, что вы ушли') : undefined;
+}
+
 /** Ключ игрока-участника ярмарки: роль в составе, запись есть и игрок пришёл. */
 export function participant(state: GameState, a: Actor): string | undefined {
   const key = a.type === 'player' ? a.roleKey : undefined;

@@ -63,7 +63,8 @@ describe('торг за лот', () => {
     const s2 = must(s1, { type: 'lot.bid', id: lot.id, amount: 6 }, player('o1')).state;
     expect(errorOf(s2, { type: 'lot.bid', id: lot.id, amount: 6 }, player('o1'))).toBe('invalid');
     expect(errorOf(s1, { type: 'lot.bid', id: lot.id, amount: 1 }, player('o1'), SEALED_BIDS_MS)).toBe('phase');
-    expect(errorOf(s1, { type: 'lot.bid', id: lot.id, amount: 1 }, player('o5'))).toBe('forbidden');
+    // Не пришедший после открытия получает общий отказ phase (этап 7, §2.3).
+    expect(errorOf(s1, { type: 'lot.bid', id: lot.id, amount: 1 }, player('o5'))).toBe('phase');
     expect(errorOf(s1, { type: 'lot.bid', id: lot.id, amount: 1 }, gm)).toBe('forbidden');
     // Зарезервированное под ставку золото нельзя предложить в сделке.
     const zero = { ash: 0, moon: 0, dew: 0 };

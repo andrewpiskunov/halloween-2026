@@ -219,12 +219,12 @@ describe('сделки с резервом', () => {
     const v = itemOf(s3, 'o14', 'V');
     expect(errorOf(s3, { type: 'offer.create', to: 'o1', give: bundle({ items: [v.id] }), get: bundle({ gold: 1 }) }, player('o14'))).toBe('ok');
   });
-  test('create от роли вне ярмарки или не пришедшего игрока → forbidden, состояние не меняется', () => {
+  test('create от роли вне ярмарки → forbidden, от не пришедшего игрока → phase, состояние не меняется', () => {
     const s0 = makeGame(12, { present: allBut(12, ['o14']) });
     const rumor: Command = { type: 'offer.create', to: 'o6', give: bundle({ rumor: 'слух' }), get: bundle({ gold: 1 }) };
     const before = JSON.stringify(s0);
     expect(errorOf(s0, rumor, player('r6'))).toBe('forbidden');
-    expect(errorOf(s0, rumor, player('o14'))).toBe('forbidden');
+    expect(errorOf(s0, rumor, player('o14'))).toBe('phase');
     expect(JSON.stringify(s0)).toBe(before);
     expect(s0.players.r6).toBeUndefined();
   });
@@ -268,9 +268,10 @@ describe('сделки с резервом', () => {
     const { state: s1, id } = create(s0, 'o1', 'o6', bundle({ gold: 2 }), bundle({ gold: 1 }), 1000);
     expect(errorOf(s1, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('phase');
     expect(errorOf(s1, { type: 'offer.accept', id }, player('o6'), 300999)).toBe('ok');
-    // Во время паузы срок не идёт: 299 000 мс паузы не съедают время на ответ.
+    // Во время паузы срок не идёт: 298 000 мс паузы не съедают время на ответ (принять можно после resume).
     const paused = must(s1, { type: 'clock.pause' }, gm, 2000).state;
-    expect(errorOf(paused, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('ok');
+    const resumed = must(paused, { type: 'clock.resume' }, gm, 300000).state;
+    expect(errorOf(resumed, { type: 'offer.accept', id }, player('o6'), 301000)).toBe('ok');
   });
 
   test('wants: просьба по названию; при принятии сервер находит вещь адресата и переносит её', () => {
@@ -312,5 +313,29 @@ describe('сделки с резервом', () => {
     expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle(), get: bundle({ wants: [{ kind: 'dragon' as never, ref: 'x' }] }) }, player('o6'))).toBe('invalid');
     // wants в give смысла не имеют: автор отдаёт только конкретные вещи.
     expect(errorOf(s0, { type: 'offer.create', to: 'o1', give: bundle({ wants: [{ kind: 'shard', ref: 'I' }] }), get: bundle({ gold: 1 }) }, player('o6'))).toBe('invalid');
+  });
+});
+
+describe('сделки на паузе (этап 7, §7)', () => {
+  const detailOf = (s: GameState, cmd: Command, actor: Actor, now = 0) => {
+    const r = run(s, cmd, actor, now);
+    return r.ok ? 'ok' : `${r.error} ${r.detail ?? ''}`;
+  };
+
+  test('на паузе create и accept → phase «часы на паузе»; decline и cancel проходят; после resume всё проходит', () => {
+    const s0 = makeGame(12);
+    const { state: s1, id: a } = create(s0, 'o1', 'o6', bundle({ gold: 1 }), bundle({ gold: 1 }), 1000);
+    const { state: s2, id: b } = create(s1, 'o1', 'o6', bundle({ gold: 1 }), bundle(), 1000, true);
+    const paused = must(s2, { type: 'clock.pause' }, gm, 2000).state;
+    const newOffer: Command = { type: 'offer.create', to: 'o6', give: bundle({ gold: 1 }), get: bundle() };
+
+    expect(detailOf(paused, newOffer, player('o1'), 3000)).toBe('phase часы на паузе');
+    expect(detailOf(paused, { type: 'offer.accept', id: a }, player('o6'), 3000)).toBe('phase часы на паузе');
+    expect(detailOf(paused, { type: 'offer.decline', id: a }, player('o6'), 3000)).toBe('ok');
+    expect(detailOf(paused, { type: 'offer.cancel', id: b }, player('o1'), 3000)).toBe('ok');
+
+    const resumed = must(paused, { type: 'clock.resume' }, gm, 4000).state;
+    expect(detailOf(resumed, newOffer, player('o1'), 5000)).toBe('ok');
+    expect(detailOf(resumed, { type: 'offer.accept', id: a }, player('o6'), 5000)).toBe('ok');
   });
 });
