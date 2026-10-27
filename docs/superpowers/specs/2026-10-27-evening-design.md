@@ -99,7 +99,7 @@
 
 ### 3.2. Инварианты
 
-`checkInvariants`, `checkGold`, `checkActStart` переезжают из `packages/shared/src/__tests__/helpers.ts` в `packages/shared/src/invariants.ts` (без чтения файлов и без `node:*`: пакет собирается и в клиент) и экспортируются из пакета; тесты импортируют их через прежний помощник. Прогон вызывает `checkInvariants` на состоянии ведущего после подготовки, после каждого акта, после закрытия и после показа; `checkActStart` на снимках до и после каждого `act.next`; `checkGold` по событиям выгрузки (раздел 5) в конце.
+`checkInvariants`, `checkGold`, `checkActStart` переезжают из `packages/shared/src/__tests__/helpers.ts` в `packages/shared/src/invariants.ts` (без чтения файлов и без `node:*`: пакет собирается и в клиент) и экспортируются из пакета; тесты импортируют их через прежний помощник. Прогон вызывает `checkInvariants` на состоянии ведущего после подготовки, после каждого акта, после закрытия и после показа; `checkActStart` на снимках до и после каждого `act.next`; `checkGold` по событиям журнала из базы в конце (в тесте через `store.all()`, в CLI после остановки сервера; при `--url` пропускается).
 
 ### 3.3. Проекции игроков
 
@@ -142,7 +142,7 @@
 { "exportedAt": число, "contentVersion": "0.2", "events": [...], "state": {...} }
 ```
 
-Чистая функция `stripPersonal(events, state)` в `packages/server/src/export.ts` убирает: в событиях `PlayerBound.telegramId`, `FairOpened.players[*].telegramId`, `SessionReset.gmTelegramId`, коды в `SessionCreated.codes`, `SessionReset.codes`, `InviteRebound.code`; в состоянии `gmTelegramId`, `bindings`, `players[*].telegramId`, `roster[*].telegramId`, `invites`, `gmCode`. Тест: большие вымышленные id, поиск по ключам и значениям в строковом виде. Выгрузка не предназначена для воспроизведения (привязки удалены); `checkGold` по ней работает.
+Чистая функция `stripPersonal(events, state)` в `packages/server/src/export.ts` убирает: в событиях `PlayerBound.telegramId`, `FairOpened.players[*].telegramId`, `SessionReset.gmTelegramId`, коды в `SessionCreated.codes`, `SessionReset.codes`, `InviteRebound.code`; в состоянии `gmTelegramId`, `bindings`, `players[*].telegramId`, `roster[*].telegramId`, `invites`, `gmCode`. Тест: большие вымышленные id, поиск по ключам и значениям в строковом виде. Выгрузка не предназначена для воспроизведения (привязки удалены).
 
 Автозапись: в `index.ts` подписка `game.subscribe` ловит переход в `closed` с новым `closedAt` и пишет выгрузку в `<папка базы>/exports/evening-<closedAt>.json`; тот же файл перезаписывается на `Revealed` и на каждом `Corrected` после закрытия (исправления меняют итоги). При `DB_PATH=:memory:` файл не пишется. Ошибка записи логируется и не мешает игре.
 
