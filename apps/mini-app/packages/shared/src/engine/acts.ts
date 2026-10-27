@@ -5,13 +5,29 @@ import { biddingInProgress, shiftLots } from './lots';
 
 const isGm = (a: Actor) => a.type === 'gm';
 const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
-/** Сдвигает срок каждого pending-предложения на время паузы. */
-function shiftPending(offers: GameState['offers'], pausedMs: number): GameState['offers'] {
-  const res = { ...offers };
-  for (const [id, o] of Object.entries(offers)) {
+/** Сдвигает срок каждого pending-предложения или запроса согласия на время паузы. */
+function shiftPending<T extends { status: string; expiresAt: number }>(records: Record<string, T>, pausedMs: number): Record<string, T> {
+  const res = { ...records };
+  for (const [id, o] of Object.entries(records)) {
     if (o.status === 'pending') res[id] = { ...o, expiresAt: o.expiresAt + pausedMs };
   }
   return res;
+}
+
+/** Закрывает pending-запросы согласия при смене акта и снимает резерв с их вещей. */
+function expireRequests(state: GameState): Pick<GameState, 'requests' | 'items'> {
+  const requests = { ...state.requests };
+  const items = { ...state.items };
+  for (const r of Object.values(state.requests)) {
+    if (r.status !== 'pending') continue;
+    requests[r.id] = { ...r, status: 'expired', reason: 'act' };
+    for (const it of Object.values(items)) {
+      if (it.reservedFor !== r.id) continue;
+      const { reservedFor: _r, ...rest } = it;
+      items[it.id] = rest;
+    }
+  }
+  return { requests, items };
 }
 
 const EVENT_WHEN = { 2: 'Акт II', 3: 'Акт III' } as const;
@@ -97,13 +113,15 @@ export const actCommands: CommandHandlers = {
     } else if (c.field === 'ingredient') {
       if (!Number.isInteger(c.delta)) return fail('invalid');
       if (p.ingredients[c.ingredient] + c.delta < 0) return fail('insufficient');
-    } else {
+    } else if (c.field === 'itemOwner') {
       const it = state.items[c.itemId];
       if (!it) return fail('not_found', c.itemId);
       // Вещь из лота или с алтаря остаётся в их списках: перенос оставил бы состояние несогласованным.
       if (it.owner.type !== 'player') return fail('invalid', 'переносить можно только вещь у игрока');
       if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
       if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
+    } else {
+      return fail('invalid', `исправление пока не поддерживается: ${c.field}`);
     }
     return ok({ type: 'Corrected', at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() });
   },
@@ -119,15 +137,15 @@ export const actReducers: EventReducers = {
   ActStarted: (state, _content, e) => {
     const players = { ...state.players };
     for (const [key, p] of Object.entries(state.players)) {
-      players[key] = {
-        ...p, abilityUsedInAct: false, protection: undefined, thorns: false, discount: false,
-        pendingModifier: undefined, hostileAttemptsAgainstInAct: 0,
-      };
+      // Проклятие и облик переживают смену акта; остальные отметки акта снимаются.
+      const { abilityPending: _a, protection: _p, thornsBy: _t, discountBy: _d, ...rest } = p;
+      players[key] = { ...rest, abilityUsedInAct: false, thorns: false, discount: false, hostileAttemptsAgainstInAct: 0 };
     }
     const lots = { ...state.lots };
     for (const id of e.announcedLots) lots[id] = { ...lots[id], status: 'announced' };
     for (const l of e.newLots) lots[l.id] = l;
-    const items = { ...state.items };
+    const expired = expireRequests(state);
+    const items = expired.items;
     for (const it of e.newItems) items[it.id] = it;
     for (const id of e.revealedItems) {
       const { hiddenUntilAct: _h, ...rest } = items[id];
@@ -137,7 +155,9 @@ export const actReducers: EventReducers = {
       ash: state.workshop.ash + e.refill, moon: state.workshop.moon + e.refill, dew: state.workshop.dew + e.refill,
     };
     return {
-      ...state, offers: shiftPending(state.offers, e.pausedMs), phase: e.act === 2 ? 'act2' : 'act3', players, lots, items, workshop,
+      // Запросы согласия не сдвигаются: все pending закрыты сменой акта.
+      ...state, offers: shiftPending(state.offers, e.pausedMs), requests: expired.requests,
+      phase: e.act === 2 ? 'act2' : 'act3', players, lots, items, workshop,
       clock: { actStartedAt: e.at, pausedTotal: 0 },
       announcements: [...state.announcements, e.announcement],
     };
@@ -145,7 +165,10 @@ export const actReducers: EventReducers = {
   ClockPaused: (state, _c, e) => ({ ...state, clock: { ...state.clock, pausedAt: e.at } }),
   ClockResumed: (state, _c, e) => {
     const { pausedAt: _p, ...clock } = state.clock;
-    return { ...state, offers: shiftPending(state.offers, e.pausedMs), lots: shiftLots(state.lots, e.pausedMs), clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs } };
+    return {
+      ...state, offers: shiftPending(state.offers, e.pausedMs), requests: shiftPending(state.requests, e.pausedMs),
+      lots: shiftLots(state.lots, e.pausedMs), clock: { ...clock, pausedTotal: clock.pausedTotal + e.pausedMs },
+    };
   },
   ClockExtended: (state, _c, e) => ({
     ...state, clock: { ...state.clock, pausedTotal: state.clock.pausedTotal + e.minutes * 60000 },
@@ -159,6 +182,8 @@ export const actReducers: EventReducers = {
       const ingredients = { ...p.ingredients, [c.ingredient]: p.ingredients[c.ingredient] + c.delta };
       return { ...state, players: { ...state.players, [e.playerKey]: { ...p, ingredients } } };
     }
+    // Исправления отметок команда пока отклоняет, поэтому таких событий нет.
+    if (c.field !== 'itemOwner') return state;
     // Резерв снимается: вещь ушла от автора, его предложение закроется при попытке принять.
     const { reservedFor: _r, ...item } = state.items[c.itemId];
     return { ...state, items: { ...state.items, [c.itemId]: { ...item, owner: c.owner } } };

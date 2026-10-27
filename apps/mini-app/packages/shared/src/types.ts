@@ -1,3 +1,6 @@
+import type { AbilityKind, CopyableKind } from './abilities';
+import type { AbilityUse } from './commands';
+
 export type Side = 'wake' | 'bind' | 'break' | 'ship' | 'free';
 export type AltarSide = Exclude<Side, 'free'>;
 export type Ingredient = 'ash' | 'moon' | 'dew';
@@ -12,8 +15,16 @@ export interface Bundle { gold: number; ingredients: Counts; items: string[]; ru
 export interface Player {
   roleKey: string; telegramId?: number; present: boolean;
   gold: number; reservedGold: number; ingredients: Counts;
-  abilityUsedInAct: boolean; pendingModifier?: unknown; protection?: { by: string };
-  thorns: boolean; curse: boolean; discount: boolean; side?: Side; hostileAttemptsAgainstInAct: number;
+  abilityUsedInAct: boolean;
+  /** id запроса согласия на способность, пока он pending. */
+  abilityPending?: string;
+  protection?: { by: string; source: 'ability' | 'ward' | 'gm' };
+  thorns: boolean; thornsBy?: string;
+  curse: boolean;
+  discount: boolean; discountBy?: string;
+  guise?: { name: string; at: number; by: string };
+  side?: Side;
+  hostileAttemptsAgainstInAct: number;
 }
 export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export interface Offer { id: string; from: string; to: string; give: Bundle; get: Bundle; service: boolean; status: OfferStatus; createdAt: number; expiresAt: number; reason?: string }
@@ -31,6 +42,70 @@ export interface Lot {
 export interface Contribution { id: string; player: string; item?: string; gold?: number }
 export interface Altar { side: AltarSide; contributions: Contribution[] }
 export interface Announcement { at: number; title: string; text: string }
+/** Изменение ресурса или отметки от способности или вещи; применяется одним редьюсером applyEffects. */
+export type Effect =
+  | { type: 'gold'; player: string; delta: number }                       // в банк или из банка
+  | { type: 'goldMove'; from: string; to: string; amount: number }        // кража
+  | { type: 'ingredient'; player: string; ingredient: Ingredient; delta: number }
+  | { type: 'ingredientMove'; from: string; to: string; ingredient: Ingredient }
+  | { type: 'workshop'; ingredient: Ingredient; delta: number }
+  | { type: 'itemRemoved'; itemId: string }
+  | { type: 'itemCreated'; item: Item }
+  | { type: 'protection'; player: string; value: Player['protection'] | null }
+  | { type: 'protectionMoved'; from: string; to: string }
+  | { type: 'thorns'; player: string; value: boolean; by?: string }
+  | { type: 'curse'; player: string; value: boolean }
+  | { type: 'discount'; player: string; value: boolean; by?: string }
+  | { type: 'guise'; player: string; value: Player['guise'] | null };
+
+/** Итог наблюдательной способности: видит только автор и ведущий. */
+export type Intel =
+  | { kind: 'inventory'; target: string; gold: number; reservedGold: number; ingredients: Counts; items: { kind: ItemKind; ref: string }[] }
+  | { kind: 'gold'; target: string; gold: number }
+  | { kind: 'side'; target: string; side: Side }                 // 'free' для свободного без выбора
+  | { kind: 'sniff'; ingredient: Ingredient; holders: string[] }
+  | { kind: 'question'; target: string; question?: string };     // Веста: ответ голосом
+
+/** Запись журнала применений: одна на AbilityUsed и ItemUsed. Источник для целей и личных лент. */
+export interface ActionRecord {
+  id: string;                  // seq события как строка
+  at: number;
+  act: 1 | 2 | 3;
+  author: string;
+  source: { type: 'ability'; ability: AbilityKind; copied?: CopyableKind } | { type: 'item'; kind: 'potion' | 'ward' | 'shape' };
+  target?: string;
+  from?: string; to?: string;
+  outcome: 'done' | 'blocked';
+  hostile: boolean;
+  effects: Effect[];
+  removed?: { curse: boolean; thorns: boolean };
+  intel?: Intel;
+  guise?: string;
+  requestId?: string;
+}
+
+export type ConsentStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired' | 'failed';
+
+/** Что исполнится после согласия: ровно то, что прислал автор. */
+export type ConsentAction =
+  | { type: 'ability'; use: AbilityUse }
+  | { type: 'item'; itemId: string; target: string; guise?: string };
+
+export interface ConsentRequest {
+  id: string;
+  author: string;
+  action: ConsentAction;
+  /** Кто должен согласиться, по порядку показа. Не пуст. */
+  approvers: string[];
+  /** Кто уже согласился. */
+  approved: string[];
+  status: ConsentStatus;
+  createdAt: number;
+  expiresAt: number;
+  /** timeout | act | closed | gm | текст причины failed */
+  reason?: string;
+}
+
 export interface GameState {
   phase: Phase; roster: string[]; nPresent: number;
   clock: { actStartedAt: number; pausedAt?: number; pausedTotal: number };
@@ -40,4 +115,8 @@ export interface GameState {
   /** roleKey → telegramId; переживает уход роли из состава и её возвращение. */
   bindings: Record<string, number>;
   gmCode: string; gmTelegramId?: number; announcements: Announcement[]; seq: number;
+  /** Запросы согласия на способности и вещи. */
+  requests: Record<string, ConsentRequest>;
+  /** Журнал применений способностей и вещей. */
+  actions: ActionRecord[];
 }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { makeGame, player, run } from './helpers';
+import { content, makeGame, player, run } from './helpers';
+import { reduce } from '../engine';
 import type { GameState } from '../types';
 
 const grete = player('o6');
@@ -116,5 +117,29 @@ describe('мастерская: изготовление', () => {
     expect(errorOf({ ...s, phase: 'setup' }, { type: 'shop.craft', recipeId: 'focus' })).toBe('phase');
     expect(errorOf(s, { type: 'shop.craft', recipeId: 'nope' })).toBe('not_found');
     expect(errorOf(s, { type: 'shop.craft', recipeId: 'focus' }, { type: 'system' })).toBe('forbidden');
+  });
+});
+
+describe('мастерская: редьюсеры событий способностей', () => {
+  test('ItemCrafted снимает только отмеченные cleared шипы и скидку вместе с их авторами', () => {
+    const s = withPlayer(makeGame(12), 'o6', { thorns: true, thornsBy: 'o12', discount: true, discountBy: 'o14' });
+    const item = { id: 'c1', kind: 'focus' as const, ref: 'focus', owner: { type: 'player' as const, key: 'o6' }, createdBy: 'o6' };
+    const crafted = (clearedThorns: boolean, clearedDiscount: boolean) => reduce(s, content, {
+      type: 'ItemCrafted', at: 0, player: 'o6', item, paidGold: 0, paidIngredients: {}, clearedThorns, clearedDiscount, viaAbility: 'focusFree',
+    }).players.o6;
+    expect(crafted(true, false)).toMatchObject({ thorns: false, discount: true, discountBy: 'o14' });
+    expect(crafted(true, false).thornsBy).toBeUndefined();
+    expect(crafted(false, true)).toMatchObject({ thorns: true, thornsBy: 'o12', discount: false });
+    expect(crafted(false, true).discountBy).toBeUndefined();
+  });
+
+  test('IngredientBought из банка не уменьшает запас мастерской', () => {
+    const s = makeGame(12);
+    const bought = (fromBank?: boolean) => reduce(s, content, {
+      type: 'IngredientBought', at: 0, player: 'o6', ingredient: 'dew', count: 1, paidGold: 2, ...(fromBank ? { fromBank } : {}),
+    });
+    expect(bought(true).workshop).toEqual(s.workshop);
+    expect(bought(true).players.o6.ingredients.dew).toBe(s.players.o6.ingredients.dew + 1);
+    expect(bought().workshop.dew).toBe(s.workshop.dew - 1);
   });
 });

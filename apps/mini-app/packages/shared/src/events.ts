@@ -1,5 +1,9 @@
+import type { AbilityKind, CopyableKind } from './abilities';
 import type { Correction } from './commands';
-import type { Altar, AltarSide, Announcement, Bundle, Contribution, Counts, Ingredient, Item, Lot, Offer, OfferStatus, Player } from './types';
+import type {
+  Altar, AltarSide, Announcement, Bundle, ConsentRequest, ConsentStatus, Contribution, Counts, Effect, Ingredient, Intel, Item, Lot, Offer,
+  OfferStatus, Player,
+} from './types';
 
 /** Общие поля события: время факта и номер в журнале (проставляется при записи). */
 export interface EventBase { at: number; seq?: number }
@@ -59,14 +63,18 @@ export interface OfferClosed extends EventBase {
   type: 'OfferClosed'; id: string; status: Exclude<OfferStatus, 'pending' | 'accepted'>; reason?: string;
 }
 
-/** Игрок купил ингредиенты в мастерской по 2 золота за штуку. */
+/** Игрок купил ингредиенты в мастерской (обычно по 2 золота за штуку, со способностью дешевле). */
 export interface IngredientBought extends EventBase {
   type: 'IngredientBought'; player: string; ingredient: Ingredient; count: number; paidGold: number;
+  /** Куплено из банка (Орсон): запас мастерской не уменьшается. */
+  fromBank?: boolean;
 }
-/** Игрок изготовил вещь; вещь целиком в событии. Шипы и скидка потрачены в любом случае. */
+/** Игрок изготовил вещь; вещь целиком в событии. Снимаются только те шипы и скидка, что отмечены cleared. */
 export interface ItemCrafted extends EventBase {
   type: 'ItemCrafted'; player: string; item: Item; paidGold: number; paidIngredients: Partial<Counts>;
   clearedThorns: boolean; clearedDiscount: boolean;
+  /** Способность, с которой изготовлено: для журнала. */
+  viaAbility?: AbilityKind;
 }
 /** Ведущий открыл торг за лот: две минуты голосом, окно только для часов. */
 export interface LotBiddingOpened extends EventBase { type: 'LotBiddingOpened'; id: string; until: number; title: string }
@@ -85,9 +93,49 @@ export interface ContributionWithdrawn extends EventBase {
   type: 'ContributionWithdrawn'; side: AltarSide; contributionId: string; player: string; item?: string; gold?: number;
 }
 
+/** Способность применена: исполнена или враждебная попытка отражена защитой. */
+export interface AbilityUsed extends EventBase {
+  type: 'AbilityUsed';
+  author: string;
+  ability: AbilityKind;
+  /** Для копии Астры: какой вид исполнен. */
+  copied?: CopyableKind;
+  target?: string;
+  /** Для transferProtection: откуда и куда. */
+  from?: string; to?: string;
+  outcome: 'done' | 'blocked';
+  hostile: boolean;
+  effects: Effect[];
+  intel?: Intel;
+  /** Для очищения: что было снято на самом деле. */
+  removed?: { curse: boolean; thorns: boolean };
+  /** Если исполнено по согласию. */
+  requestId?: string;
+}
+
+/** Вещь применена. */
+export interface ItemUsed extends EventBase {
+  type: 'ItemUsed';
+  player: string;
+  itemId: string;
+  kind: 'potion' | 'ward' | 'shape';
+  target: string;               // для себя равен player
+  effects: Effect[];
+  removed?: { curse: boolean; thorns: boolean };
+  guise?: string;
+  requestId?: string;
+}
+
+export interface ConsentRequested extends EventBase { type: 'ConsentRequested'; request: ConsentRequest }
+export interface ConsentGiven extends EventBase { type: 'ConsentGiven'; id: string; by: string }
+export interface ConsentClosed extends EventBase {
+  type: 'ConsentClosed'; id: string; status: Exclude<ConsentStatus, 'pending' | 'accepted'>; reason?: string;
+}
+
 // События следующих задач добавляются в объединение по мере реализации.
 export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
-  | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought;
+  | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought
+  | AbilityUsed | ItemUsed | ConsentRequested | ConsentGiven | ConsentClosed;
 export type EventType = Event['type'];

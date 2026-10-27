@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { allBut, content, gm, makeGame, player, run } from './helpers';
-import type { GameState, Item, Offer } from '../types';
+import type { ConsentRequest, GameState, Item, Offer } from '../types';
 
 const next = (s: GameState, now = 0) => {
   const r = run(s, { type: 'act.next' }, gm, now);
@@ -40,23 +40,59 @@ describe('смена актов', () => {
     expect(Object.values(withLyra.items).filter(i => i.ref === 'V')).toHaveLength(1);
   });
 
-  test('act.next сбрасывает abilityUsedInAct, protection, thorns, discount, pendingModifier, hostileAttemptsAgainstInAct; curse остаётся', () => {
+  test('act.next сбрасывает отметки акта (защиту, шипы, скидку, их авторов, ожидание согласия, попытки); проклятие и облик остаются', () => {
     const s0 = makeGame(15);
     const key = s0.roster[0];
+    const guise = { name: 'Тень', at: 1, by: key };
     const s1: GameState = {
       ...s0,
       players: {
         ...s0.players,
         [key]: {
-          ...s0.players[key], abilityUsedInAct: true, protection: { by: 'o1' }, thorns: true, discount: true,
-          pendingModifier: { x: 1 }, hostileAttemptsAgainstInAct: 2, curse: true,
+          ...s0.players[key], abilityUsedInAct: true, abilityPending: 'req', protection: { by: 'o9', source: 'ability' },
+          thorns: true, thornsBy: 'o12', discount: true, discountBy: 'o14', hostileAttemptsAgainstInAct: 1, curse: true, guise,
         },
       },
     };
     const p = next(s1).players[key];
-    expect(p).toMatchObject({ abilityUsedInAct: false, thorns: false, discount: false, hostileAttemptsAgainstInAct: 0, curse: true });
-    expect(p.protection).toBeUndefined();
-    expect(p.pendingModifier).toBeUndefined();
+    expect(p).toMatchObject({ abilityUsedInAct: false, thorns: false, discount: false, hostileAttemptsAgainstInAct: 0, curse: true, guise });
+    for (const f of ['protection', 'thornsBy', 'discountBy', 'abilityPending'] as const) expect(p[f]).toBeUndefined();
+  });
+
+  test('проклятие Эльмара: ставится при открытии только ему и переживает смену акта; защита и шипы нет', () => {
+    const s = makeGame(12);
+    expect(s.players.o9.curse).toBe(true);
+    for (const key of s.roster.filter(k => k !== 'o9')) expect(s.players[key].curse).toBe(false);
+    const withMarks: GameState = {
+      ...s, players: { ...s.players, o9: { ...s.players.o9, protection: { by: 'o4', source: 'ability' }, thorns: true, thornsBy: 'o12' } },
+    };
+    const o9 = next(withMarks).players.o9;
+    expect(o9.curse).toBe(true);
+    expect(o9.protection).toBeUndefined();
+    expect(o9.thorns).toBe(false);
+  });
+
+  test('проклятие Эльмара не ставится, если он не пришёл', () => {
+    const s = makeGame(12, { present: allBut(12, ['o9']) });
+    expect(s.players.o9.curse).toBe(false);
+  });
+
+  test('act.next закрывает pending-запросы согласия как expired (act) и снимает резерв их вещей; закрытые не трогает', () => {
+    const s0 = makeGame(12);
+    const item = Object.values(s0.items).find(i => i.owner.type === 'player' && i.owner.key === 'o1')!;
+    const req = (id: string, status: ConsentRequest['status']): ConsentRequest => ({
+      id, author: 'o1', action: { type: 'item', itemId: item.id, target: 'o6' }, approvers: ['o6'], approved: [],
+      status, createdAt: 0, expiresAt: 300000,
+    });
+    const s1: GameState = {
+      ...s0,
+      items: { ...s0.items, [item.id]: { ...item, reservedFor: 'a' } },
+      requests: { a: req('a', 'pending'), b: req('b', 'declined') },
+    };
+    const s2 = next(s1);
+    expect(s2.requests.a).toMatchObject({ status: 'expired', reason: 'act' });
+    expect(s2.requests.b).toEqual(s1.requests.b);
+    expect(s2.items[item.id].reservedFor).toBeUndefined();
   });
 
   test('act.next из act3 → phase; из setup → phase; от игрока → forbidden; объявление акта добавлено с title из content.events', () => {
@@ -94,6 +130,24 @@ describe('часы', () => {
     expect(r.state.clock.pausedAt).toBeUndefined();
     expect(r.state.offers.x.expiresAt).toBe(360000);
     expect(r.state.offers.y.expiresAt).toBe(300000);
+  });
+
+  test('resume и act.next во время паузы сдвигают сроки pending-запросов согласия', () => {
+    const s0 = makeGame(15);
+    const req = (id: string, status: ConsentRequest['status']): ConsentRequest => ({
+      id, author: 'o1', action: { type: 'ability', use: { kind: 'protectSelf' } }, approvers: ['o6'], approved: [],
+      status, createdAt: 0, expiresAt: 300000,
+    });
+    const s1: GameState = { ...s0, requests: { a: req('a', 'pending'), b: req('b', 'declined') } };
+    const p = run(s1, { type: 'clock.pause' }, gm, 10000);
+    if (!p.ok) throw new Error(p.error);
+    const r = run(p.state, { type: 'clock.resume' }, gm, 70000);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.requests.a.expiresAt).toBe(360000);
+    expect(r.state.requests.b.expiresAt).toBe(300000);
+    const n = run(p.state, { type: 'act.next' }, gm, 70000);
+    if (!n.ok) throw new Error(n.error);
+    expect(n.state.requests.a).toMatchObject({ status: 'expired', expiresAt: 300000 });
   });
 
   test('act.next во время паузы действует как неявный resume: пауза снята, pending сдвинуты, resume → invalid', () => {

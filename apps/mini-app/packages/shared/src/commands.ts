@@ -1,3 +1,4 @@
+import type { CopyableKind } from './abilities';
 import type { AltarSide, Bundle, Ingredient, Owner } from './types';
 
 /** Кто отправил команду: ведущий, игрок конкретной роли или сам сервер. */
@@ -9,7 +10,42 @@ export interface Ctx { now: number; actor: Actor; newId: () => string; random: (
 export type Correction =
   | { field: 'gold'; delta: number }
   | { field: 'ingredient'; ingredient: Ingredient; delta: number }
-  | { field: 'itemOwner'; itemId: string; owner: Owner };
+  | { field: 'itemOwner'; itemId: string; owner: Owner }
+  | { field: 'protection'; value: boolean }          // true: { by: 'gm', source: 'gm' }
+  | { field: 'thorns'; value: boolean }
+  | { field: 'curse'; value: boolean }
+  | { field: 'discount'; value: boolean }
+  | { field: 'abilityUsed'; value: boolean }         // false: вернуть применение в этом акте
+  | { field: 'hostileAttempt'; value: boolean }      // false: снять отметку попытки
+  | { field: 'guise'; name: string | null };         // null: снять облик
+
+/** Параметры применения: дискриминант kind совпадает с видом роли автора. */
+export type AbilityUse =
+  | { kind: 'payAshWithGold'; recipeId: string }
+  | { kind: 'focusFree' }
+  | { kind: 'substituteIngredient'; recipeId: string; from: Ingredient; to: Ingredient }
+  | { kind: 'buyCheap'; ingredient: Ingredient }
+  | { kind: 'buyBulk'; take: [Ingredient, Ingredient] }
+  | { kind: 'buyFromBank'; ingredient: Ingredient }
+  | { kind: 'grow'; give: Ingredient }
+  | { kind: 'swapIngredient'; give: Ingredient; take: Ingredient }
+  | { kind: 'disassemble'; itemId: string; take: [Ingredient, Ingredient] }
+  | { kind: 'reforge'; itemId: string; into: 'cleanse' | 'ward' | 'focus' }
+  | { kind: 'sellToBank'; itemId: string }
+  | { kind: 'protectSelf' }
+  | { kind: 'protectOther'; target: string }
+  | { kind: 'transferProtection'; from: string; to: string }
+  | { kind: 'cleanseOther'; target: string }
+  | { kind: 'discountOther'; target: string }
+  | { kind: 'copyAbility'; copy: Extract<AbilityUse, { kind: CopyableKind }> }
+  | { kind: 'stealGold'; target: string }
+  | { kind: 'stealIngredient'; target: string; ingredient: Ingredient }
+  | { kind: 'thorns'; target: string }
+  | { kind: 'inspectInventory'; target: string }
+  | { kind: 'sniffIngredient'; ingredient: Ingredient }
+  | { kind: 'knowGold'; target: string }
+  | { kind: 'askSide'; target: string }
+  | { kind: 'askYesNo'; target: string; question?: string };
 
 export type Command =
   | { type: 'session.setN'; n: number }
@@ -34,6 +70,12 @@ export type Command =
   | { type: 'lot.bid'; id: string; amount: number }
   | { type: 'lot.close'; id: string }
   | { type: 'lot.buyout'; id: string }
-  | { type: 'altar.withdraw'; contributionId: string };
+  | { type: 'altar.withdraw'; contributionId: string }
+  | { type: 'ability.use'; use: AbilityUse }
+  | { type: 'item.use'; itemId: string; target?: string; guise?: string }
+  | { type: 'consent.accept'; id: string }
+  | { type: 'consent.decline'; id: string }
+  | { type: 'consent.cancel'; id: string }          // автор или ведущий
+  | { type: 'consent.expire'; id: string };         // только actor system
 
 export type CommandType = Command['type'];

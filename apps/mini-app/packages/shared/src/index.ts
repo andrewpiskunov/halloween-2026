@@ -1,4 +1,5 @@
 export * from './content';
+export * from './abilities';
 export * from './types';
 export * from './commands';
 export * from './events';

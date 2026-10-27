@@ -10,7 +10,7 @@ export const emptyState = (): GameState => ({
   phase: 'setup', roster: [], nPresent: 0,
   clock: { actStartedAt: 0, pausedTotal: 0 },
   players: {}, items: {}, workshop: { ash: 0, moon: 0, dew: 0 }, offers: {}, lots: {},
-  altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0,
+  altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0, requests: {}, actions: [],
 });
 
 const CODE_LENGTH = 12;
@@ -36,6 +36,8 @@ const BASE_ALTARS: AltarSide[] = ['wake', 'bind', 'break'];
 // Стартовые владельцы улик; улика A приходит с осколком IV во втором акте и при открытии не создаётся.
 const CLUE_OWNERS: Record<string, string> = { B: 'o10', C: 'o16' };
 const HIDDEN_SHARD = 'V';
+/** Роли, проклятые с открытия ярмарки (extra: «старое проклятие»); тест сверяет с содержимым. */
+export const CURSED_AT_START: string[] = ['o9'];
 
 const zero = (): Counts => ({ ash: 0, moon: 0, dew: 0 });
 
@@ -78,7 +80,7 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
   for (const key of state.roster) {
     const p = state.players[key];
     players[key] = p.present
-      ? { ...p, gold: START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle } }
+      ? { ...p, gold: START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle }, curse: CURSED_AT_START.includes(key) }
       : { ...p, gold: 0, ingredients: zero() };
   }
   const nPresent = state.roster.filter(present).length;

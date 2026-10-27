@@ -1,4 +1,4 @@
-import type { Item, ItemKind } from '../types';
+import type { Item, ItemKind, Player } from '../types';
 import { INGREDIENTS, available } from './bundles';
 import { isActPhase, participant } from './guards';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
@@ -50,17 +50,21 @@ export const shopReducers: EventReducers = {
         ...state.players,
         [e.player]: { ...p, gold: p.gold - e.paidGold, ingredients: { ...p.ingredients, [e.ingredient]: p.ingredients[e.ingredient] + e.count } },
       },
-      workshop: { ...state.workshop, [e.ingredient]: state.workshop[e.ingredient] - e.count },
+      workshop: e.fromBank ? state.workshop : { ...state.workshop, [e.ingredient]: state.workshop[e.ingredient] - e.count },
     };
   },
   ItemCrafted: (state, _c, e) => {
-    const p = state.players[e.player];
+    const { thornsBy, discountBy, ...p } = state.players[e.player];
     const ingredients = { ...p.ingredients };
     for (const k of INGREDIENTS) ingredients[k] -= e.paidIngredients[k] ?? 0;
-    return {
-      ...state,
-      items: { ...state.items, [e.item.id]: e.item },
-      players: { ...state.players, [e.player]: { ...p, gold: p.gold - e.paidGold, ingredients, thorns: false, discount: false } },
+    // Снимается только то, что потрачено изготовлением; вместе с отметкой уходит её автор.
+    const thorns = p.thorns && !e.clearedThorns;
+    const discount = p.discount && !e.clearedDiscount;
+    const player: Player = {
+      ...p, gold: p.gold - e.paidGold, ingredients, thorns, discount,
+      ...(thorns && thornsBy !== undefined ? { thornsBy } : {}),
+      ...(discount && discountBy !== undefined ? { discountBy } : {}),
     };
+    return { ...state, items: { ...state.items, [e.item.id]: e.item }, players: { ...state.players, [e.player]: player } };
   },
 };
