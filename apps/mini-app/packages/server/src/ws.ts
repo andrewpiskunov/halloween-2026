@@ -93,10 +93,10 @@ export function closeWs(wss: WebSocketServer): Promise<void> {
 /** WebSocket /ws?token=…: проекции состояния и приём команд от имени владельца токена. */
 export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
   const { game, content, config, now } = deps;
-  // Проекция ведущего несёт состояние целиком, а первое сообщение — содержимое: сжатие заметно уменьшает их.
+  // Проекция ведущего несёт состояние целиком, а его первое сообщение — содержимое: сжатие заметно уменьшает их.
   const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024, perMessageDeflate: true });
   const conns = new Set<Conn>();
-  // Содержимое не меняется за время работы сервера: сообщение сериализуется один раз на все подключения.
+  // Содержимое не меняется за время работы сервера: сообщение сериализуется один раз на все подключения ведущего.
   const contentMsg = JSON.stringify({ kind: 'content', version: content.version, data: contentData(content) });
 
   const send = (ws: WebSocket, msg: unknown) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); };
@@ -120,11 +120,13 @@ export function attachWs(server: Server, deps: ServerDeps): WebSocketServer {
     const token = new URL(req.url ?? '/', 'http://localhost').searchParams.get('token') ?? '';
     const auth = verifyToken(token, config.sessionSecret, now());
     if (!auth) { ws.close(CLOSE_UNAUTHORIZED, 'unauthorized'); return; }
-    if (!game.actorForToken(auth)) { ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
+    const actor = game.actorForToken(auth);
+    if (!actor) { ws.close(CLOSE_FORBIDDEN, 'no role'); return; }
 
     const conn: Conn = { ws, telegramId: auth.telegramId, alive: true, ...(auth.as !== undefined ? { as: auth.as } : {}) };
-    // Протокол един для ведущего и игроков: сначала содержимое, затем первая проекция.
-    ws.send(contentMsg);
+    // Содержимое несёт тайны (правда истории, секреты и цели ролей): только ведущему, не «Играть за».
+    // Ведущий получает его первым, до первой проекции.
+    if (actor.type === 'gm') ws.send(contentMsg);
     if (!pushView(conn, game.state())) return;
     conns.add(conn);
 

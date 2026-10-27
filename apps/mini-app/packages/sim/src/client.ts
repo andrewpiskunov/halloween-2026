@@ -9,7 +9,7 @@ export interface CmdOutcome { ok: boolean; seq?: number; error?: string; detail?
 export interface BotConn {
   readonly actor: Actor;
   view(): PlayerView | GmView;
-  /** Содержимое из сообщения content (сервер шлёт его первым); null — не приходило. */
+  /** Содержимое из сообщения content: сервер шлёт его первым и только ведущему; у игроков null. */
   content(): ContentData | null;
   seq(): number;
   send(cmd: Command, timeoutMs?: number): Promise<CmdOutcome>;

@@ -26,7 +26,7 @@ export interface ConnectOptions {
   delays?: number[];
   /** Начало адреса WebSocket, например `wss://example.org`; по умолчанию из `location`. */
   base?: string;
-  /** Содержимое игры: сервер присылает его первым сообщением каждого подключения. */
+  /** Содержимое игры: сервер присылает его первым сообщением, только подключению ведущего. */
   onContent?: (data: ContentData) => void;
 }
 

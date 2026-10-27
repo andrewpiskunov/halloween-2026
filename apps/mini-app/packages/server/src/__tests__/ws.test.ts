@@ -243,23 +243,25 @@ test('ведущий по WS получает GmView: первым сообще�
   expect(c.ws.extensions).toContain('permessage-deflate');
 });
 
-test('игрок тоже получает content первым сообщением', async () => {
+test('игрок не получает content: первое сообщение — проекция, содержимого с тайнами нет', async () => {
   const codes = await (await fetch(`${base}/api/dev/codes`)).json() as { roles: Record<string, string> };
   const c = connect((await devAuth(1002, codes.roles.o2)).token);
   await c.next(m => m.kind === 'view');
-  expect(c.log.map(m => m.kind).slice(0, 2)).toEqual(['content', 'view']);
-  expect(c.log[0].version).toBe(content.version);
+  expect(c.log[0].kind).toBe('view');
+  expect(c.log.some(m => m.kind === 'content')).toBe(false);
 });
 
-test('невалидный token → закрытие 4401', async () => {
+test('невалидный token → закрытие 4401 без единого сообщения', async () => {
   const c = connect('bad');
   expect(await c.closed).toBe(4401);
+  expect(c.log).toEqual([]);
 });
 
-test('гость без роли → закрытие 4403', async () => {
+test('гость без роли → закрытие 4403 без единого сообщения', async () => {
   const { token } = await devAuth(7777);
   const c = connect(token);
   expect(await c.closed).toBe(4403);
+  expect(c.log).toEqual([]);
 });
 
 test('closeWs закрывает подключённых клиентов и завершается; после него app.close не зависает', async () => {
@@ -300,6 +302,9 @@ test('ведущий получает токен «за игрока» и вид
   await c.opened;
   const view = await c.next(m => m.kind === 'view');
   expect((view.view as { kind: string; me: { role: { key: string } } }).me.role.key).toBe('o6');
+  // «Играть за» — актёр игрок: содержимое с тайнами не приходит.
+  expect(c.log[0].kind).toBe('view');
+  expect(c.log.some(m => m.kind === 'content')).toBe(false);
   // Команда выполняется от имени Греты: покупка ингредиента списывает её золото
   const before = game.state().players.o6.gold;
   const r = await c.cmd('as-buy', { type: 'shop.buy', ingredient: 'dew' });

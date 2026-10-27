@@ -7,7 +7,7 @@ import { BASE } from './base';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
-/** Содержимое игры из сообщения content; приходит до первой проекции на каждом подключении. */
+/** Содержимое игры из сообщения content: приходит только ведущему, до первой проекции; у игрока null. */
 export const content = signal<ContentData | null>(null);
 /** Когда пришла проекция (часы клиента): от него идут часы акта. */
 export const viewAt = signal(0);
