@@ -23,8 +23,8 @@ export function checkInvariants(state: GameState): void {
   for (const [key, p] of Object.entries(state.players)) {
     // Этап 7, §2.2: присутствующий после открытия получил стартовый набор.
     if (state.phase !== 'setup' && present(key) && p.startIssuedAt === undefined) fail(`у ${key} нет стартового набора`);
-    // 1. Защита только у присутствующего.
-    if (p.protection !== undefined && !present(key)) fail(`защита у отсутствующего ${key}`);
+    // 1. Защита только у присутствующего; у ушедшего после открытия она остаётся (этап 7, §2.3).
+    if (p.protection !== undefined && !present(key) && p.startIssuedAt === undefined) fail(`защита у отсутствующего ${key}`);
     // 5–6. Ресурсы не в минусе, резерв покрыт, кража не тронула обещанное.
     if (p.gold < 0 || p.gold < p.reservedGold) fail(`золото ${key}: ${p.gold} < резерва ${p.reservedGold}`);
     const a = available(state, key);

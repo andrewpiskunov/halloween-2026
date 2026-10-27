@@ -8,12 +8,15 @@ export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'a
 export const isClosed = (s: GameState) => s.phase === 'closed' || s.phase === 'revealed';
 
 /**
- * Отказ игроку, которого ведущий отметил ушедшим (или который ещё не пришёл) после открытия.
- * Проверяется для любой команды игрока до её обработчика.
+ * Отказ отсутствующему игроку во всех фазах после setup (акты, closed, revealed): ушёл или ещё не пришёл.
+ * В setup отметки присутствия только готовятся, поэтому там не проверяется.
+ * Вызывается в decide для любой команды игрока до её обработчика.
  */
 export function leftPlayer(state: GameState, a: Actor): Result | undefined {
   if (a.type !== 'player' || state.phase === 'setup') return undefined;
-  return state.players[a.roleKey]?.present === false ? fail('phase', 'ведущий отметил, что вы ушли') : undefined;
+  const p = state.players[a.roleKey];
+  if (p?.present !== false) return undefined;
+  return fail('phase', p.startIssuedAt === undefined ? 'ведущий ещё не отметил ваш приход' : 'ведущий отметил, что вы ушли');
 }
 
 /** Ключ игрока-участника ярмарки: роль в составе, запись есть и игрок пришёл. */

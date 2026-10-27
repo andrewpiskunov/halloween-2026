@@ -51,7 +51,7 @@ describe('присутствие после открытия', () => {
 
   test('ушедший: сделки закрыты, резервы сняты', () => {
     const { f, log } = lateGame();
-    const created = step(f, log, { type: 'offer.create', to: 'o8', give: bundle({ gold: 2 }), get: bundle() , service: true }, 'o6');
+    const created = step(f, log, { type: 'offer.create', to: 'o8', give: bundle({ gold: 2 }), get: bundle(), service: true }, 'o6');
     const offerId = (created[0] as Extract<Event, { type: 'OfferCreated' }>).offer.id;
     expect(f.s.players.o6.reservedGold).toBe(2);
     const asked = step(f, log, { type: 'ability.use', use: { kind: 'cleanseOther', target: 'o8' } }, 'o10');
@@ -96,8 +96,8 @@ describe('присутствие после открытия', () => {
     expect(errorOf(f.s, { type: 'altar.contribute', side: 'wake', gold: 1 }, 'o8')).toEqual({ error: 'phase', detail: 'ведущий отметил, что вы ушли' });
     expect(errorOf(f.s, { type: 'offer.create', to: 'o6', give: bundle({ gold: 1 }), get: bundle() }, 'o8'))
       .toEqual({ error: 'phase', detail: 'ведущий отметил, что вы ушли' });
-    // Опоздавший до прихода получает тот же отказ.
-    expect(errorOf(f.s, buy, 'o11')).toEqual({ error: 'phase', detail: 'ведущий отметил, что вы ушли' });
+    // Не пришедший к открытию до прихода получает свой текст.
+    expect(errorOf(f.s, buy, 'o11')).toEqual({ error: 'phase', detail: 'ведущий ещё не отметил ваш приход' });
     f.run(setPresent('o8', true), gm);
     expect(errorOf(f.s, buy, 'o8').error).toBe('ok');
   });
@@ -159,5 +159,50 @@ describe('присутствие после открытия', () => {
     // Повтор в setup по-прежнему даёт событие.
     const again = run(first.state, setPresent('o6', true), gm);
     expect(again.ok && again.events.map(e => e.type)).toEqual(['PresenceSet']);
+  });
+
+  test('защита у ушедшего остаётся, инварианты держатся', () => {
+    const { f } = lateGame();
+    f.as('o9', { type: 'ability.use', use: { kind: 'protectOther', target: 'o8' } });
+    const protection = f.s.players.o8.protection;
+    expect(protection).toBeDefined();
+    f.run(setPresent('o8', false), gm);
+    expect(f.s.players.o8.protection).toEqual(protection);
+    checkInvariants(f.s);
+    f.run(setPresent('o8', true), gm);
+    expect(f.s.players.o8.protection).toEqual(protection);
+    checkInvariants(f.s);
+  });
+
+  test('вещь в предложении ушедшего освобождается', () => {
+    const { f } = lateGame();
+    const shard = f.find('shard', 'I');
+    expect(shard.owner).toEqual({ type: 'player', key: 'o1' });
+    const created = f.as('o1', { type: 'offer.create', to: 'o8', give: bundle({ items: [shard.id] }), get: bundle({ gold: 1 }) });
+    const offerId = (created[0] as Extract<Event, { type: 'OfferCreated' }>).offer.id;
+    expect(f.s.items[shard.id].reservedFor).toBe(offerId);
+    const e = f.run(setPresent('o1', false), gm);
+    expect(e).toContainEqual({ type: 'OfferClosed', at: f.now, id: offerId, status: 'cancelled', reason: 'left' });
+    expect(f.s.items[shard.id].reservedFor).toBeUndefined();
+    expect(f.s.items[shard.id].owner).toEqual({ type: 'player', key: 'o1' });
+    checkInvariants(f.s);
+  });
+
+  test('просьба с вещью закрывается, резерв вещи снят', () => {
+    const { f } = lateGame();
+    const potion = f.craft('o6', 'cleanse');
+    const asked = f.as('o6', { type: 'item.use', itemId: potion, target: 'o8' });
+    const req = (asked[0] as Extract<Event, { type: 'ConsentRequested' }>).request;
+    expect(req.action.type).toBe('item');
+    expect(f.s.items[potion].reservedFor).toBe(req.id);
+    const e = f.run(setPresent('o8', false), gm);
+    expect(e).toEqual([
+      { type: 'PlayerLeft', at: f.now, roleKey: 'o8' },
+      { type: 'ConsentClosed', at: f.now, id: req.id, status: 'cancelled', reason: 'left' },
+    ]);
+    expect(f.s.requests[req.id].status).toBe('cancelled');
+    expect(f.s.items[potion].reservedFor).toBeUndefined();
+    expect(f.s.items[potion].owner).toEqual({ type: 'player', key: 'o6' });
+    checkInvariants(f.s);
   });
 });

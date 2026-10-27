@@ -99,11 +99,11 @@ export const offerCommands: CommandHandlers = {
 
   'offer.accept': (state, _content, cmd, ctx) => {
     if (!isActPhase(state)) return fail('phase');
-    // На паузе новые сделки не заключаются; отклонить и отозвать можно (спек этапа 7, §7).
-    if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     const o = pendingOffer(state, cmd.id);
     if (isResult(o)) return o;
     if (participant(state, ctx.actor) !== o.to) return fail('forbidden');
+    // На паузе новые сделки не заключаются; отклонить и отозвать можно (спек этапа 7, §7).
+    if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     if (isOverdue(state, o, ctx.now)) return fail('phase', 'срок ответа истёк');
     if (!authorStillHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'author' });
     if (!counterpartyHas(state, o)) return ok({ type: 'OfferClosed', at: ctx.now, id: o.id, status: 'expired', reason: 'counterparty' });
