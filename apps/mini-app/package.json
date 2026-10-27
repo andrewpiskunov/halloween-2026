@@ -9,7 +9,8 @@
     "dev": "pnpm -r --parallel dev",
     "start": "pnpm --filter @fair/server start",
     "e2e": "playwright test -c e2e",
-    "sim": "pnpm --filter @fair/sim sim"
+    "sim": "pnpm --filter @fair/sim sim",
+    "sim:load": "pnpm --filter @fair/sim load"
   },
   "engines": {
     "node": ">=20"

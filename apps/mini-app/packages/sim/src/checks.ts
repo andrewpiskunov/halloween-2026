@@ -6,6 +6,7 @@ import {
 } from '@fair/shared';
 import type { BotConn } from './client';
 import type { CheckResult, CommandLog } from './evening';
+import { INGREDIENTS } from './items';
 import { forbiddenStrings, privacyViolations } from './privacy';
 import { ALLOWED_INVALID, HOSTILE } from './uses';
 
@@ -146,24 +147,57 @@ export function checkClosing(state: GameState, content: Content, expect: { outco
   return result('closing', bad);
 }
 
-/** Подготовка (§2.3): у каждого стартовые золото, ингредиенты и вещи по содержимому. */
-export function checkStart(bots: Record<string, BotConn>, gmState: GameState, content: Content): CheckResult {
-  const bad: string[] = rosterMismatch(bots, gmState);
+/** Стартовый набор роли в проекции: 6 золота, ингредиенты по набору роли; вещей столько же, сколько в состоянии. */
+function startSetProblems(role: string, view: PlayerView, gmState: GameState, content: Content): string[] {
+  const bad: string[] = [];
+  if (view.me.player.gold !== START_GOLD) bad.push(`${role}: золото ${view.me.player.gold}`);
+  if (!isDeepStrictEqual(content.roleByKey[role].bundle, view.me.player.ingredients)) bad.push(`${role}: ингредиенты ${JSON.stringify(view.me.player.ingredients)}`);
+  if (view.me.items.length !== ownedCount(gmState, role)) bad.push(`${role}: вещей ${view.me.items.length} ≠ ${ownedCount(gmState, role)}`);
+  return bad;
+}
+
+/**
+ * Подготовка (§2.3): у каждого присутствующего стартовые золото, ингредиенты и вещи по содержимому.
+ * late — роли, не отмеченные при открытии (этап 7, §2.6): у них есть бот, но нет ни золота, ни ингредиентов, ни вещей.
+ */
+export function checkStart(bots: Record<string, BotConn>, gmState: GameState, content: Content, late: string[] = []): CheckResult {
+  const onTime = Object.fromEntries(Object.entries(bots).filter(([k]) => !late.includes(k)));
+  const bad: string[] = rosterMismatch(onTime, gmState);
   if (gmState.phase !== 'act1') bad.push(`фаза ${gmState.phase}, ожидалась act1`);
-  for (const [role, bot] of Object.entries(bots)) {
+  for (const [role, bot] of Object.entries(onTime)) {
     const view = bot.view() as PlayerView;
-    const r = content.roleByKey[role];
-    if (view.me.player.gold !== START_GOLD) bad.push(`${role}: золото ${view.me.player.gold}`);
-    if (!isDeepStrictEqual(r.bundle, view.me.player.ingredients)) bad.push(`${role}: ингредиенты ${JSON.stringify(view.me.player.ingredients)}`);
+    bad.push(...startSetProblems(role, view, gmState, content));
     const refs = new Set(view.me.items.map(i => `${i.kind}:${i.ref}`));
     const expected = [
       ...content.relics.filter(x => x.owner === role).map(x => `relic:${x.name}`),
       ...content.shards.filter(x => x.owner === role).map(x => `shard:${x.id}`),
     ];
     for (const e of expected) if (!refs.has(e)) bad.push(`${role}: нет стартовой вещи ${e}`);
-    if (view.me.items.length !== ownedCount(gmState, role)) bad.push(`${role}: вещей ${view.me.items.length} ≠ ${ownedCount(gmState, role)}`);
+  }
+  for (const role of late) {
+    const bot = bots[role];
+    if (!bot) { bad.push(`${role}: нет бота опоздавшего`); continue; }
+    const view = bot.view() as PlayerView;
+    const p = view.me.player;
+    if (gmState.players[role]?.present) bad.push(`${role}: опоздавший отмечен при открытии`);
+    if (p.gold !== 0 || INGREDIENTS.some(k => p.ingredients[k] !== 0)) bad.push(`${role}: до прихода есть набор: золото ${p.gold}, ингредиенты ${JSON.stringify(p.ingredients)}`);
+    if (view.me.items.length > 0 || ownedCount(gmState, role) > 0) bad.push(`${role}: до прихода есть вещи`);
   }
   return result('start', bad);
+}
+
+/**
+ * Опоздавший после прихода (этап 7, §2.2): присутствует, 6 золота и ингредиенты по набору роли.
+ * Вещи роли при открытии распределены без него (лот или вне игры), поэтому стартовые вещи не ждутся.
+ */
+export function checkArrived(role: string, bot: BotConn | undefined, gmState: GameState, content: Content): CheckResult {
+  const name = `start:${role}`;
+  if (!bot) return result(name, [`${role}: нет бота`]);
+  const bad: string[] = [];
+  if (!gmState.players[role]?.present) bad.push(`${role}: не отмечен пришедшим`);
+  if (bot.seq() !== gmState.seq) bad.push(`${role}: seq ${bot.seq()} ≠ ${gmState.seq}`);
+  bad.push(...startSetProblems(role, bot.view() as PlayerView, gmState, content));
+  return result(name, bad);
 }
 
 /** Команды, которые прогон не обязан выполнить (§3.6): системные и сброс; при 30 ещё выкуп. */

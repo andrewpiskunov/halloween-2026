@@ -28,6 +28,7 @@ test('ведущий входит по коду, команда возвраща
   expect(bot.maxViewBytes()).toBeGreaterThan(0);
   // Содержимое с тайнами приходит только ведущему.
   expect(bot.content()?.roles.length).toBeGreaterThan(0);
+  expect(bot.contentBytes()).toBeGreaterThan(1000);
 
   const r = await bot.send({ type: 'session.setN', n: 12 });
   expect(r.ok).toBe(true);
@@ -44,6 +45,7 @@ test('ведущий входит по коду, команда возвраща
   expect(o1.actor).toEqual({ type: 'player', roleKey: 'o1' });
   expect(JSON.stringify(o1.view())).not.toContain('telegramId');
   expect(o1.content()).toBeNull();
+  expect(o1.contentBytes()).toBe(0);
 });
 
 /** Ведущий со своим соединением: тесты не делят ботов. */

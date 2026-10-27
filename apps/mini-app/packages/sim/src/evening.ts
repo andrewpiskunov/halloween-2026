@@ -4,7 +4,7 @@ import {
 } from '@fair/shared';
 import { fetchCodes, openBot, type BotConn, type CmdOutcome } from './client';
 import {
-  checkClosing, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay, checkResponses, checkStart, checkViews, coverageOf,
+  checkArrived, checkClosing, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay, checkResponses, checkStart, checkViews, coverageOf,
 } from './checks';
 import { answerIncoming, playerAction, type Act, type TurnMemory } from './policy';
 import { Rng } from './rng';
@@ -35,7 +35,8 @@ export interface EveningResult {
   finalState: GameState;
   snapshots: { label: string; state: GameState }[];
   timing: { p50: number; p95: number; max: number; totalMs: number };
-  sizes: { player: number; gm: number };
+  /** Байты: самая большая проекция игрока и ведущего, сообщение content ведущему (этап 7, §3.3). */
+  sizes: { player: number; gm: number; content: number };
   coverage: { missingCommands: string[]; missingAbilities: string[]; missingItems: string[] };
   /** Вопросы владельцу к правилам (раздел 7 отчёта). */
   questions: string[];
@@ -49,9 +50,10 @@ export interface EveningResult {
 export const GM_USER_ID = 100;
 export const PLAYER_USER_BASE = 1000;
 export const REBIND_USER_BASE = 2000;
-/** Пороги §3.5: предупреждение, не падение. */
+/** Пороги §3.5 (и этапа 7, §3.3 для ведущего): предупреждение, не падение. */
 const P95_LIMIT_MS = 300;
 const PLAYER_VIEW_LIMIT = 256 * 1024;
+export const GM_VIEW_LIMIT = 96 * 1024;
 
 /** Особый ход: сценарий сам делает действие хода и возвращает true; false — ход идёт по политике. */
 export type Special = (view: PlayerView) => Promise<boolean>;
@@ -191,10 +193,13 @@ export class Ctx {
     return out;
   }
 
-  /** Начало акта: память услуг сбрасывается; отмену и изъятие делает сценарий, не политика. */
+  /**
+   * Начало акта: память услуг сбрасывается; отмену и изъятие делает сценарий, не политика.
+   * Память заводится всем ботам, и неотмеченным: опоздавший приходит посреди акта и сразу ходит.
+   */
   startAct(act: Act): void {
     this.act = act;
-    for (const role of this.present()) {
+    for (const role of Object.keys(this.bots)) {
       this.mem[role] ??= { abilityUsedAct: null, boughtPending: null, serviceDone: false, cancelDone: true, withdrawDone: true, bids: {} };
       Object.assign(this.mem[role], { serviceDone: false, cancelDone: true, withdrawDone: true });
     }
@@ -268,10 +273,16 @@ export class Ctx {
     }
   }
 
+  /** Боты присутствующих ролей: ушедший остаётся подключённым, но в сверку не входит. */
+  presentBots(): Record<string, BotConn> {
+    const s = this.gmState();
+    return Object.fromEntries(Object.entries(this.bots).filter(([k]) => s.players[k]?.present));
+  }
+
   /** Сверка проекций игроков с состоянием ведущего (§3.3) при равных seq. */
   async verifyViews(label: string): Promise<void> {
     await this.settle();
-    const r = checkViews(this.bots, this.gmState(), this.content);
+    const r = checkViews(this.presentBots(), this.gmState(), this.content);
     this.viewChecks.push({ ...r, name: `views:${label}` });
   }
 
@@ -280,14 +291,22 @@ export class Ctx {
     this.viewChecks.push(checkClosing(this.gmState(), this.content, { outcome: this.altarAssembled ? 'wake' : undefined, truth: this.truthFor }));
   }
 
-  async verifyStart(): Promise<void> {
+  /** Стартовые наборы после открытия; late — роли, не отмеченные при открытии (этап 7, §2.6). */
+  async verifyStart(late: string[] = []): Promise<void> {
     await this.settle();
-    this.viewChecks.push(checkStart(this.bots, this.gmState(), this.content));
+    this.viewChecks.push(checkStart(this.bots, this.gmState(), this.content, late));
   }
 
-  sizes(): { player: number; gm: number } {
+  /** Опоздавший получил стартовый набор после прихода (этап 7, §2.2). */
+  async verifyArrived(role: string): Promise<void> {
+    await this.settle();
+    this.viewChecks.push(checkArrived(role, this.bots[role], this.gmState(), this.content));
+  }
+
+  sizes(): { player: number; gm: number; content: number } {
     const player = Math.max(0, ...this.everyBot.filter(b => b.actor.type === 'player').map(b => b.maxViewBytes()));
-    return { player, gm: this.gm.maxViewBytes() };
+    const gms = this.everyBot.filter(b => b.actor.type === 'gm');
+    return { player, gm: Math.max(0, ...gms.map(b => b.maxViewBytes())), content: Math.max(0, ...gms.map(b => b.contentBytes())) };
   }
 }
 
@@ -330,6 +349,7 @@ export async function runEvening(opts: EveningOptions): Promise<EveningResult> {
     const warnings: string[] = [];
     if (timing.p95 > P95_LIMIT_MS) warnings.push(`p95 ${timing.p95} мс выше ${P95_LIMIT_MS} мс`);
     if (sizes.player > PLAYER_VIEW_LIMIT) warnings.push(`проекция игрока ${sizes.player} байт больше ${PLAYER_VIEW_LIMIT}`);
+    if (sizes.gm > GM_VIEW_LIMIT) warnings.push(`проекция ведущего ${sizes.gm} байт больше ${GM_VIEW_LIMIT}`);
     const skipped = [
       ...checks.flatMap(c => c.details.filter(d => d.startsWith('пропущено')).map(d => `${c.name}: ${d}`)),
       ...ctx.stepSkips.map(s => `сценарий: ${s}`),

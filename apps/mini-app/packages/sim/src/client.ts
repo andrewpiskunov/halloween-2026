@@ -15,6 +15,10 @@ export interface BotConn {
   send(cmd: Command, timeoutMs?: number): Promise<CmdOutcome>;
   waitSeq(seq: number, timeoutMs?: number): Promise<void>;
   maxViewBytes(): number;
+  /** Размер последнего сообщения content в байтах; 0, если его не было. */
+  contentBytes(): number;
+  /** Соединение закрыто (сервером, сетью или close()). */
+  closed(): boolean;
   close(): void;
 }
 
@@ -54,6 +58,7 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
   let lastContent: ContentData | null = null;
   let lastSeq = -1;
   let maxBytes = 0;
+  let contentBytes = 0;
   let nextId = 0;
   // Сервер помнит результаты по аккаунту и id команды: без префикса соединения повторный вход
   // того же аккаунта получил бы чужой старый результат вместо выполнения команды.
@@ -81,7 +86,11 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
       ws.close();
       return;
     }
-    if (msg.kind === 'content') { lastContent = msg.data; return; }
+    if (msg.kind === 'content') {
+      lastContent = msg.data;
+      contentBytes = Buffer.byteLength(text);
+      return;
+    }
     if (msg.kind === 'view') {
       maxBytes = Math.max(maxBytes, Buffer.byteLength(text));
       lastView = msg.view;
@@ -147,6 +156,8 @@ export async function openBot(baseUrl: string, userId: number, code: string): Pr
       });
     },
     maxViewBytes: () => maxBytes,
+    contentBytes: () => contentBytes,
+    closed: () => closed !== undefined,
     // Все ожидания отклоняются сразу, не дожидаясь события close; повторный вызов ничего не делает.
     close: () => {
       fail(new Error(`бот ${userId}: соединение закрыто`));

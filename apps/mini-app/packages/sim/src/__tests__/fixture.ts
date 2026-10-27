@@ -20,10 +20,10 @@ export class Game {
   now = 1000;
   private ids = 0;
 
-  constructor(n: number) {
+  constructor(n: number, absent: string[] = []) {
     this.s = initialState(content, testCodes());
     this.must({ type: 'session.setN', n }, 'gm');
-    for (const key of this.s.roster) this.must({ type: 'player.setPresent', roleKey: key, present: true }, 'gm');
+    for (const key of this.s.roster.filter(k => !absent.includes(k))) this.must({ type: 'player.setPresent', roleKey: key, present: true }, 'gm');
     this.must({ type: 'session.open' }, 'gm');
   }
 

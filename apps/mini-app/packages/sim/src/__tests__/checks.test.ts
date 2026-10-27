@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 import type { Command, GameState } from '@fair/shared';
 import {
   ALLOWED_FAIL_PREFIXES, ALLOWED_FAIL_REASONS, abilityWorked, actNextLabel, checkClosing, checkCoverage, checkGoldLog, checkInvariantsAt, checkReplay,
-  checkResponses, checkStart, checkViews,
+  checkArrived, checkResponses, checkStart, checkViews,
 } from '../checks';
 import type { BotConn } from '../client';
 import type { CmdOutcome } from '../client';
@@ -110,7 +110,7 @@ describe('checkCoverage', () => {
 describe('сверка проекций: набор ботов', () => {
   const botOf = (g: Game, key: string): BotConn => ({
     actor: { type: 'player', roleKey: key }, view: () => g.view(key), seq: () => g.s.seq,
-    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, content: () => null, maxViewBytes: () => 0, close: () => {},
+    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, content: () => null, maxViewBytes: () => 0, contentBytes: () => 0, closed: () => false, close: () => {},
   });
 
   test('бот без присутствующей роли или роль без бота — ошибка', () => {
@@ -172,5 +172,26 @@ describe('checkClosing', () => {
     const forged: GameState = { ...s, closing: { ...s.closing!, outcome: 'wake' } };
     expect(checkClosing(forged, content).details).toEqual(['итоги в состоянии расходятся с computeClosing']);
     expect(checkClosing({ ...s, closing: undefined }, content).ok).toBe(false);
+  });
+});
+
+describe('опоздавший (этап 7, §2.6)', () => {
+  const botOf = (g: Game, key: string): BotConn => ({
+    actor: { type: 'player', roleKey: key }, view: () => g.view(key), seq: () => g.s.seq,
+    send: async () => ({ ok: true, ms: 0 }), waitSeq: async () => {}, content: () => null, maxViewBytes: () => 0, contentBytes: () => 0, closed: () => false, close: () => {},
+  });
+
+  test('при открытии у опоздавшего нулевой набор, после прихода стартовый', () => {
+    const g = new Game(12, ['o11']);
+    const bots = Object.fromEntries(g.s.roster.map(k => [k, botOf(g, k)]));
+    expect(checkStart(bots, g.s, content, ['o11'])).toEqual({ name: 'start', ok: true, details: [] });
+    // Без списка опоздавших бот Корвина лишний.
+    expect(checkStart(bots, g.s, content).details[0]).toMatch(/^боты .* не совпадают/);
+    expect(checkArrived('o11', bots.o11, g.s, content).ok).toBe(false);
+
+    g.must({ type: 'player.setPresent', roleKey: 'o11', present: true }, 'gm');
+    expect(checkArrived('o11', bots.o11, g.s, content)).toEqual({ name: 'start:o11', ok: true, details: [] });
+    // Опоздавший с набором в начале — ошибка.
+    expect(checkStart(bots, g.s, content, ['o11']).ok).toBe(false);
   });
 });

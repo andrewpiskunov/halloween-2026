@@ -1,10 +1,12 @@
 import { beforeAll, expect, test } from 'vitest';
+import type { Event } from '@fair/shared';
 import type { EveningResult } from '../evening';
 import { runTwelve } from './evening-run';
 
 let result: EveningResult;
+let events: Event[];
 
-beforeAll(async () => { ({ result } = await runTwelve()); }, 60_000);
+beforeAll(async () => { ({ result, events } = await runTwelve()); }, 60_000);
 
 test('вечер на 12: сценарий проходит, проверки зелёные, покрытие полное', () => {
   const failed = result.checks.filter(c => !c.ok).map(c => `${c.name}: ${c.details.join('; ')}`);
@@ -54,4 +56,31 @@ test('вечер на 12: сбор алтаря даёт исход wake, три
   const reasons = result.commands.filter(e => e.cmd.type === 'gm.correct' && e.outcome.ok).map(e => (e.cmd as { reason: string }).reason);
   expect(reasons).toContain('проверка готовности алтаря');
   expect(reasons).toContain('проверка «Правды»');
+});
+
+test('вечер на 12: Корвин опаздывает, Никс уходит и возвращается (спецификация этапа 7, §2.6)', () => {
+  const presence = events.flatMap(e => {
+    if (e.type === 'PlayerArrived') return [`пришёл ${e.roleKey} ${e.startSet ? 'с набором' : 'без набора'}`];
+    if (e.type === 'PlayerLeft') return [`ушёл ${e.roleKey}`];
+    return [];
+  });
+  expect(presence).toEqual(['пришёл o11 с набором', 'ушёл o8', 'пришёл o8 без набора']);
+  // Корвин не отмечен при открытии: нулевой набор, после прихода стартовый.
+  const setup = result.snapshots.find(s => s.label === 'setup')!.state;
+  expect(setup.players.o11.present).toBe(false);
+  expect(setup.players.o11.gold).toBe(0);
+  expect(result.checks.find(c => c.name === 'start')).toMatchObject({ ok: true });
+  expect(result.checks.find(c => c.name === 'start:o11')).toMatchObject({ ok: true });
+  // Команды Никса после ухода получили phase с текстом «ведущий отметил».
+  const left = result.commands.filter(e => e.actor === 'o8' && !e.outcome.ok && e.outcome.error === 'phase');
+  expect(left.length).toBeGreaterThan(0);
+  expect(left.every(e => e.outcome.detail?.includes('ведущий отметил'))).toBe(true);
+  expect(result.finalState.players.o8.present).toBe(true);
+  expect(result.finalState.players.o11.present).toBe(true);
+});
+
+test('вечер на 12: содержимое отдельным сообщением, проекция ведущего меньше 96 КБ', () => {
+  expect(result.sizes.content).toBeGreaterThan(0);
+  expect(result.sizes.gm).toBeLessThan(96 * 1024);
+  expect(result.sizes.player).toBeGreaterThan(0);
 });

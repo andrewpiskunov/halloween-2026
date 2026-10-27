@@ -15,6 +15,16 @@ export const ROUNDS = 6;
 /** Исправление акта II (§2.3). */
 const GOLD_REASON = 'награда за рунный контур';
 
+/**
+ * Опоздавший и ушедший (этап 7, §2.6): Корвин не отмечен при открытии и приходит во втором круге акта I;
+ * Никс уходит в третьем круге акта I и возвращается в первом круге акта II. В сценах этапа 6 они не участвуют.
+ */
+export const LATE_ROLE = 'o11';
+export const LEAVING_ROLE = 'o8';
+const LATE_ROUND = 2;
+const LEAVE_ROUND = 3;
+const STAGE7_ROLES = [LATE_ROLE, LEAVING_ROLE];
+
 const nothing = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] as string[] };
 
 /** Следующий присутствующий по составу после роли (по кругу). */
@@ -34,10 +44,11 @@ async function prepare(ctx: Ctx): Promise<void> {
   const codes = (await fetchCodes(ctx.opts.baseUrl)).roles;
   ctx.turnNo++;
   for (const [i, role] of roster.entries()) await ctx.login(role, PLAYER_USER_BASE + i + 1, codes[role]);
-  await ctx.gmTurn(roster.map(roleKey => ({ type: 'player.setPresent', roleKey, present: true }) as Command));
+  // Корвин входит, но ведущий не отмечает его приход до акта I.
+  await ctx.gmTurn(roster.filter(k => k !== LATE_ROLE).map(roleKey => ({ type: 'player.setPresent', roleKey, present: true }) as Command));
 
   // «Телефон сел»: ведущий выдаёт новый код, игрок входит с другого аккаунта.
-  const rebound = roster[1];
+  const rebound = roster.filter(k => !STAGE7_ROLES.includes(k))[1];
   ctx.drop(rebound);
   await ctx.gmTurn([{ type: 'gm.rebind', roleKey: rebound }]);
   const fresh = (await fetchCodes(ctx.opts.baseUrl)).roles[rebound];
@@ -46,7 +57,7 @@ async function prepare(ctx: Ctx): Promise<void> {
 
   await ctx.gmTurn([{ type: 'session.open' }]);
   ctx.snapshot('setup');
-  await ctx.verifyStart();
+  await ctx.verifyStart(roster.includes(LATE_ROLE) ? [LATE_ROLE] : []);
 }
 
 /** Конец акта: круг ответов, шаги сценария после него, снимок и сверка проекций; затем act.next с парой снимков. */
@@ -85,7 +96,9 @@ function lastOwnContribution(ctx: Ctx, role: string, side: AltarSide): string | 
 /** Акт I: защита для Клёпы, выбор стороны во втором круге, отмена предложения, изъятие вклада, проба чужого согласия. */
 async function act1(ctx: Ctx): Promise<void> {
   ctx.startAct(1);
-  const present = ctx.present();
+  // Роли сцен выбираются из постоянных участников: опоздавший и ушедший в сценах этапа 6 не участвуют.
+  const present = ctx.present().filter(k => !STAGE7_ROLES.includes(k));
+  const roster = ctx.gmState().roster;
   const keeper = present.find(k => ABILITY_BY_ROLE[k] === 'transferProtection');
   const protector = keeper ? present.find(k => ABILITY_BY_ROLE[k] === 'protectOther') : undefined;
   if (keeper && !protector) ctx.questions.push(`${keeper}: нет защитника, перенос защиты не проверяется`);
@@ -95,7 +108,15 @@ async function act1(ctx: Ctx): Promise<void> {
   let probed = false;
 
   for (let round = 1; round <= ROUNDS; round++) {
-    for (const role of present) {
+    if (round === LATE_ROUND && roster.includes(LATE_ROLE)) {
+      await gmRound(ctx, [{ type: 'player.setPresent', roleKey: LATE_ROLE, present: true }]);
+      await ctx.verifyArrived(LATE_ROLE);
+    }
+    if (round === LEAVE_ROUND && roster.includes(LEAVING_ROLE)) await gmRound(ctx, [{ type: 'player.setPresent', roleKey: LEAVING_ROLE, present: false }]);
+    // Состав круга по состоянию; ушедший продолжает ходить до конца акта и получает отказ phase.
+    const s = ctx.gmState();
+    const order = roster.filter(k => s.players[k]?.present || (k === LEAVING_ROLE && round >= LEAVE_ROUND));
+    for (const role of order) {
       const free = ctx.content.roleByKey[role].side === 'free';
       await ctx.turn(role, {
         // Свободная роль выбирает сторону на первом ходу второго круга, не раньше.
@@ -200,9 +221,12 @@ async function act2(ctx: Ctx): Promise<void> {
   const lotB = lots.find(l => l.id !== lotA.id);
   let cancelled = false;
 
+  const back: Command[] = ctx.gmState().roster.includes(LEAVING_ROLE) ? [{ type: 'player.setPresent', roleKey: LEAVING_ROLE, present: true }] : [];
+
   for (let round = 1; round <= ROUNDS; round++) {
     switch (round) {
-      case 1: await gmRound(ctx, [{ type: 'lot.openBidding', id: lotA.id }]); break;
+      // Никс возвращается в первом круге: без второго стартового набора.
+      case 1: await gmRound(ctx, [...back, { type: 'lot.openBidding', id: lotA.id }]); break;
       case 2: await gmRound(ctx, [{ type: 'lot.sealedBids', id: lotA.id }]); break;
       case 3: await gmRound(ctx, [{ type: 'gm.correct', playerKey: present[0], change: { field: 'gold', delta: 1 }, reason: GOLD_REASON }]); break;
       case 4: await gmRound(ctx, [{ type: 'lot.close', id: lotA.id }]); break;
@@ -212,7 +236,7 @@ async function act2(ctx: Ctx): Promise<void> {
     if (round === 1) await probe(ctx, present[0], { type: 'lot.close', id: lotA.id }, 'forbidden');
 
     let buyer: string | undefined;
-    for (const role of present) {
+    for (const role of ctx.present()) {
       await ctx.turn(role, {
         special: async view => {
           if (round === 2 || round === 3) {
@@ -249,7 +273,7 @@ async function act3(ctx: Ctx): Promise<void> {
     }
     // Пауза и снятие подряд: в промежутке ботов не вызывают.
     if (round === ROUNDS) await gmRound(ctx, [{ type: 'clock.pause' }, { type: 'clock.resume' }]);
-    for (const role of present) {
+    for (const role of ctx.present()) {
       await ctx.turn(role, {
         before: view => declineOnce(ctx, role, view),
         special: async view => await buyoutOnce(ctx, role, view) || (round === ROUNDS && await useWardOnce(ctx, role, view)),

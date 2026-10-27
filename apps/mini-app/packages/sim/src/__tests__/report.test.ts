@@ -56,3 +56,11 @@ test('лоты нумеруются, способность названа по-
   expect(md).not.toMatch(/Лот акта/);
   expect(md).toContain(`${content.roleByKey.o1.skill} (payAshWithGold): `);
 });
+
+test('раздел 6 показывает три размера: игрок, ведущий, содержимое', () => {
+  const md = renderReport(result, meta(false), content);
+  const s6 = md.slice(md.indexOf('## 6.'), md.indexOf('## 7.'));
+  expect(s6).toMatch(/Самая большая проекция игрока: \d+\.\d КБ/);
+  expect(s6).toMatch(/Самая большая проекция ведущего: \d+\.\d КБ \(порог 96 КБ\)/);
+  expect(s6).toMatch(/Содержимое \(сообщение content, только ведущему, при подключении\): \d+\.\d КБ/);
+});

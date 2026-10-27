@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sim": "tsx src/cli.ts",
+    "load": "tsx src/load-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json"
   },
