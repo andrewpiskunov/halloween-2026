@@ -15,7 +15,7 @@ const MAX_DEPTH = 5;
 /** Все типы команд объединения Command: компилятор проверит полноту списка. */
 const COMMAND_TYPES: Record<Command['type'], true> = {
   'session.setN': true, 'session.toggleRole': true, 'player.bind': true, 'player.setPresent': true,
-  'session.open': true, 'act.next': true, 'clock.pause': true, 'clock.resume': true, 'clock.extend': true,
+  'session.open': true, 'session.reset': true, 'act.next': true, 'clock.pause': true, 'clock.resume': true, 'clock.extend': true,
   'gm.announce': true, 'gm.correct': true, 'gm.rebind': true,
   'offer.create': true, 'offer.accept': true, 'offer.decline': true, 'offer.cancel': true, 'offer.expire': true,
   'shop.buy': true, 'shop.craft': true, 'altar.contribute': true, 'altar.withdraw': true,

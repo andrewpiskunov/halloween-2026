@@ -17,6 +17,7 @@ export type Command =
   | { type: 'player.bind'; code: string; telegramId: number }
   | { type: 'player.setPresent'; roleKey: string; present: boolean }
   | { type: 'session.open' }
+  | { type: 'session.reset' }
   | { type: 'act.next' }
   | { type: 'clock.pause' } | { type: 'clock.resume' } | { type: 'clock.extend'; minutes: number }
   | { type: 'gm.announce'; text: string }

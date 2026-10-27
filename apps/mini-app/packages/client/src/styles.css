@@ -452,3 +452,6 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
   color: var(--fg); font: 400 20px var(--serif); cursor: pointer;
 }
 .m-note.warn { color: var(--acc); }
+
+.danger-zone { border-color: var(--cinnabar); }
+.danger-zone h5 { color: var(--cinnabar); }

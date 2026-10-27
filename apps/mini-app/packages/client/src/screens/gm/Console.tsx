@@ -83,6 +83,16 @@ export function Console({ v }: { v: GmView }) {
         </span>
       </div>
 
+      <div class="m-card danger-zone">
+        <h5>Сброс игры</h5>
+        <p class="m-note">Удалит состав, явку, привязки игроков, вещи, сделки, алтари и журнал. Коды приглашений выдадутся заново, вы останетесь ведущим.</p>
+        <Button kind="sec" onClick={() => ask({
+          title: 'Сбросить игру полностью?', danger: true, okLabel: 'Сбросить',
+          text: 'Всё состояние вернётся к началу: состав пустой, игроки отвязаны, ссылки старые перестанут работать. Отменить нельзя.',
+          onOk: () => { void run({ type: 'session.reset' }).then(r => { if (r.ok) showToast('Игра сброшена'); }); },
+        })}>Сбросить игру</Button>
+      </div>
+
       <div class="m-card">
         <h5>Объявление всем</h5>
         <label class="field">

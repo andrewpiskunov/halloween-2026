@@ -1,9 +1,34 @@
 import type { Content } from '../content';
-import type { Actor } from '../commands';
+import type { Actor, Ctx } from '../commands';
 import type { FairOpened } from '../events';
 import type { Altar, AltarSide, Counts, GameState, Item, Lot, Player } from '../types';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 import { defaultRoster, MAX_N, MIN_N } from './roster';
+
+/** Пустое состояние до SessionCreated: фаза setup, ни состава, ни кодов. */
+export const emptyState = (): GameState => ({
+  phase: 'setup', roster: [], nPresent: 0,
+  clock: { actStartedAt: 0, pausedTotal: 0 },
+  players: {}, items: {}, workshop: { ash: 0, moon: 0, dew: 0 }, offers: {}, lots: {},
+  altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0,
+});
+
+const CODE_LENGTH = 12;
+/**
+ * Коды приглашений для сброса: из newId (на сервере это UUID) берутся первые 12 знаков без дефисов.
+ * Уникальность обеспечивает сам newId.
+ */
+function codesFrom(content: Content, ctx: Ctx): Record<string, string> {
+  const codes: Record<string, string> = {};
+  const used = new Set<string>();
+  for (const key of ['gm', ...content.roles.map(r => r.key)]) {
+    let code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
+    while (used.has(code)) code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
+    used.add(code);
+    codes[key] = code;
+  }
+  return codes;
+}
 
 const START_GOLD = 6;
 const FIRST_ACT_LOTS = 4;
@@ -117,6 +142,12 @@ export const sessionCommands: CommandHandlers = {
     return ok({ type: 'RoleToggled', at: ctx.now, roleKey: cmd.roleKey, inRoster: !state.roster.includes(cmd.roleKey) });
   },
 
+  /** Полный сброс с пульта: всё начальное, коды новые, ведущий остаётся ведущим. */
+  'session.reset': (state, content, _cmd, ctx) => {
+    if (ctx.actor.type !== 'gm') return fail('forbidden');
+    return ok({ type: 'SessionReset', at: ctx.now, codes: codesFrom(content, ctx), ...(state.gmTelegramId !== undefined ? { gmTelegramId: state.gmTelegramId } : {}) });
+  },
+
   'player.bind': (state, _content, cmd, ctx) => {
     if (ctx.actor.type === 'player') return fail('forbidden');
     // Аккаунт уже занимает роль состава (кроме roleKey) или место ведущего.
@@ -159,6 +190,10 @@ export const sessionReducers: EventReducers = {
   SessionCreated: (state, _content, e) => {
     const { gm, ...invites } = e.codes;
     return { ...state, invites, gmCode: gm ?? '' };
+  },
+  SessionReset: (_state, _content, e) => {
+    const { gm, ...invites } = e.codes;
+    return { ...emptyState(), invites, gmCode: gm ?? '', ...(e.gmTelegramId !== undefined ? { gmTelegramId: e.gmTelegramId } : {}) };
   },
   RosterSet: (state, _content, e) => ({ ...state, roster: [...e.roster], players: playersFor(state, e.roster) }),
   RoleToggled: (state, content, e) => {

@@ -7,7 +7,7 @@ import { actCommands, actReducers } from './acts';
 import { altarCommands, altarReducers } from './altars';
 import { offerCommands, offerReducers } from './offers';
 import { shopCommands, shopReducers } from './shop';
-import { sessionCommands, sessionReducers } from './session';
+import { emptyState, sessionCommands, sessionReducers } from './session';
 
 export type { ErrorCode, Result, CommandHandlers, EventReducers } from './result';
 export { defaultRoster } from './roster';
@@ -22,13 +22,7 @@ type AnyReducer = (state: GameState, content: Content, event: Event) => GameStat
 
 /** Пустая сессия в фазе setup с кодами приглашений (по roleKey для всех ролей и 'gm'). */
 export function initialState(content: Content, codes: Record<string, string>): GameState {
-  const empty: GameState = {
-    phase: 'setup', roster: [], nPresent: 0,
-    clock: { actStartedAt: 0, pausedTotal: 0 },
-    players: {}, items: {}, workshop: { ash: 0, moon: 0, dew: 0 }, offers: {}, lots: {},
-    altars: {}, invites: {}, bindings: {}, gmCode: '', announcements: [], seq: 0,
-  };
-  return reduce(empty, content, { type: 'SessionCreated', at: 0, codes });
+  return reduce(emptyState(), content, { type: 'SessionCreated', at: 0, codes });
 }
 
 /** Проверяет команду и возвращает события; состояние не меняет. */

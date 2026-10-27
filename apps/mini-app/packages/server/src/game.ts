@@ -97,6 +97,7 @@ export class Game {
     const okResult = (stored: Event[]): SubmitResult => ({ ok: true, seq: stored.length ? stored[stored.length - 1].seq! : before.seq });
     const stored = this.store.commit(r.events, cmdId, okResult);
     this.current = stored.reduce((s, e) => reduce(s, this.content, e), before);
+    for (const e of stored) if (e.type === 'SessionReset') { this.store.saveMeta('gmCode', e.codes.gm); console.log('Ведущий сбросил игру'); }
     if (stored.length) this.notify();
     return okResult(stored);
   }

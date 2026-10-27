@@ -266,3 +266,26 @@ test('ведущий получает токен «за игрока» и вид
   expect((await as(gmAuth.token, 'n18')).status).toBe(403);
   expect((await as('мусор', 'o6')).status).toBe(401);
 });
+
+// Последний тест файла: после сброса состояние общей игры начальное.
+test('session.reset от ведущего: игроки теряют роль и соединение, ведущий получает проекцию setup, коды новые', async () => {
+  const gmAuth = await devAuth(1000);
+  expect(gmAuth.actor).toEqual({ type: 'gm' });
+  const g = connect(gmAuth.token);
+  await g.opened;
+  await g.next(m => m.kind === 'view');
+  const oldGm = game.gmCode();
+  const oldO6 = game.state().invites.o6;
+
+  const r = await g.cmd('reset-1', { type: 'session.reset' });
+  expect(r).toMatchObject({ kind: 'result', id: 'reset-1', ok: true });
+  expect(await o6.closed).toBe(4403);
+  const view = await g.next(m => m.kind === 'view' && (m.view as { state: { phase: string } }).state.phase === 'setup');
+  expect((view.view as { state: { roster: string[]; gmTelegramId?: number } }).state).toMatchObject({ roster: [], gmTelegramId: 1000 });
+  expect(game.gmCode()).not.toBe(oldGm);
+  expect(game.state().invites.o6).not.toBe(oldO6);
+  expect(store.getMeta('gmCode')).toBe(game.gmCode());
+  // Старый код игрока больше не действует, ведущий входит без кода.
+  expect((await devAuth(1006, oldO6)).actor).toBeNull();
+  expect((await devAuth(1000)).actor).toEqual({ type: 'gm' });
+});

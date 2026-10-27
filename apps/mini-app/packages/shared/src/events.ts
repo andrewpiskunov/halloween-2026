@@ -6,6 +6,8 @@ export interface EventBase { at: number; seq?: number }
 
 /** Сессия создана с кодами приглашений: по roleKey для всех 30 ролей и ключ 'gm'. */
 export interface SessionCreated extends EventBase { type: 'SessionCreated'; codes: Record<string, string> }
+/** Ведущий сбросил игру: состояние начальное с новыми кодами, ведущий остаётся привязанным. */
+export interface SessionReset extends EventBase { type: 'SessionReset'; codes: Record<string, string>; gmTelegramId?: number }
 /** Ведущий задал N, состав пересчитан по правилу 6.1. */
 export interface RosterSet extends EventBase { type: 'RosterSet'; roster: string[] }
 /** Роль вручную убрана из состава или возвращена в него. */
@@ -74,7 +76,7 @@ export interface ContributionWithdrawn extends EventBase {
 }
 
 // События следующих задач добавляются в объединение по мере реализации.
-export type Event = SessionCreated | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
+export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn;
 export type EventType = Event['type'];
