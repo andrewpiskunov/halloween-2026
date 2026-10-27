@@ -127,7 +127,7 @@ export const consentCommands: CommandHandlers = {
 };
 
 /** Снимает резервы запроса: abilityPending автора и reservedFor вещи, если они его. */
-function release(state: GameState, req: ConsentRequest): GameState {
+export function release(state: GameState, req: ConsentRequest): GameState {
   let s = state;
   const p = s.players[req.author];
   if (p?.abilityPending === req.id) {

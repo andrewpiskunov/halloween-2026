@@ -5,6 +5,7 @@ import type { AbilityUse, Actor, Command, Correction } from '../commands';
 import type { Event } from '../events';
 import type { AltarSide, Bundle, Counts, GameState, Item } from '../types';
 import { available, execute, initialState } from '../engine';
+import { isClosed } from '../engine/guards';
 
 export const content = loadContent(JSON.parse(readFileSync(defaultContentPath(), 'utf8')));
 
@@ -131,6 +132,28 @@ export function checkInvariants(state: GameState): void {
     const r = it.reservedFor !== undefined ? state.requests[it.reservedFor] : undefined;
     if (r && r.status !== 'pending') fail(`вещь ${it.id} в резерве закрытого запроса ${r.id}`);
   }
+  checkClosed(state, present);
+}
+
+/** Этап 5, §8: после закрытия всё заморожено, итоги есть ровно для присутствующих; до закрытия итогов нет. */
+function checkClosed(state: GameState, present: (k: string) => boolean): void {
+  const fail = (msg: string) => { throw new Error(`инвариант закрытия: ${msg}`); };
+  if (!isClosed(state)) {
+    if (state.closing !== undefined) fail(`итоги в фазе ${state.phase}`);
+    return;
+  }
+  for (const o of Object.values(state.offers)) if (o.status === 'pending') fail(`открытое предложение ${o.id}`);
+  for (const r of Object.values(state.requests)) if (r.status === 'pending') fail(`открытый запрос ${r.id}`);
+  for (const l of Object.values(state.lots)) if (l.status === 'openBidding' || l.status === 'sealedBidding') fail(`торг за лот ${l.id}`);
+  for (const [key, p] of Object.entries(state.players)) {
+    if (p.reservedGold !== 0) fail(`резерв золота у ${key}`);
+    if (p.abilityPending !== undefined) fail(`abilityPending у ${key}`);
+  }
+  for (const it of Object.values(state.items)) if (it.reservedFor !== undefined) fail(`вещь ${it.id} в резерве`);
+  if (!state.closing) fail('нет итогов');
+  const keys = Object.keys(state.closing!.players).sort();
+  const expected = state.roster.filter(present).sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expected)) fail(`итоги для ${keys.join(',')}, присутствуют ${expected.join(',')}`);
 }
 
 /**
@@ -264,4 +287,21 @@ export class Fair {
     this.as(key, { type: 'lot.bid', id: lot.id, amount: 1 });
     this.run({ type: 'lot.close', id: lot.id }, gm);
   }
+}
+
+/**
+ * Собирает алтарь: три осколка и два Фокуса кладёт keeper, золото 2 + 2 + 2 кладут три дарителя.
+ * Осколки заранее должны лежать у keeper.
+ */
+export function buildAltar(f: Fair, side: AltarSide, keeper: string, shardRefs: string[], donors: string[]): void {
+  for (const ref of shardRefs) f.contribute(keeper, side, { itemId: f.find('shard', ref).id });
+  for (let i = 0; i < 2; i++) f.contribute(keeper, side, { itemId: f.craft(keeper, 'focus') });
+  for (const d of donors) f.contribute(d, side, { gold: 2 });
+}
+
+/** Состав 12: осколки II и III переезжают к Серафине, она собирает wake. */
+export function wakeReady(f: Fair): void {
+  f.moveTo(f.find('shard', 'II').id, 'o1');
+  f.moveTo(f.find('shard', 'III').id, 'o1');
+  buildAltar(f, 'wake', 'o1', ['I', 'II', 'III'], ['o1', 'o2', 'o4']);
 }

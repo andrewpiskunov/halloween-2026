@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { allBut, content, gm, makeGame, player, run } from './helpers';
+import { Fair, allBut, buildAltar, checkInvariants, content, gm, makeGame, player, run, wakeReady } from './helpers';
 import type { ConsentRequest, GameState, Item, Offer } from '../types';
 import type { Command } from '../commands';
 
@@ -211,7 +211,7 @@ describe('ведущий', () => {
     expect(run(s, { type: 'gm.correct', playerKey: 'zzz', change: { field: 'gold', delta: 1 }, reason: 'x' }, gm)).toMatchObject({ ok: false, error: 'not_found' });
   });
 
-  test('correct itemOwner: цель вне состава → not_found, цель не игрок → invalid; вещь в лоте или на алтаре → invalid; резерв снимается', () => {
+  test('correct itemOwner: цель вне состава → not_found, цель не игрок → invalid; вещь в лоте → invalid; резерв снимается', () => {
     const s0 = makeGame(12);
     const shard = Object.values(s0.items).find(i => i.kind === 'shard' && i.owner.type === 'player')!;
     const holder = (shard.owner as { key: string }).key;
@@ -227,7 +227,7 @@ describe('ведущий', () => {
 
     const onAltar = run(s0, { type: 'altar.contribute', side: 'wake', itemId: shard.id }, player(holder));
     if (!onAltar.ok) throw new Error(onAltar.error);
-    expect(correct(onAltar.state, shard.id, { type: 'player', key: to })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(correct(onAltar.state, shard.id, { type: 'altar', side: 'bind' })).toMatchObject({ ok: false, error: 'invalid' });
 
     const zero = { ash: 0, moon: 0, dew: 0 };
     const offered = run(s0, {
@@ -361,5 +361,107 @@ describe('исправления ведущего: отметки способн
     expect(err(s, 'o17', { field: 'protection', value: true })).toBe('not_found');
     expect(err(s, 'o17', { field: 'gold', delta: 1 })).toBe('not_found');
     expect(err({ ...s, phase: 'setup' }, 'o1', { field: 'protection', value: true })).toBe('phase');
+  });
+});
+
+describe('исправления ведущего: сторона, цели, вещь с алтаря (этап 5, §2.4)', () => {
+  type Change = Extract<Command, { type: 'gm.correct' }>['change'];
+  const correct = (s: GameState, key: string, change: Change, now = 0) =>
+    run(s, { type: 'gm.correct', playerKey: key, change, reason: 'ошибка учёта' }, gm, now);
+  const must = (s: GameState, key: string, change: Change, now = 0) => {
+    const r = correct(s, key, change, now);
+    if (!r.ok) throw new Error(`${r.error} ${r.detail ?? ''}`);
+    return r;
+  };
+
+  test('side: у свободного Грима ставит и снимает; у Серафины → invalid; чужая сторона и пустое снятие → invalid', () => {
+    const s = makeGame(12);
+    const on = must(s, 'o13', { field: 'side', side: 'bind' });
+    expect(on.state.players.o13.side).toBe('bind');
+    const off = must(on.state, 'o13', { field: 'side', side: null });
+    expect(off.state.players.o13).not.toHaveProperty('side');
+    expect(correct(s, 'o1', { field: 'side', side: 'bind' })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(correct(s, 'o13', { field: 'side', side: 'ship' })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(correct(s, 'o13', { field: 'side', side: null })).toMatchObject({ ok: false, error: 'invalid' });
+  });
+
+  test('goal: index 1 = true ставит отметку, null снимает; неверные index и value → invalid', () => {
+    const s = makeGame(12);
+    const on = must(s, 'o1', { field: 'goal', index: 1, value: true });
+    expect(on.state.players.o1.goalOverrides?.[1]).toBe(true);
+    expect(on.state.players.o1.goalOverrides?.[0]).toBeNull();
+    const no = must(on.state, 'o1', { field: 'goal', index: 0, value: false });
+    expect(no.state.players.o1.goalOverrides).toEqual([false, true]);
+    const off = must(on.state, 'o1', { field: 'goal', index: 1, value: null });
+    expect(off.state.players.o1.goalOverrides?.[1] ?? null).toBeNull();
+    expect(correct(s, 'o1', { field: 'goal', index: 2, value: true } as unknown as Change)).toMatchObject({ ok: false, error: 'invalid' });
+    expect(correct(s, 'o1', { field: 'goal', index: 0, value: 'да' } as unknown as Change)).toMatchObject({ ok: false, error: 'invalid' });
+  });
+
+  test('itemOwner с алтаря игроку: вклад удалён, вещь у игрока', () => {
+    const f = new Fair(makeGame(12));
+    const shard = f.find('shard', 'I');
+    const holder = (shard.owner as { key: string }).key;
+    const id = f.contribute(holder, 'wake', { itemId: shard.id });
+    f.contribute('o2', 'wake', { gold: 2 });
+    const r = must(f.s, 'o2', { field: 'itemOwner', itemId: shard.id, owner: { type: 'player', key: 'o2' } });
+    expect(r.state.items[shard.id].owner).toEqual({ type: 'player', key: 'o2' });
+    expect(r.state.altars.wake!.contributions.some(c => c.id === id)).toBe(false);
+    expect(r.state.altars.wake!.contributions).toHaveLength(1);
+    checkInvariants(r.state);
+  });
+
+  test('после закрытия: исправление несёт пересчитанные итоги (Грим: 11 золота — цель нет, 12 — да)', () => {
+    const f = new Fair(makeGame(12));
+    f.nextAct();
+    f.nextAct();
+    f.run({ type: 'session.close' }, gm);
+    expect(f.s.players.o13.gold).toBe(6);
+    const r = must(f.s, 'o13', { field: 'gold', delta: 5 }, 99);
+    const e = r.events[0];
+    if (e.type !== 'Corrected') throw new Error(e.type);
+    expect(e.closing).toBeDefined();
+    expect(e.closing!.closedAt).toBe(f.s.closing!.closedAt);
+    expect(r.state.closing).toEqual(e.closing);
+    expect(r.state.closing!.players.o13.goals[0]).toBe(false);
+    const r2 = must(r.state, 'o13', { field: 'gold', delta: 1 });
+    expect(r2.state.closing!.players.o13.goals[0]).toBe(true);
+    checkInvariants(r2.state);
+    // Ручная отметка цели после закрытия тоже пересчитывает итоги.
+    const r3 = must(r2.state, 'o13', { field: 'goal', index: 0, value: false });
+    expect(r3.state.closing!.players.o13.goals[0]).toBe(false);
+    // До закрытия итогов в событии нет.
+    const before = must(makeGame(12), 'o13', { field: 'gold', delta: 1 });
+    expect(before.events[0]).not.toHaveProperty('closing');
+    expect(before.state).not.toHaveProperty('closing');
+  });
+
+  test('два готовых алтаря по ошибке → sleep; ведущий забирает осколок с bind → исход wake, предупреждений нет', () => {
+    const f = new Fair(makeGame(12));
+    wakeReady(f);
+    f.nextAct();
+    f.winLot('o5', 2);
+    f.nextAct();
+    f.moveTo(f.find('shard', 'V').id, 'o5');
+    buildAltar(f, 'bind', 'o5', ['IV', 'V'], ['o5', 'o6', 'o8']);
+    // Третьего разного осколка командами не получить: ошибку учёта изображает поддельный осколок I на bind.
+    const fake = { id: 'fake-shard', kind: 'shard' as const, ref: 'I', owner: { type: 'altar' as const, side: 'bind' as const } };
+    const bind = f.s.altars.bind!;
+    f.s = {
+      ...f.s,
+      items: { ...f.s.items, [fake.id]: fake },
+      altars: { ...f.s.altars, bind: { ...bind, contributions: [...bind.contributions, { id: 'fake-c', player: 'o5', item: fake.id }] } },
+    };
+    f.run({ type: 'session.close' }, gm);
+    expect(f.s.closing!.outcome).toBe('sleep');
+    expect(f.s.closing!.warnings).toHaveLength(1);
+    expect(f.s.closing!.players.o1.outcome).toBe(false);
+
+    f.correct('o5', { field: 'itemOwner', itemId: fake.id, owner: { type: 'player', key: 'o5' } });
+    expect(f.s.altars.bind!.contributions.some(c => c.id === 'fake-c')).toBe(false);
+    expect(f.s.closing!.outcome).toBe('wake');
+    expect(f.s.closing!.warnings).toEqual([]);
+    expect(f.s.closing!.players.o1.outcome).toBe(true);
+    checkInvariants(f.s);
   });
 });

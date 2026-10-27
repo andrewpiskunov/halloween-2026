@@ -1,12 +1,14 @@
+import type { Content } from '../content';
 import type { Actor, Correction, Ctx } from '../commands';
+import type { Corrected } from '../events';
 import type { Counts, Effect, GameState, Item, Lot, Player } from '../types';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
+import { computeClosing } from './closing';
 import { applyEffects } from './effects';
-import { presentPlayer } from './guards';
+import { isActPhase, isClosed, presentPlayer } from './guards';
 import { biddingInProgress, shiftLots } from './lots';
 
 const isGm = (a: Actor) => a.type === 'gm';
-const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
 /** Сдвигает срок каждого pending-предложения или запроса согласия на время паузы. */
 function shiftPending<T extends { status: string; expiresAt: number }>(records: Record<string, T>, pausedMs: number): Record<string, T> {
   const res = { ...records };
@@ -88,6 +90,54 @@ function correctMark(state: GameState, key: string, c: Exclude<Correction, { fie
   return markEffects(key, c);
 }
 
+/** Вклад на алтаре, в котором лежит вещь. */
+function altarContribution(state: GameState, it: Item) {
+  return it.owner.type === 'altar' ? state.altars[it.owner.side]?.contributions.find(x => x.item === it.id) : undefined;
+}
+
+/** После закрытия исправление несёт итоги, пересчитанные на исправленном состоянии (§2.4); редьюсер их копирует. */
+function withClosing(state: GameState, content: Content, e: Corrected): Corrected {
+  if (!isClosed(state) || !state.closing) return e;
+  return { ...e, closing: computeClosing(applyCorrection(state, e), content, state.closing.closedAt) };
+}
+
+/** Изменение состояния исправлением, без итогов: общий код редьюсера и пересчёта. */
+function applyCorrection(state: GameState, e: Corrected): GameState {
+  const p = state.players[e.playerKey];
+  const c = e.change;
+  const withPlayer = (next: Player) => ({ ...state, players: { ...state.players, [e.playerKey]: next } });
+  switch (c.field) {
+    case 'gold': return withPlayer({ ...p, gold: p.gold + c.delta });
+    case 'ingredient': return withPlayer({ ...p, ingredients: { ...p.ingredients, [c.ingredient]: p.ingredients[c.ingredient] + c.delta } });
+    // Исправления не пишут записей в actions: цели считаются только за действия игроков.
+    case 'abilityUsed': return withPlayer({ ...p, abilityUsedInAct: c.value });
+    case 'hostileAttempt': return withPlayer({ ...p, hostileAttemptsAgainstInAct: c.value ? 1 : 0 });
+    case 'side': {
+      const { side: _s, ...rest } = p;
+      return withPlayer(c.side === null ? rest : { ...rest, side: c.side });
+    }
+    case 'goal': {
+      const overrides: [boolean | null, boolean | null] = [...(p.goalOverrides ?? [null, null])];
+      overrides[c.index] = c.value;
+      const { goalOverrides: _g, ...rest } = p;
+      // Обе отметки сняты: цели снова считаются по журналу, поле не нужно.
+      return withPlayer(overrides.every(v => v === null) ? rest : { ...rest, goalOverrides: overrides });
+    }
+    case 'itemOwner': {
+      // Резерв снимается: вещь ушла от автора, его предложение закроется при попытке принять.
+      const { reservedFor: _r, ...item } = state.items[c.itemId];
+      let s: GameState = { ...state, items: { ...state.items, [c.itemId]: { ...item, owner: c.owner } } };
+      // Вещь с алтаря: её вклад удаляется.
+      if (item.owner.type === 'altar') {
+        const altar = s.altars[item.owner.side]!;
+        s = { ...s, altars: { ...s.altars, [altar.side]: { ...altar, contributions: altar.contributions.filter(x => x.item !== c.itemId) } } };
+      }
+      return s;
+    }
+    default: return applyEffects(state, e.effects ?? []);
+  }
+}
+
 export const actCommands: CommandHandlers = {
   'act.next': (state, content, _cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
@@ -156,14 +206,15 @@ export const actCommands: CommandHandlers = {
     return ok({ type: 'Announced', at: ctx.now, title: 'Ведущий', text });
   },
 
-  'gm.correct': (state, _content, cmd, ctx) => {
+  'gm.correct': (state, content, cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase === 'setup') return fail('phase');
     if (!cmd.reason.trim()) return fail('invalid', 'нужна причина');
     const p = state.players[cmd.playerKey];
     if (!p || !state.roster.includes(cmd.playerKey)) return fail('not_found', cmd.playerKey);
     const c = cmd.change;
-    const base = { type: 'Corrected' as const, at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() };
+    const base: Corrected = { type: 'Corrected', at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() };
+    let event: Corrected = base;
     if (c.field === 'gold') {
       if (!Number.isInteger(c.delta)) return fail('invalid');
       if (p.gold + c.delta < p.reservedGold) return fail('insufficient', 'ниже зарезервированного золота');
@@ -173,19 +224,27 @@ export const actCommands: CommandHandlers = {
     } else if (c.field === 'itemOwner') {
       const it = state.items[c.itemId];
       if (!it) return fail('not_found', c.itemId);
-      // Вещь из лота или с алтаря остаётся в их списках: перенос оставил бы состояние несогласованным.
-      if (it.owner.type !== 'player') return fail('invalid', 'переносить можно только вещь у игрока');
+      // Вещь из лота остаётся в его списке: перенос оставил бы состояние несогласованным.
+      if (it.owner.type === 'lot') return fail('invalid', 'вещь в лоте: переносить можно вещь у игрока или на алтаре');
+      if (it.owner.type === 'altar' && !altarContribution(state, it)) return fail('invalid', 'вклада с этой вещью на алтаре нет');
       if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
       if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
-    } else if (c.field === 'side' || c.field === 'goal') {
-      // Исправления стороны и целей появятся вместе с закрытием ярмарки.
-      return fail('invalid', 'исправление пока не поддерживается');
+    } else if (c.field === 'side') {
+      if (content.roleByKey[cmd.playerKey]?.side !== 'free') return fail('invalid', 'сторону выбирают только свободные');
+      if (c.side === null) {
+        if (p.side === undefined) return fail('invalid', 'сторона не выбрана');
+      } else if (typeof c.side !== 'string' || !Object.hasOwn(state.altars, c.side) || !state.altars[c.side]) {
+        return fail('invalid', 'такого алтаря в этой игре нет');
+      }
+    } else if (c.field === 'goal') {
+      if (c.index !== 0 && c.index !== 1) return fail('invalid', 'цель: index 0 или 1');
+      if (c.value !== null && typeof c.value !== 'boolean') return fail('invalid', 'цель: value булево или null');
     } else {
       const effects = correctMark(state, cmd.playerKey, c, ctx);
       if (!Array.isArray(effects)) return effects;
-      return ok({ ...base, ...(effects.length ? { effects } : {}) });
+      if (effects.length) event = { ...base, effects };
     }
-    return ok(base);
+    return ok(withClosing(state, content, event));
   },
 
   'gm.rebind': (state, _content, cmd, ctx) => {
@@ -237,22 +296,8 @@ export const actReducers: EventReducers = {
   }),
   Announced: (state, _c, e) => ({ ...state, announcements: [...state.announcements, { at: e.at, title: e.title, text: e.text }] }),
   Corrected: (state, _c, e) => {
-    const p = state.players[e.playerKey];
-    const c = e.change;
-    if (c.field === 'gold') return { ...state, players: { ...state.players, [e.playerKey]: { ...p, gold: p.gold + c.delta } } };
-    if (c.field === 'ingredient') {
-      const ingredients = { ...p.ingredients, [c.ingredient]: p.ingredients[c.ingredient] + c.delta };
-      return { ...state, players: { ...state.players, [e.playerKey]: { ...p, ingredients } } };
-    }
-    // Исправления не пишут записей в actions: цели считаются только за действия игроков.
-    if (c.field === 'abilityUsed') return { ...state, players: { ...state.players, [e.playerKey]: { ...p, abilityUsedInAct: c.value } } };
-    if (c.field === 'hostileAttempt') {
-      return { ...state, players: { ...state.players, [e.playerKey]: { ...p, hostileAttemptsAgainstInAct: c.value ? 1 : 0 } } };
-    }
-    if (c.field !== 'itemOwner') return applyEffects(state, e.effects ?? []);
-    // Резерв снимается: вещь ушла от автора, его предложение закроется при попытке принять.
-    const { reservedFor: _r, ...item } = state.items[c.itemId];
-    return { ...state, items: { ...state.items, [c.itemId]: { ...item, owner: c.owner } } };
+    const next = applyCorrection(state, e);
+    return e.closing ? { ...next, closing: e.closing } : next;
   },
   InviteRebound: (state, _c, e) => {
     const { [e.roleKey]: _old, ...bindings } = state.bindings;

@@ -4,6 +4,8 @@ import { fail, type Result } from './result';
 
 /** Идут ли сейчас акты 1–3. */
 export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
+/** Ярмарка закрыта: итоги посчитаны или уже показаны. */
+export const isClosed = (s: GameState) => s.phase === 'closed' || s.phase === 'revealed';
 
 /** Ключ игрока-участника ярмарки: роль в составе, запись есть и игрок пришёл. */
 export function participant(state: GameState, a: Actor): string | undefined {

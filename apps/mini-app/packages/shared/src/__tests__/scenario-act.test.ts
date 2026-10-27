@@ -11,7 +11,7 @@ import { checkActStart, checkGold, checkInvariants, content, gm, makeGame, newGa
  * чтобы почти всё прошло; одна враждебная попытка отражается защитой. После каждой команды —
  * инварианты §6.8; в конце журнал событий, проигранный с нуля, даёт то же состояние (пункт 13).
  */
-test('акт I: все 30 способностей, инварианты после каждой команды, replay журнала, смена акта', () => {
+test('акт I: все 30 способностей, инварианты после каждой команды, replay журнала, смена акта, закрытие', () => {
   const log: Event[] = [];
   let s = makeGame(30, { log });
   expect(s.roster).toHaveLength(30);
@@ -111,6 +111,18 @@ test('акт I: все 30 способностей, инварианты пос�
   checkActStart(before, s);
   expect(s.players.r5.guise?.name).toBe('Странник');
   expect(log.reduce((st: GameState, e) => reduce(st, content, e), newGame())).toEqual(s);
+
+  // Этап 5: третий акт, закрытие и показ итогов; журнал по-прежнему даёт то же состояние и те же итоги.
+  step({ type: 'act.next' }, gm);
+  expect(s.phase).toBe('act3');
+  step({ type: 'session.close' }, gm);
+  expect(s.phase).toBe('closed');
+  expect(Object.keys(s.closing!.players)).toHaveLength(30);
+  step({ type: 'session.reveal' }, gm);
+  expect(s.phase).toBe('revealed');
+  const replayed2 = log.reduce((st: GameState, e) => reduce(st, content, e), newGame());
+  expect(replayed2).toEqual(s);
+  expect(replayed2.closing).toEqual(s.closing);
 });
 
 test('checkInvariants ловит нарушения §6.8', () => {
@@ -124,6 +136,10 @@ test('checkInvariants ловит нарушения §6.8', () => {
   expect(() => checkInvariants(patch('o1', { gold: 1, reservedGold: 2 }))).toThrow('резерва');
   expect(() => checkInvariants({ ...s, workshop: { ...s.workshop, ash: -1 } })).toThrow('мастерской');
   expect(() => checkInvariants(patch('o1', { abilityPending: 'нет' }))).toThrow('abilityPending');
+  const closing = { closedAt: 0, altars: [], outcome: 'sleep' as const, warnings: [], players: {} };
+  expect(() => checkInvariants({ ...s, closing })).toThrow('итоги в фазе act1');
+  expect(() => checkInvariants({ ...s, phase: 'closed' })).toThrow('нет итогов');
+  expect(() => checkInvariants({ ...s, phase: 'closed', closing })).toThrow('итоги для');
 
   const r = run(s, { type: 'ability.use', use: { kind: 'inspectInventory', target: 'o14' } }, player('o11'));
   if (!r.ok) throw new Error(r.error);

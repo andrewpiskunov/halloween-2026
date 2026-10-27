@@ -156,8 +156,10 @@ describe('согласие: отказ, отмена, истечение, пау
   });
 
   test('вне акта consent.* → phase', () => {
-    const { state: s1, req } = request(makeGame(30), 'o10', u);
-    const closed = { ...s1, phase: 'closed' } as GameState;
+    const act3 = step(step(makeGame(30), { type: 'act.next' }, gm).state, { type: 'act.next' }, gm).state;
+    const { state: s1, req } = request(act3, 'o10', u);
+    const closed = step(s1, { type: 'session.close' }, gm).state;
+    expect(closed.requests[req.id]).toMatchObject({ status: 'expired', reason: 'closed' });
     expect(refusal(closed, accept(req.id), player('o9'))).toBe('phase');
   });
 

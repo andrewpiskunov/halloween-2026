@@ -6,6 +6,7 @@ import { fail, type CommandHandlers, type ErrorCode, type EventReducers, type Re
 import { abilityCommands, abilityReducers } from './abilities';
 import { actCommands, actReducers } from './acts';
 import { altarCommands, altarReducers } from './altars';
+import { closeCommands, closeReducers } from './close';
 import { consentCommands, consentReducers } from './consent';
 import { itemCommands, itemReducers } from './items';
 import { offerCommands, offerReducers } from './offers';
@@ -18,10 +19,12 @@ export type { ErrorCode, Result, CommandHandlers, EventReducers } from './result
 export { defaultRoster } from './roster';
 export { available, hasBundle, isTradable, transfer } from './bundles';
 export { BUYOUT_PRICE, OPEN_BIDDING_MS, SEALED_BIDS_MS, itemTitle, lotTitle } from './lots';
+export { altarResults, computeClosing, goalDone } from './closing';
+export { freeze } from './close';
 
 // Новые группы команд подключаются добавлением в эти списки.
-const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands };
-const eventReducers: EventReducers = { ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers, ...sideReducers };
+const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands, ...closeCommands };
+const eventReducers: EventReducers = { ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers, ...sideReducers, ...closeReducers };
 
 type AnyHandler = (state: GameState, content: Content, cmd: Command, ctx: Ctx) => Result;
 type AnyReducer = (state: GameState, content: Content, event: Event) => GameState;

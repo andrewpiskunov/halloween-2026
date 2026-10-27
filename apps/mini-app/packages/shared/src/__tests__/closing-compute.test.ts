@@ -1,24 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { altarResults, computeClosing } from '../engine/closing';
-import type { AltarSide, GameState } from '../types';
-import { Fair, allBut, checkInvariants, content, makeGame } from './helpers';
-
-/**
- * Собирает алтарь: три осколка и два Фокуса кладёт keeper, золото 2 + 2 + 2 кладут три дарителя.
- * Осколки заранее должны лежать у keeper.
- */
-function buildAltar(f: Fair, side: AltarSide, keeper: string, shardRefs: string[], donors: string[]): void {
-  for (const ref of shardRefs) f.contribute(keeper, side, { itemId: f.find('shard', ref).id });
-  for (let i = 0; i < 2; i++) f.contribute(keeper, side, { itemId: f.craft(keeper, 'focus') });
-  for (const d of donors) f.contribute(d, side, { gold: 2 });
-}
-
-/** Состав 12: осколки II и III переезжают к Серафине, она собирает wake. */
-function wakeReady(f: Fair): void {
-  f.moveTo(f.find('shard', 'II').id, 'o1');
-  f.moveTo(f.find('shard', 'III').id, 'o1');
-  buildAltar(f, 'wake', 'o1', ['I', 'II', 'III'], ['o1', 'o2', 'o4']);
-}
+import type { GameState } from '../types';
+import { Fair, allBut, buildAltar, checkInvariants, content, makeGame, wakeReady } from './helpers';
 
 describe('computeClosing: алтари и исход', () => {
   test('собранный wake: готов, исход wake, достижение у стороны wake', () => {

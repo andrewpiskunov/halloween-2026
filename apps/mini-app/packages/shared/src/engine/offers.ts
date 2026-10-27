@@ -130,6 +130,7 @@ export const offerCommands: CommandHandlers = {
 
   'offer.expire': (state, _content, cmd, ctx) => {
     if (ctx.actor.type !== 'system') return fail('forbidden');
+    if (!isActPhase(state)) return fail('phase');
     // На паузе сроки стоят (спек §10).
     if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
     const o = pendingOffer(state, cmd.id);
@@ -140,7 +141,7 @@ export const offerCommands: CommandHandlers = {
 };
 
 /** Снимает резерв автора: золото и метки reservedFor на вещах этого предложения. */
-function release(state: GameState, o: Offer): GameState {
+export function release(state: GameState, o: Offer): GameState {
   const p = state.players[o.from];
   const items = { ...state.items };
   for (const id of o.give.items) {
