@@ -1,8 +1,9 @@
 import { computed, signal } from '@preact/signals';
 import type { Command } from '@fair/shared';
-import { auth, authAs, connect, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
+import { auth, authAs, connect, exportUrlFor, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
 import { collectNotices, noticeToast, type Seen } from './notices';
 import { nextTab } from './rules';
+import { BASE } from './base';
 
 /** Последняя проекция от сервера. */
 export const view = signal<View | null>(null);
@@ -58,6 +59,11 @@ let connection: Connection | null = null;
 /** Собственный токен аккаунта: к нему возвращается ведущий после игры за игрока. */
 let ownToken = '';
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Адрес выгрузки журнала с собственным токеном ведущего (не токеном «за игрока»). */
+export function exportUrl(): string {
+  return exportUrlFor(location.origin, BASE, ownToken);
+}
 
 export function showToast(text: string): void {
   toast.value = text;

@@ -28,7 +28,7 @@ export interface ConnectOptions {
   base?: string;
 }
 
-interface TelegramWebApp { initData?: string; ready(): void; expand(): void }
+interface TelegramWebApp { initData?: string; ready(): void; expand(): void; openLink?(url: string): void }
 declare global {
   interface Window { Telegram?: { WebApp?: TelegramWebApp } }
 }
@@ -70,6 +70,18 @@ export async function authAs(token: string, roleKey: string): Promise<AuthResult
   });
   if (!res.ok) throw new Error(`as_failed_${res.status}`);
   return res.json() as Promise<AuthResult>;
+}
+
+/** Адрес выгрузки журнала: токен в query, потому что внешний браузер не передаст заголовок. */
+export function exportUrlFor(origin: string, base: string, token: string): string {
+  return `${origin}${base}api/gm/export?token=${encodeURIComponent(token)}`;
+}
+
+/** Открывает ссылку вне Mini App: в Telegram через openLink, без него в новой вкладке. */
+export function openExternal(url: string): void {
+  const openLink = window.Telegram?.WebApp?.openLink;
+  if (openLink) openLink.call(window.Telegram!.WebApp, url);
+  else window.open(url, '_blank');
 }
 
 function defaultBase(): string {

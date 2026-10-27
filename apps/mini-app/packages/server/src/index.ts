@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { loadContent } from '@fair/shared';
 import { loadConfig } from './config';
 import { EventStore } from './store';
@@ -8,6 +8,7 @@ import { Game } from './game';
 import { buildApp } from './http';
 import { attachWs, closeWs } from './ws';
 import { startBot } from './bot';
+import { writeExportOnClose } from './export';
 
 const config = loadConfig();
 if (config.dbPath !== ':memory:') mkdirSync(dirname(config.dbPath), { recursive: true });
@@ -16,7 +17,11 @@ const store = new EventStore(config.dbPath);
 const game = Game.open(store, content, { now: Date.now, newId: () => randomUUID(), random: Math.random });
 const ticker = setInterval(() => game.tick(), 1000);
 
-const deps = { game, content, config, now: Date.now };
+// Автозапись выгрузки рядом с базой; при базе в памяти не пишется.
+const exportsDir = config.dbPath === ':memory:' ? null : join(dirname(config.dbPath), 'exports');
+const stopExports = writeExportOnClose(game, store, content, exportsDir, console.warn);
+
+const deps = { game, store, content, config, now: Date.now };
 const app = buildApp(deps);
 const wss = attachWs(app.server, deps);
 await app.listen({ port: config.port, host: '0.0.0.0' });
@@ -31,6 +36,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   console.log(`Получен ${signal}, сервер останавливается`);
   clearInterval(ticker);
+  stopExports();
   try {
     await bot?.stop();
     await closeWs(wss);

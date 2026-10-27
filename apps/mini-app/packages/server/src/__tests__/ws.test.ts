@@ -88,8 +88,8 @@ let o1: Client;
 beforeAll(async () => {
   store = new EventStore(':memory:');
   game = Game.open(store, content, opts);
-  app = buildApp({ game, content, config, now });
-  wss = attachWs(app.server, { game, content, config, now });
+  app = buildApp({ game, store, content, config, now });
+  wss = attachWs(app.server, { game, store, content, config, now });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const { port } = app.server.address() as AddressInfo;
   base = `http://127.0.0.1:${port}`;
@@ -248,7 +248,7 @@ test('гость без роли → закрытие 4403', async () => {
 test('closeWs закрывает подключённых клиентов и завершается; после него app.close не зависает', async () => {
   const st = new EventStore(':memory:');
   const g = Game.open(st, content, opts);
-  const deps = { game: g, content, config, now };
+  const deps = { game: g, store: st, content, config, now };
   const a = buildApp(deps);
   const w = attachWs(a.server, deps);
   await a.listen({ port: 0, host: '127.0.0.1' });

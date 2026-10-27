@@ -10,7 +10,8 @@ import { actNextPreview } from '../../gm/lots';
 import { itemImageUrl, resourceImageUrl } from '../../assets';
 import { INGREDIENTS, goldText, mmss, plural, roman } from '../../labels';
 import { correctableItems, remainingMs } from '../../rules';
-import { ask, gmTab, now, run, showToast } from '../../store';
+import { openExternal } from '../../api';
+import { ask, exportUrl, gmTab, now, run, showToast } from '../../store';
 
 type Field = 'gold' | 'ingredient' | 'itemOwner' | 'side' | 'goal' | MarkField;
 /** Ручная отметка цели: выполнено, не выполнено или снять отметку (считать по журналу). */
@@ -113,6 +114,8 @@ export function Console({ v }: { v: GmView }) {
           text: 'Всё состояние вернётся к началу: состав пустой, игроки отвязаны, ссылки старые перестанут работать. Отменить нельзя.',
           onOk: () => { void run({ type: 'session.reset' }).then(r => { if (r.ok) showToast('Игра сброшена'); }); },
         })}>Сбросить игру</Button>
+        <Button kind="sec" onClick={() => openExternal(exportUrl())}>Скачать журнал</Button>
+        <p class="m-note">Файл также сохраняется на сервере при закрытии ярмарки</p>
       </div>
 
       <div class="m-card">

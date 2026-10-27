@@ -2,9 +2,11 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Content } from '@fair/shared';
 import type { Config } from './config';
 import type { Game } from './game';
+import type { EventStore } from './store';
 import { issueToken, verifyInitData, verifyToken } from './auth';
+import { buildExport } from './export';
 
-export interface ServerDeps { game: Game; content: Content; config: Config; now: () => number }
+export interface ServerDeps { game: Game; store: EventStore; content: Content; config: Config; now: () => number }
 
 interface AuthBody { initData?: unknown; dev?: { userId?: unknown; startParam?: unknown } }
 
@@ -27,7 +29,15 @@ function identify(body: AuthBody, deps: ServerDeps): { userId: number; startPara
   return null;
 }
 
-/** HTTP API: здоровье, вход и (только в разработке) коды приглашений. */
+/** Токен выгрузки: заголовок Authorization: Bearer, иначе ?token= (для кнопки на пульте, только здесь). */
+function exportToken(header: string | undefined, query: unknown): string | undefined {
+  const m = header?.match(/^Bearer\s+(\S+)$/i);
+  if (m) return m[1];
+  const q = (query as { token?: unknown } | undefined)?.token;
+  return typeof q === 'string' && q ? q : undefined;
+}
+
+/** HTTP API: здоровье, вход, выгрузка журнала и (только в разработке) коды приглашений. */
 export function buildApp(deps: ServerDeps): FastifyInstance {
   const { game, config, now } = deps;
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
@@ -55,6 +65,21 @@ export function buildApp(deps: ServerDeps): FastifyInstance {
     if (!actor) return reply.code(403).send({ error: 'forbidden' });
     console.log(`Ведущий ${auth.telegramId} открыл экраны игрока ${body.roleKey}`);
     return { token: issueToken({ telegramId: auth.telegramId, as: body.roleKey }, config.sessionSecret, now()), actor, botName: config.botName };
+  });
+
+  // Выгрузка журнала без личных данных (спек §5): только ведущему от своего имени.
+  app.get('/api/gm/export', async (req, reply) => {
+    const token = exportToken(req.headers.authorization, req.query);
+    const auth = token ? verifyToken(token, config.sessionSecret, now()) : null;
+    if (!auth) return reply.code(401).send({ error: 'unauthorized' });
+    if (auth.as !== undefined || game.actorForToken({ telegramId: auth.telegramId })?.type !== 'gm') {
+      return reply.code(403).send({ error: 'forbidden' });
+    }
+    const date = new Date(now()).toISOString().slice(0, 10);
+    return reply
+      .header('content-type', 'application/json; charset=utf-8')
+      .header('content-disposition', `attachment; filename="evening-${date}.json"`)
+      .send(JSON.stringify(buildExport(deps.store, game, deps.content, now)));
   });
 
   app.get('/api/dev/codes', async (_req, reply) => {

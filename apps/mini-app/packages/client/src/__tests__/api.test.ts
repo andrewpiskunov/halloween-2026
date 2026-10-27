@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { connect, type Status } from '../api';
+import { connect, exportUrlFor, openExternal, type Status } from '../api';
 
 /** Поддельный WebSocket: тест сам открывает, роняет соединение и присылает сообщения. */
 class FakeWebSocket {
@@ -155,5 +155,25 @@ describe('connect', () => {
     conn.close();
     vi.advanceTimersByTime(60_000);
     expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+});
+
+describe('выгрузка журнала', () => {
+  test('exportUrlFor: адрес маршрута под базовым путём с токеном в query', () => {
+    expect(exportUrlFor('https://wta5.ru', '/fair/', 'a+b/c.d=')).toBe('https://wta5.ru/fair/api/gm/export?token=a%2Bb%2Fc.d%3D');
+    expect(exportUrlFor('http://localhost:5173', '/', 'tok')).toBe('http://localhost:5173/api/gm/export?token=tok');
+  });
+
+  test('openExternal: через Telegram.WebApp.openLink, без него window.open', () => {
+    const openLink = vi.fn();
+    const open = vi.fn();
+    vi.stubGlobal('window', { Telegram: { WebApp: { openLink } }, open });
+    openExternal('https://x/a');
+    expect(openLink).toHaveBeenCalledWith('https://x/a');
+    expect(open).not.toHaveBeenCalled();
+    vi.stubGlobal('window', { Telegram: { WebApp: { initData: '' } }, open });
+    openExternal('https://x/b');
+    expect(open).toHaveBeenCalledWith('https://x/b', '_blank');
+    vi.unstubAllGlobals();
   });
 });

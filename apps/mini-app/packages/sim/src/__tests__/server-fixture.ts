@@ -33,7 +33,7 @@ export async function startServer(): Promise<TestServer> {
   const store = new EventStore(':memory:');
   const game = Game.open(store, content, opts);
   const ticker = setInterval(() => game.tick(), 1000);
-  const deps = { game, content, config, now: Date.now };
+  const deps = { game, store, content, config, now: Date.now };
   const app = buildApp(deps);
   const wss = attachWs(app.server, deps);
   await app.listen({ port: 0, host: '127.0.0.1' });
