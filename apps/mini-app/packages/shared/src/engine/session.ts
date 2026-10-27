@@ -3,7 +3,7 @@ import type { Actor, Ctx } from '../commands';
 import type { FairOpened } from '../events';
 import type { Altar, AltarSide, Counts, GameState, Item, Lot, Player } from '../types';
 import { cancelRequestsOf } from './consent';
-import { isActPhase } from './guards';
+import { isActPhase, lookup } from './guards';
 import { cancelOffersOf } from './offers';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 import { defaultRoster, MAX_N, MIN_N } from './roster';
@@ -26,12 +26,18 @@ function codesFrom(content: Content, ctx: Ctx): Record<string, string> {
   const codes: Record<string, string> = {};
   const used = new Set<string>();
   for (const key of ['gm', ...content.roles.map(r => r.key)]) {
-    let code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
-    while (used.has(code)) code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
+    const code = freshCode(ctx, used);
     used.add(code);
     codes[key] = code;
   }
   return codes;
+}
+
+/** Один код того же вида, что при сбросе, не совпадающий ни с одним из used. */
+function freshCode(ctx: Ctx, used: Set<string>): string {
+  let code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
+  while (used.has(code)) code = ctx.newId().replace(/-/g, '').slice(0, CODE_LENGTH);
+  return code;
 }
 
 export const START_GOLD = 6;
@@ -144,7 +150,7 @@ export const sessionCommands: CommandHandlers = {
   'session.toggleRole': (state, content, cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase !== 'setup') return fail('phase');
-    if (!content.roleByKey[cmd.roleKey]) return fail('not_found', cmd.roleKey);
+    if (!lookup(content.roleByKey, cmd.roleKey)) return fail('not_found', cmd.roleKey);
     return ok({ type: 'RoleToggled', at: ctx.now, roleKey: cmd.roleKey, inRoster: !state.roster.includes(cmd.roleKey) });
   },
 
@@ -152,6 +158,16 @@ export const sessionCommands: CommandHandlers = {
   'session.reset': (state, content, _cmd, ctx) => {
     if (ctx.actor.type !== 'gm') return fail('forbidden');
     return ok({ type: 'SessionReset', at: ctx.now, codes: codesFrom(content, ctx), ...(state.gmTelegramId !== undefined ? { gmTelegramId: state.gmTelegramId } : {}) });
+  },
+
+  /**
+   * Пересдача кода ведущего (спек этапа 7, §6): только сервер, без перезапуска.
+   * Новый код не совпадает с кодами игроков и прежним кодом ведущего; аккаунт ведущего отвязывается.
+   */
+  'gm.reissue': (state, _content, _cmd, ctx) => {
+    if (ctx.actor.type !== 'system') return fail('forbidden');
+    const code = freshCode(ctx, new Set([state.gmCode, ...Object.values(state.invites)]));
+    return ok({ type: 'GmReissued', at: ctx.now, code });
   },
 
   'player.bind': (state, _content, cmd, ctx) => {
@@ -179,12 +195,12 @@ export const sessionCommands: CommandHandlers = {
   'player.setPresent': (state, _content, cmd, ctx) => {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase === 'setup') {
-      if (!state.players[cmd.roleKey]) return fail('not_found', cmd.roleKey);
+      if (!lookup(state.players, cmd.roleKey)) return fail('not_found', cmd.roleKey);
       return ok({ type: 'PresenceSet', at: ctx.now, roleKey: cmd.roleKey, present: cmd.present });
     }
     // После открытия (спек этапа 7, §2): приход или уход, в closed и revealed нельзя.
     if (!isActPhase(state)) return fail('phase');
-    const p = state.players[cmd.roleKey];
+    const p = lookup(state.players, cmd.roleKey);
     if (!state.roster.includes(cmd.roleKey) || !p) return fail('not_found', cmd.roleKey);
     if (p.present === cmd.present) return ok();
     if (cmd.present) return ok({ type: 'PlayerArrived', at: ctx.now, roleKey: cmd.roleKey, startSet: p.startIssuedAt === undefined });
@@ -212,6 +228,10 @@ export const sessionReducers: EventReducers = {
   SessionReset: (_state, _content, e) => {
     const { gm, ...invites } = e.codes;
     return { ...emptyState(), invites, gmCode: gm ?? '', ...(e.gmTelegramId !== undefined ? { gmTelegramId: e.gmTelegramId } : {}) };
+  },
+  GmReissued: (state, _content, e) => {
+    const { gmTelegramId: _old, ...rest } = state;
+    return { ...rest, gmCode: e.code };
   },
   RosterSet: (state, _content, e) => ({ ...state, roster: [...e.roster], players: playersFor(state, e.roster) }),
   RoleToggled: (state, content, e) => {

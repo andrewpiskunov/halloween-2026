@@ -5,7 +5,7 @@ import type { ConsentClosed } from '../events';
 import type { ConsentAction, ConsentRequest, GameState } from '../types';
 import { performAbility } from './abilities';
 import { isConsentedKind, kindApprovers } from './consented-kinds';
-import { isActPhase, participant, presentPlayer } from './guards';
+import { isActPhase, lookup, participant, presentPlayer } from './guards';
 import { performItemConsented } from './items';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
 
@@ -80,7 +80,7 @@ function recheckAbility(state: GameState, content: Content, req: ConsentRequest,
 function pendingRequest(state: GameState, id: string, ctx: Ctx): ConsentRequest | Result {
   if (!isActPhase(state)) return fail('phase');
   if (state.clock.pausedAt !== undefined && ctx.actor.type !== 'gm') return fail('phase', 'часы на паузе');
-  const r = state.requests[id];
+  const r = lookup(state.requests, id);
   if (!r) return fail('not_found', id);
   if (r.status !== 'pending') return fail('invalid', 'запрос уже закрыт');
   return r;
@@ -169,7 +169,7 @@ const setRequest = (state: GameState, req: ConsentRequest): GameState => ({ ...s
 
 /** Для редьюсеров AbilityUsed и ItemUsed: исполненный по согласию запрос становится accepted. */
 export function acceptRequest(state: GameState, id: string | undefined): GameState {
-  const req = id !== undefined ? state.requests[id] : undefined;
+  const req = lookup(state.requests, id);
   if (!req) return state;
   return setRequest(release(state, req), { ...req, status: 'accepted' });
 }

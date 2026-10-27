@@ -1,7 +1,7 @@
 import type { Content } from '../content';
 import type { GameState, Item, Lot } from '../types';
 import { available } from './bundles';
-import { isActPhase, participant } from './guards';
+import { isActPhase, lookup, participant } from './guards';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 
 /** Открытый торг голосом: две минуты. Закрытые ставки: 90 секунд. Без ставок лот выкупается за 4. */
@@ -26,7 +26,7 @@ export const lotTitle = (state: GameState, content: Content, lot: Lot) =>
   lot.items.map(id => state.items[id]).filter(Boolean).map(it => itemTitle(content, it)).join(' + ');
 
 function activeLot(state: GameState, id: string): Lot | undefined {
-  const l = state.lots[id];
+  const l = lookup(state.lots, id);
   return l && l.status !== 'queued' ? l : undefined;
 }
 const inBidding = (l: Lot) => l.status === 'openBidding' || l.status === 'sealedBidding';

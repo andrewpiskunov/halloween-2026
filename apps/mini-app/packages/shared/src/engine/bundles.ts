@@ -1,10 +1,11 @@
 import type { Bundle, Counts, GameState, Ingredient, Phase } from '../types';
+import { lookup } from './guards';
 
 export const INGREDIENTS: Ingredient[] = ['ash', 'moon', 'dew'];
 
 /** Что игрок может пустить в новую сделку: всё за вычетом резерва pending-предложений. */
 export function available(state: GameState, playerKey: string): { gold: number; ingredients: Counts; items: string[] } {
-  const p = state.players[playerKey];
+  const p = lookup(state.players, playerKey);
   if (!p) return { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
   const ingredients: Counts = { ...p.ingredients };
   for (const o of Object.values(state.offers)) {
@@ -54,7 +55,7 @@ export function transfer(state: GameState, from: string, to: string, b: Bundle):
 
 /** Вещь у игрока, не на алтаре и не в лоте, и не скрыта до третьего акта. */
 export function isTradable(state: GameState, itemId: string, phase: Phase): boolean {
-  const it = state.items[itemId];
+  const it = lookup(state.items, itemId);
   if (!it || it.owner.type !== 'player') return false;
   return !(it.hiddenUntilAct !== undefined && phase !== 'act3');
 }

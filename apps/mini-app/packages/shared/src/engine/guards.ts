@@ -2,6 +2,14 @@ import type { Actor } from '../commands';
 import type { GameState } from '../types';
 import { fail, type Result } from './result';
 
+/**
+ * Значение по ключу из входа: только собственные ключи записи.
+ * «constructor», «__proto__» и прочее из прототипа, как и не строка, дают undefined.
+ */
+export function lookup<T>(record: Record<string, T>, id: unknown): T | undefined {
+  return typeof id === 'string' && Object.hasOwn(record, id) ? record[id] : undefined;
+}
+
 /** Идут ли сейчас акты 1–3. */
 export const isActPhase = (s: GameState) => s.phase === 'act1' || s.phase === 'act2' || s.phase === 'act3';
 /** Ярмарка закрыта: итоги посчитаны или уже показаны. */

@@ -168,7 +168,8 @@ export function checkStart(bots: Record<string, BotConn>, gmState: GameState, co
 
 /** Команды, которые прогон не обязан выполнить (§3.6): системные и сброс; при 30 ещё выкуп. */
 function excludedCommands(players: 12 | 30): Set<string> {
-  const ex = new Set(['offer.expire', 'consent.expire', 'session.reset']);
+  // gm.reissue подаёт только сервер (актёр system) по маршруту администратора, не игрок по WebSocket.
+  const ex = new Set(['offer.expire', 'consent.expire', 'session.reset', 'gm.reissue']);
   if (players === 30) ex.add('lot.buyout');
   return ex;
 }

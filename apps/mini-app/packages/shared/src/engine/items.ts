@@ -4,7 +4,7 @@ import type { ConsentAction, ConsentRequest, Effect, GameState, Item, ItemKind }
 import { acceptRequest, requestConsent } from './consent';
 import { cleanseEffects } from './consented-kinds';
 import { actOf, applyEffects, recordAction } from './effects';
-import { isActPhase, participant, presentPlayer } from './guards';
+import { isActPhase, lookup, participant, presentPlayer } from './guards';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
 
 /** Вещи, которые применяют командой item.use (§3); Фокус кладётся на алтарь. */
@@ -20,8 +20,7 @@ const DETAIL: Partial<Record<ErrorCode, string>> = {
 
 /** Общие проверки вещи (§3): существует, лежит у автора, свободна, применяемого вида. */
 export function usableItem(state: GameState, author: string, itemId: string): Item | ErrorCode {
-  // Только собственные ключи: «constructor» и подобные из прототипа — не вещи.
-  const it = Object.hasOwn(state.items, itemId) ? state.items[itemId] : undefined;
+  const it = lookup(state.items, itemId);
   if (!it) return 'not_found';
   if (it.owner.type !== 'player' || it.owner.key !== author) return 'not_owner';
   if (it.reservedFor !== undefined) return 'reserved';
@@ -74,7 +73,7 @@ function useOnTarget(state: GameState, author: string, it: Item, target: unknown
 
 /** Повторная проверка вещи после согласия: всё ещё у автора и в резерве этого запроса. */
 export function performItemConsented(state: GameState, req: ConsentRequest, a: ItemAction, ctx: Ctx): Result {
-  const it = Object.hasOwn(state.items, a.itemId) ? state.items[a.itemId] : undefined;
+  const it = lookup(state.items, a.itemId);
   if (!it || it.owner.type !== 'player' || it.owner.key !== req.author) return fail('not_owner', 'вещи больше нет у автора');
   if (it.reservedFor !== req.id) return fail('reserved', DETAIL.reserved);
   if (!presentPlayer(state, req.author)) return fail('forbidden', 'автора нет на ярмарке');

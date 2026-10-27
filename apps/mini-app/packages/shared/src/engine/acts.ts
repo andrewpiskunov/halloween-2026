@@ -5,7 +5,7 @@ import type { Counts, Effect, GameState, Item, Lot, Player } from '../types';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
 import { computeClosing } from './closing';
 import { applyEffects } from './effects';
-import { isActPhase, isClosed, presentPlayer } from './guards';
+import { isActPhase, isClosed, lookup, presentPlayer } from './guards';
 import { biddingInProgress, shiftLots } from './lots';
 
 const isGm = (a: Actor) => a.type === 'gm';
@@ -210,7 +210,7 @@ export const actCommands: CommandHandlers = {
     if (!isGm(ctx.actor)) return fail('forbidden');
     if (state.phase === 'setup') return fail('phase');
     if (!cmd.reason.trim()) return fail('invalid', 'нужна причина');
-    const p = state.players[cmd.playerKey];
+    const p = lookup(state.players, cmd.playerKey);
     if (!p || !state.roster.includes(cmd.playerKey)) return fail('not_found', cmd.playerKey);
     const c = cmd.change;
     const base: Corrected = { type: 'Corrected', at: ctx.now, playerKey: cmd.playerKey, change: c, reason: cmd.reason.trim() };
@@ -222,18 +222,18 @@ export const actCommands: CommandHandlers = {
       if (!Number.isInteger(c.delta)) return fail('invalid');
       if (p.ingredients[c.ingredient] + c.delta < 0) return fail('insufficient');
     } else if (c.field === 'itemOwner') {
-      const it = state.items[c.itemId];
+      const it = lookup(state.items, c.itemId);
       if (!it) return fail('not_found', c.itemId);
       // Вещь из лота остаётся в его списке: перенос оставил бы состояние несогласованным.
       if (it.owner.type === 'lot') return fail('invalid', 'вещь в лоте: переносить можно вещь у игрока или на алтаре');
       if (it.owner.type === 'altar' && !altarContribution(state, it)) return fail('invalid', 'вклада с этой вещью на алтаре нет');
       if (c.owner.type !== 'player') return fail('invalid', 'новый владелец должен быть игроком');
-      if (!state.roster.includes(c.owner.key) || !state.players[c.owner.key]) return fail('not_found', c.owner.key);
+      if (!state.roster.includes(c.owner.key) || !lookup(state.players, c.owner.key)) return fail('not_found', c.owner.key);
     } else if (c.field === 'side') {
-      if (content.roleByKey[cmd.playerKey]?.side !== 'free') return fail('invalid', 'сторону выбирают только свободные');
+      if (lookup(content.roleByKey, cmd.playerKey)?.side !== 'free') return fail('invalid', 'сторону выбирают только свободные');
       if (c.side === null) {
         if (p.side === undefined) return fail('invalid', 'сторона не выбрана');
-      } else if (typeof c.side !== 'string' || !Object.hasOwn(state.altars, c.side) || !state.altars[c.side]) {
+      } else if (!lookup(state.altars, c.side)) {
         return fail('invalid', 'такого алтаря в этой игре нет');
       }
     } else if (c.field === 'goal') {

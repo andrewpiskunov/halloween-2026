@@ -1,6 +1,6 @@
 import type { Contribution, GameState, Item } from '../types';
 import { available } from './bundles';
-import { isActPhase, participant } from './guards';
+import { isActPhase, lookup, participant } from './guards';
 import { fail, ok, type CommandHandlers, type EventReducers } from './result';
 
 /** Какую вещь можно положить на алтарь. */
@@ -12,14 +12,14 @@ export const altarCommands: CommandHandlers = {
     if (!key) return fail('forbidden');
     if (!isActPhase(state)) return fail('phase');
     if ((cmd.itemId === undefined) === (cmd.gold === undefined)) return fail('invalid', 'нужно указать ровно одно: вещь или золото');
-    if (!state.altars[cmd.side]) return fail('not_found', cmd.side);
+    if (!lookup(state.altars, cmd.side)) return fail('not_found', cmd.side);
     const contribution: Contribution = { id: ctx.newId(), player: key };
     if (cmd.gold !== undefined) {
       if (!Number.isInteger(cmd.gold) || cmd.gold < 1) return fail('invalid', 'золото: целое число не меньше 1');
       if (available(state, key).gold < cmd.gold) return fail('insufficient', 'не хватает золота');
       contribution.gold = cmd.gold;
     } else {
-      const it = state.items[cmd.itemId!];
+      const it = lookup(state.items, cmd.itemId);
       if (!it) return fail('not_found', cmd.itemId);
       if (it.owner.type !== 'player' || it.owner.key !== key) return fail('not_owner');
       if (it.reservedFor !== undefined) return fail('reserved');

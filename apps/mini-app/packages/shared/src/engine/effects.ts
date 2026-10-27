@@ -66,7 +66,7 @@ export function recordAction(state: GameState, e: AbilityUsed | ItemUsed, act: 1
       ...common, author: e.author,
       source: { type: 'ability', ability: e.ability, ...optional({ copied: e.copied }) },
       outcome: e.outcome, hostile: e.hostile, effects: e.effects,
-      ...optional({ target: e.target, from: e.from, to: e.to, removed: e.removed, intel: e.intel, requestId: e.requestId }),
+      ...optional({ target: e.target, from: e.from, to: e.to, removed: e.removed, intel: e.intel, requestId: e.requestId, item: e.item }),
     }
     : {
       ...common, author: e.player, source: { type: 'item', kind: e.kind }, target: e.target,

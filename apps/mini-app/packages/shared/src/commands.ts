@@ -61,6 +61,7 @@ export type Command =
   | { type: 'gm.announce'; text: string }
   | { type: 'gm.correct'; playerKey: string; change: Correction; reason: string }
   | { type: 'gm.rebind'; roleKey: string }
+  | { type: 'gm.reissue' }                         // только actor system: новый код ведущего
   | { type: 'offer.create'; to: string; give: Bundle; get: Bundle; service?: boolean }
   | { type: 'offer.accept'; id: string } | { type: 'offer.decline'; id: string } | { type: 'offer.cancel'; id: string }
   | { type: 'offer.expire'; id: string }                       // только actor system
@@ -92,7 +93,7 @@ export type CommandType = Command['type'];
 export const COMMAND_TYPES: Record<Command['type'], true> = {
   'session.setN': true, 'session.toggleRole': true, 'player.bind': true, 'player.setPresent': true,
   'session.open': true, 'session.reset': true, 'act.next': true, 'clock.pause': true, 'clock.resume': true, 'clock.extend': true,
-  'gm.announce': true, 'gm.correct': true, 'gm.rebind': true,
+  'gm.announce': true, 'gm.correct': true, 'gm.rebind': true, 'gm.reissue': true,
   'offer.create': true, 'offer.accept': true, 'offer.decline': true, 'offer.cancel': true, 'offer.expire': true,
   'shop.buy': true, 'shop.craft': true, 'altar.contribute': true, 'altar.withdraw': true,
   'lot.openBidding': true, 'lot.sealedBids': true, 'lot.bid': true, 'lot.close': true, 'lot.buyout': true,

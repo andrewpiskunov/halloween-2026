@@ -1,7 +1,7 @@
 import type { AbilityKind, CopyableKind } from './abilities';
 import type { Correction } from './commands';
 import type {
-  Altar, AltarSide, Announcement, Bundle, Closing, ConsentRequest, ConsentStatus, Contribution, Counts, Effect, Ingredient, Intel, Item, Lot, Offer,
+  Altar, AltarSide, Announcement, Bundle, Closing, ConsentRequest, ConsentStatus, Contribution, Counts, Effect, Ingredient, Intel, Item, ItemKind, Lot, Offer,
   OfferStatus, Player,
 } from './types';
 
@@ -60,6 +60,8 @@ export interface Corrected extends EventBase {
   closing?: Closing;
 }
 export interface InviteRebound extends EventBase { type: 'InviteRebound'; roleKey: string; code: string }
+/** Новый код ведущего от сервера; прежний аккаунт ведущего отвязан. */
+export interface GmReissued extends EventBase { type: 'GmReissued'; code: string }
 
 /** Игрок предложил сделку; его сторона give зарезервирована. */
 export interface OfferCreated extends EventBase { type: 'OfferCreated'; offer: Offer }
@@ -120,6 +122,8 @@ export interface AbilityUsed extends EventBase {
   removed?: { curse: boolean; thorns: boolean };
   /** Если исполнено по согласию. */
   requestId?: string;
+  /** Вещь способности: созданная (изготовление, перековка) или убранная (разбор, продажа в казну). */
+  item?: { kind: ItemKind; ref: string };
 }
 
 /** Вещь применена. */
@@ -152,7 +156,7 @@ export interface Revealed extends EventBase { type: 'Revealed' }
 
 // События следующих задач добавляются в объединение по мере реализации.
 export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | PlayerArrived | PlayerLeft | FairOpened
-  | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound
+  | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound | GmReissued
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
   | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought
   | AbilityUsed | ItemUsed | ConsentRequested | ConsentGiven | ConsentClosed

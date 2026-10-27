@@ -236,3 +236,38 @@ describe('ability.use: общие проверки', () => {
     refused(s, 'o10', { kind: 'cleanse' } as unknown as AbilityUse, 'forbidden');
   });
 });
+
+describe('вещь в записи журнала (спек этапа 7, §5.2)', () => {
+  /** Поле item в AbilityUsed и в последней записи журнала совпадают. */
+  function itemOf(r: ReturnType<typeof done>) {
+    const e = r.events[0];
+    if (e?.type !== 'AbilityUsed') throw new Error('нет AbilityUsed');
+    expect(r.state.actions.at(-1)?.item).toEqual(e.item);
+    return e.item;
+  }
+
+  test('изготовление способностью → созданная вещь', () => {
+    const s = addIngredients(makeGame(30), 'o1', { ash: 1, dew: 1 });
+    expect(itemOf(done(s, 'o1', { kind: 'payAshWithGold', recipeId: 'cleanse' }))).toEqual({ kind: 'potion', ref: 'cleanse' });
+    const f = addIngredients(makeGame(30), 'o5', { ash: 1, moon: 1 });
+    expect(itemOf(done(f, 'o5', { kind: 'focusFree' }))).toEqual({ kind: 'focus', ref: 'focus' });
+  });
+
+  test('reforge → созданная вещь', () => {
+    const s = withItem(makeGame(30), ownItem('pot', 'n20', 'potion', 'cleanse'));
+    expect(itemOf(done(s, 'n20', { kind: 'reforge', itemId: 'pot', into: 'ward' }))).toEqual({ kind: 'ward', ref: 'ward' });
+  });
+
+  test('disassemble и sellToBank → убранная вещь', () => {
+    const d = withItem(makeGame(30), ownItem('pot', 'o13', 'potion', 'cleanse'));
+    expect(itemOf(done(d, 'o13', { kind: 'disassemble', itemId: 'pot', take: ['moon', 'moon'] }))).toEqual({ kind: 'potion', ref: 'cleanse' });
+    const st = withItem(makeGame(30), ownItem('st', 't1', 'shape', 'shape'));
+    expect(itemOf(done(st, 't1', { kind: 'sellToBank', itemId: 'st' }))).toEqual({ kind: 'shape', ref: 'shape' });
+  });
+
+  test('покупка ингредиента → поля нет', () => {
+    const r = done(makeGame(30), 'o3', { kind: 'buyCheap', ingredient: 'moon' });
+    expect(r.events[0]).not.toHaveProperty('item');
+    expect(r.state.actions.at(-1)).not.toHaveProperty('item');
+  });
+});

@@ -86,6 +86,8 @@ export interface ActionRecord {
   intel?: Intel;
   guise?: string;
   requestId?: string;
+  /** Вещь способности: созданная или убранная (спек этапа 7, §5.2). */
+  item?: { kind: ItemKind; ref: string };
 }
 
 export type ConsentStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired' | 'failed';

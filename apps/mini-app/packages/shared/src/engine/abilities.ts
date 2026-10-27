@@ -7,7 +7,7 @@ import { INGREDIENTS, available } from './bundles';
 import { acceptRequest, needsConsent, requestConsent } from './consent';
 import { consentedKind } from './consented-kinds';
 import { actOf, applyEffects, recordAction } from './effects';
-import { isActPhase, otherTarget, participant } from './guards';
+import { isActPhase, lookup, otherTarget, participant } from './guards';
 import { buildIntel, isObservation, type ObservationUse } from './intel';
 import { KIND_BY_RECIPE, craftQuote, recipeOf, type CraftModifier } from './shop';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
@@ -71,17 +71,17 @@ export function checkCommon(state: GameState, ctx: Ctx, use: AbilityUse): { auth
 }
 
 /** AbilityUsed невраждебной исполненной способности. */
-function used(author: string, kind: AbilityKind, effects: Effect[], ctx: Ctx, requestId?: string): AbilityUsed {
+function used(author: string, kind: AbilityKind, effects: Effect[], ctx: Ctx, requestId?: string, item?: Item): AbilityUsed {
   return {
     type: 'AbilityUsed', at: ctx.now, author, ability: kind, outcome: 'done', hostile: false, effects,
     ...(requestId !== undefined ? { requestId } : {}),
+    ...(item !== undefined ? { item: { kind: item.kind, ref: item.ref } } : {}),
   };
 }
 
 /** Своё свободное изделие нужного вида: вещь или отказ. */
 function ownFreeItem(state: GameState, author: string, itemId: string, kinds: ItemKind[]): Item | Result {
-  // Только собственные ключи: «constructor» и подобные из прототипа — не вещи.
-  const it = typeof itemId === 'string' && Object.hasOwn(state.items, itemId) ? state.items[itemId] : undefined;
+  const it = lookup(state.items, itemId);
   if (!it) return fail('not_found', itemId);
   if (it.owner.type !== 'player' || it.owner.key !== author) return fail('not_owner');
   if (it.reservedFor !== undefined) return fail('reserved', 'вещь в резерве сделки');
@@ -103,7 +103,7 @@ function craftWith(
   if ('error' in q) return fail(q.error, q.detail);
   const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, createdBy: author };
   return ok(
-    used(author, kind, [], ctx, requestId),
+    used(author, kind, [], ctx, requestId, item),
     { type: 'ItemCrafted', at: ctx.now, player: author, item, ...q, viaAbility: kind },
   );
 }
@@ -181,6 +181,8 @@ export function performAbility(
 ): Result {
   const a = available(state, author);
   const done = (effects: Effect[], ...rest: Event[]) => ok(used(author, use.kind, effects, ctx, requestId), ...rest);
+  /** То же с вещью в записи журнала (спек этапа 7, §5.2). */
+  const doneWith = (item: Item, effects: Effect[]) => ok(used(author, use.kind, effects, ctx, requestId, item));
   const bought = (ingredient: Ingredient, count: number, paidGold: number, fromBank?: true): Event =>
     ({ type: 'IngredientBought', at: ctx.now, player: author, ingredient, count, paidGold, ...(fromBank ? { fromBank } : {}) });
 
@@ -239,7 +241,7 @@ export function performAbility(
       const it = ownFreeItem(state, author, use.itemId, CRAFTED);
       if (isResult(it)) return it;
       if (!stockHas(state, use.take)) return fail('insufficient', 'в мастерской не хватает ингредиентов');
-      return done([
+      return doneWith(it, [
         { type: 'itemRemoved', itemId: it.id },
         ...use.take.flatMap((ingredient): Effect[] => [
           { type: 'workshop', ingredient, delta: -1 },
@@ -256,7 +258,7 @@ export function performAbility(
       if (kind === it.kind) return fail('invalid', 'новая вещь должна быть другого вида');
       if (a.gold < REFORGE_PRICE) return fail('insufficient', 'не хватает золота');
       const item: Item = { id: ctx.newId(), kind, ref: use.into, owner: { type: 'player', key: author }, createdBy: author };
-      return done([
+      return doneWith(item, [
         { type: 'itemRemoved', itemId: it.id },
         { type: 'itemCreated', item },
         { type: 'gold', player: author, delta: -REFORGE_PRICE },
@@ -266,7 +268,7 @@ export function performAbility(
     case 'sellToBank': {
       const it = ownFreeItem(state, author, use.itemId, CRAFTED);
       if (isResult(it)) return it;
-      return done([
+      return doneWith(it, [
         { type: 'itemRemoved', itemId: it.id },
         { type: 'gold', player: author, delta: SELL_PRICE },
       ]);

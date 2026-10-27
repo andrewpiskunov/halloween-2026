@@ -1,7 +1,7 @@
 import type { OfferClosed } from '../events';
 import type { Bundle, GameState, Item, Offer, TradeRecord, TradeSide, Want } from '../types';
 import { INGREDIENTS, available, isTradable, transfer } from './bundles';
-import { isActPhase, participant } from './guards';
+import { isActPhase, lookup, participant } from './guards';
 import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, type Result } from './result';
 
 const OFFER_TTL_MS = 300000;
@@ -40,7 +40,7 @@ const hasRumor = (b: Bundle) => (b.rumor?.trim() ?? '') !== '';
 /** Проверка, что автор может отдать набор: код ошибки или undefined. */
 function checkGive(state: GameState, from: string, b: Bundle): ErrorCode | undefined {
   for (const id of b.items) {
-    const it = state.items[id];
+    const it = lookup(state.items, id);
     if (!it) return 'not_owner';
     if (it.owner.type === 'player' && it.owner.key !== from) return 'not_owner';
     if (!isTradable(state, id, state.phase)) return 'invalid';
@@ -68,7 +68,7 @@ const counterpartyHas = (state: GameState, o: Offer) =>
   checkGive(state, o.to, o.get) === undefined && resolveWants(state, o.to, o.get) !== undefined;
 
 function pendingOffer(state: GameState, id: string): Offer | Result {
-  const o = state.offers[id];
+  const o = lookup(state.offers, id);
   if (!o) return fail('not_found', id);
   if (o.status !== 'pending') return fail('invalid', 'предложение уже закрыто');
   return o;
@@ -83,7 +83,7 @@ export const offerCommands: CommandHandlers = {
     if (!from) return fail('forbidden');
     if (!isActPhase(state)) return fail('phase');
     if (state.clock.pausedAt !== undefined) return fail('phase', 'часы на паузе');
-    if (!state.roster.includes(cmd.to) || !state.players[cmd.to]?.present) return fail('not_found', cmd.to);
+    if (!state.roster.includes(cmd.to) || !lookup(state.players, cmd.to)?.present) return fail('not_found', cmd.to);
     if (cmd.to === from) return fail('invalid', 'нельзя предлагать самому себе');
     if (!validShape(cmd.give) || !validShape(cmd.get)) return fail('invalid', 'некорректные количества');
     if ((cmd.give.wants?.length ?? 0) > 0) return fail('invalid', 'отдавать можно только конкретные вещи');
