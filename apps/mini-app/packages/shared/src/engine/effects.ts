@@ -49,6 +49,11 @@ export function applyEffects(state: GameState, effects: Effect[]): GameState {
   return effects.reduce(applyEffect, state);
 }
 
+const ACT_OF_PHASE = { act1: 1, act2: 2, act3: 3 } as const;
+
+/** Номер акта для журнала; события применений бывают только в актах. */
+export const actOf = (state: GameState): 1 | 2 | 3 => ACT_OF_PHASE[state.phase as keyof typeof ACT_OF_PHASE];
+
 /** Только заданные поля: запись журнала не хранит ключей со значением undefined. */
 const optional = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;

@@ -233,6 +233,6 @@ describe('ability.use: общие проверки', () => {
     expect(byGm.ok ? 'ok' : byGm.error).toBe('forbidden');
     refused(s, 'n19', { kind: 'buyFromBank', ingredient: 'gold' as 'ash' }, 'invalid');
     refused(s, 'o1', { kind: 'payAshWithGold', recipeId: 'nope' }, 'not_found');
-    refused(s, 'o4', { kind: 'protectSelf' }, 'invalid');
+    refused(s, 'o11', { kind: 'inspectInventory', target: 'o2' }, 'invalid');
   });
 });

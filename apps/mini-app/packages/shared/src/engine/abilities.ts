@@ -4,7 +4,7 @@ import type { Content } from '../content';
 import type { AbilityUsed, Event } from '../events';
 import type { Effect, GameState, Ingredient, Item, ItemKind } from '../types';
 import { INGREDIENTS, available } from './bundles';
-import { applyEffects, recordAction } from './effects';
+import { actOf, applyEffects, recordAction } from './effects';
 import { isActPhase, participant } from './guards';
 import { KIND_BY_RECIPE, craftQuote, type CraftModifier } from './shop';
 import { fail, ok, type CommandHandlers, type EventReducers, type Result } from './result';
@@ -26,7 +26,7 @@ const isIngredient = (x: unknown): x is Ingredient => INGREDIENTS.includes(x as 
 const isKey = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= MAX_KEY;
 const isPair = (x: unknown) => Array.isArray(x) && x.length === 2 && x.every(isIngredient);
 
-/** Форма параметров видов мастерской (§5.3 шаг 5); прочие виды проверяют себя сами. */
+/** Форма параметров (§5.3 шаг 5) для мастерской, защиты и враждебных; прочие виды проверяют себя сами. */
 function validForm(use: AbilityUse): boolean {
   switch (use.kind) {
     case 'payAshWithGold': return isKey(use.recipeId);
@@ -39,6 +39,9 @@ function validForm(use: AbilityUse): boolean {
     case 'disassemble': return isKey(use.itemId) && isPair(use.take);
     case 'reforge': return isKey(use.itemId) && REFORGE_INTO.includes(use.into);
     case 'sellToBank': return isKey(use.itemId);
+    case 'protectSelf': return true;
+    case 'protectOther': case 'stealGold': case 'thorns': return isKey(use.target);
+    case 'stealIngredient': return isKey(use.target) && isIngredient(use.ingredient);
     default: return true;
   }
 }
@@ -106,6 +109,54 @@ function countPair(take: [Ingredient, Ingredient]): Partial<Record<Ingredient, n
 /** Хватает ли в запасе мастерской пары ингредиентов. */
 const stockHas = (state: GameState, take: [Ingredient, Ingredient]) =>
   Object.entries(countPair(take)).every(([k, n]) => state.workshop[k as Ingredient] >= (n ?? 0));
+
+/** Цель способности «на другого» (§5.3 шаг 6): в составе и присутствует, не сам автор. */
+function otherTarget(state: GameState, author: string, target: string): Result | undefined {
+  if (!state.roster.includes(target) || !state.players[target]?.present) return fail('not_found', target);
+  if (target === author) return fail('invalid', 'цель должна быть другим игроком');
+  return undefined;
+}
+
+/**
+ * Враждебная попытка (§5.3 шаги 7–8): лимит цели за акт, затем защита цели.
+ * Возвращает отказ, событие блокировки или undefined, если можно проверять предусловия дальше.
+ */
+export function hostileCheck(
+  state: GameState, author: string, target: string, kind: AbilityKind, ctx: Ctx, requestId?: string,
+): Result | undefined {
+  const t = state.players[target];
+  if (t.hostileAttemptsAgainstInAct >= 1) return fail('limit', 'по этому игроку в этом акте уже была враждебная попытка');
+  if (t.protection === undefined) return undefined;
+  return ok({
+    type: 'AbilityUsed', at: ctx.now, author, ability: kind, target, outcome: 'blocked', hostile: true,
+    effects: [{ type: 'protection', player: target, value: null }],
+    ...(requestId !== undefined ? { requestId } : {}),
+  });
+}
+
+/** Предусловие враждебного эффекта (§5.3 шаг 9) и его эффекты. */
+function hostileEffects(state: GameState, author: string, use: Extract<AbilityUse, { kind: 'stealGold' | 'stealIngredient' | 'thorns' }>): Effect[] | Result {
+  const t = available(state, use.target);
+  switch (use.kind) {
+    case 'stealGold':
+      if (t.gold < 1) return fail('insufficient', 'у цели нечего взять');
+      return [{ type: 'goldMove', from: use.target, to: author, amount: 1 }];
+    case 'stealIngredient':
+      if (t.ingredients[use.ingredient] < 1) return fail('insufficient', 'у цели нечего взять');
+      return [{ type: 'ingredientMove', from: use.target, to: author, ingredient: use.ingredient }];
+    case 'thorns':
+      if (state.players[use.target].thorns) return fail('invalid', 'у цели уже есть шипы');
+      return [{ type: 'thorns', player: use.target, value: true, by: author }];
+  }
+}
+
+/** Защита способностью: одна активная защита на игрока. */
+function protect(state: GameState, author: string, target: string): Effect[] | Result {
+  if (state.players[target].protection !== undefined) return fail('limit', 'защита уже есть');
+  return [{ type: 'protection', player: target, value: { by: author, source: 'ability' } }];
+}
+
+const isEffects = (x: Effect[] | Result): x is Effect[] => Array.isArray(x);
 
 /**
  * Исполнение способности после общих проверок: проверки вида и события.
@@ -204,6 +255,24 @@ export function performAbility(
       ]);
     }
 
+    case 'protectSelf': {
+      const eff = protect(state, author, author);
+      return isEffects(eff) ? done(eff) : eff;
+    }
+
+    case 'protectOther': {
+      const eff = otherTarget(state, author, use.target) ?? protect(state, author, use.target);
+      return isEffects(eff) ? ok({ ...used(author, use.kind, eff, ctx, requestId), target: use.target }) : eff;
+    }
+
+    case 'stealGold': case 'stealIngredient': case 'thorns': {
+      const stop = otherTarget(state, author, use.target) ?? hostileCheck(state, author, use.target, use.kind, ctx, requestId);
+      if (stop) return stop;
+      const eff = hostileEffects(state, author, use);
+      if (!isEffects(eff)) return eff;
+      return ok({ ...used(author, use.kind, eff, ctx, requestId), target: use.target, hostile: true });
+    }
+
     default:
       return fail('invalid', 'вид ещё не реализован');
   }
@@ -217,14 +286,12 @@ export const abilityCommands: CommandHandlers = {
   },
 };
 
-const ACT_OF_PHASE = { act1: 1, act2: 2, act3: 3 } as const;
-
 export const abilityReducers: EventReducers = {
   AbilityUsed: (state, _c, e) => {
-    const act = ACT_OF_PHASE[state.phase as keyof typeof ACT_OF_PHASE];
     const s = applyEffects(state, e.effects);
-    const p = s.players[e.author];
-    const marked = { ...s, players: { ...s.players, [e.author]: { ...p, abilityUsedInAct: true } } };
-    return recordAction(marked, e, act);
+    const players = { ...s.players, [e.author]: { ...s.players[e.author], abilityUsedInAct: true } };
+    // Враждебная попытка, исполненная или отражённая, расходует лимит цели на акт.
+    if (e.hostile && e.target !== undefined) players[e.target] = { ...players[e.target], hostileAttemptsAgainstInAct: 1 };
+    return recordAction({ ...s, players }, e, actOf(state));
   },
 };
