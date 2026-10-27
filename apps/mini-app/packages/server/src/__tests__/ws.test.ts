@@ -296,6 +296,18 @@ test('ведущий получает токен «за игрока» и вид
   expect((await as('мусор', 'o6')).status).toBe(401);
 });
 
+test('исправление цели с value: null проходит разбор сообщения: пульт так возвращает расчёт по журналу', async () => {
+  const g = connect((await devAuth(1000)).token);
+  await g.opened;
+  const set = await g.cmd('goal-set', { type: 'gm.correct', playerKey: 'o1', change: { field: 'goal', index: 0, value: true }, reason: 'у стола' });
+  expect(set).toMatchObject({ ok: true });
+  const clear = await g.cmd('goal-clear', { type: 'gm.correct', playerKey: 'o1', change: { field: 'goal', index: 0, value: null }, reason: 'по журналу' });
+  expect(clear).toMatchObject({ ok: true });
+  expect(game.state().players.o1.goalOverrides).toBeUndefined();
+  // Вне исправления null по-прежнему некорректное сообщение.
+  expect(await g.cmd('announce-null', { type: 'gm.announce', text: null })).toMatchObject({ ok: false, error: 'invalid', detail: 'bad message' });
+});
+
 test('закрытие по сокету: session.close от игрока → forbidden; player.chooseSide с неизвестной стороной → not_found; событий нет', async () => {
   // Привязка Грима по коду — событие; считаем события после неё.
   const codes = await (await fetch(`${base}/api/dev/codes`)).json() as { roles: Record<string, string> };

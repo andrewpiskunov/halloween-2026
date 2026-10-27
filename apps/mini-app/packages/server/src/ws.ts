@@ -22,9 +22,16 @@ const USE_FIELDS = new Set(['kind', 'recipeId', 'from', 'to', 'ingredient', 'tak
 const isPlain = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
 
+/**
+ * Поля исправления ведущего (change), где null — значимое значение: цель «по журналу» (value),
+ * снять облик (name), снять сторону (side). В других местах null не принимается.
+ */
+const NULLABLE_FIELDS = new Set(['value', 'name', 'side']);
+
 /** Значения JSON допустимых видов: строки ограниченной длины, конечные числа, булевы, вложенность до MAX_DEPTH. */
 function validValue(v: unknown, field: string, depth: number): boolean {
   if (depth > MAX_DEPTH) return false;
+  if (v === null) return depth >= 2 && NULLABLE_FIELDS.has(field);
   if (typeof v === 'string') return v.length <= (TEXT_FIELDS.has(field) ? MAX_TEXT : MAX_KEY);
   if (typeof v === 'number') return Number.isFinite(v);
   if (typeof v === 'boolean') return true;
