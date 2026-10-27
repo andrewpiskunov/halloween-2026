@@ -64,7 +64,7 @@ export interface GmView {
   /** Содержимое приходит отдельным сообщением `content` при подключении; здесь только его версия. */
   kind: 'gm'; state: GameState; contentVersion: string;
   invites: { roleKey: string; code: string; bound: boolean; present: boolean }[];
-  /** state содержит requests и actions целиком; здесь каталог способностей всех ролей. */
+  /** state урезан (gmStateView): offers только ожидающие, requests текущего акта, trades последние 100; actions целиком. Здесь каталог способностей всех ролей. */
   abilities: Record<string, { kind: AbilityKind; hostile: boolean; verbal: boolean; name: string }>;
 }
 
@@ -92,8 +92,7 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
   });
 }
 
-/** Проекция состояния для актора. Чистая функция: `now` передаётся снаружи. */
-/** Лимиты проекций (этап 7, раунд 2 ревью): закрытые сделки не копятся весь вечер. */
+/** Лимиты проекций (этап 7): закрытые сделки не копятся весь вечер. */
 export const PLAYER_CLOSED_OFFERS = 20;
 export const GM_TRADES = 100;
 
@@ -132,6 +131,7 @@ export function gmStateView(state: GameState): GameState {
   };
 }
 
+/** Проекция состояния для актора. Чистая функция: `now` передаётся снаружи. */
 export function viewFor(state: GameState, content: Content, actor: Actor, now: number): PlayerView | GmView {
   if (actor.type === 'system') throw new Error('system actor has no view');
   if (actor.type === 'gm') {
