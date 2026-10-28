@@ -6,6 +6,35 @@ import { fail, ok, type CommandHandlers, type ErrorCode, type EventReducers, typ
 
 const OFFER_TTL_MS = 300000;
 
+/** Сколько последних закрытых предложений хранится у каждого участника; столько же видит игрок. */
+export const CLOSED_OFFERS_KEPT = 20;
+
+/** Порядок закрытых предложений от новых к старым: по createdAt убыв., при равенстве по id возр. */
+export const newestFirst = (a: Offer, b: Offer) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * Убирает из состояния закрытые предложения, которые не входят в CLOSED_OFFERS_KEPT самых новых закрытых
+ * ни у автора, ни у адресата. Ожидающие остаются все, порядок оставшихся сохраняется. Правило зависит
+ * только от состояния, поэтому журнал воспроизводится в то же состояние. Если удалять нечего, возвращает
+ * тот же объект.
+ */
+export function compactOffers(state: GameState): GameState {
+  const closed = Object.values(state.offers).filter(o => o.status !== 'pending');
+  if (closed.length <= CLOSED_OFFERS_KEPT) return state;
+  const seen = new Map<string, number>();
+  const keep = new Set<string>();
+  for (const o of closed.sort(newestFirst)) {
+    const a = seen.get(o.from) ?? 0;
+    const b = seen.get(o.to) ?? 0;
+    if (a < CLOSED_OFFERS_KEPT || b < CLOSED_OFFERS_KEPT) keep.add(o.id);
+    seen.set(o.from, a + 1);
+    seen.set(o.to, b + 1);
+  }
+  if (keep.size === closed.length) return state;
+  const offers = Object.fromEntries(Object.entries(state.offers).filter(([id, o]) => o.status === 'pending' || keep.has(id)));
+  return { ...state, offers };
+}
+
 const isNonNegInt = (n: number) => Number.isInteger(n) && n >= 0;
 const ITEM_KINDS: Item['kind'][] = ['relic', 'shard', 'clue', 'potion', 'ward', 'focus', 'shape'];
 const MAX_WANTS = 10;
@@ -198,12 +227,12 @@ export const offerReducers: EventReducers = {
     let s: GameState = { ...release(state, o), trades: [...state.trades, trade] };
     s = transfer(s, e.from, e.to, e.give);
     s = transfer(s, e.to, e.from, e.get);
-    return { ...s, offers: { ...s.offers, [e.id]: { ...o, status: 'accepted' } } };
+    return compactOffers({ ...s, offers: { ...s.offers, [e.id]: { ...o, status: 'accepted' } } });
   },
   OfferClosed: (state, _c, e) => {
     const o = state.offers[e.id];
     const s = release(state, o);
     const closed: Offer = { ...o, status: e.status, ...(e.reason !== undefined ? { reason: e.reason } : {}) };
-    return { ...s, offers: { ...s.offers, [e.id]: closed } };
+    return compactOffers({ ...s, offers: { ...s.offers, [e.id]: closed } });
   },
 };

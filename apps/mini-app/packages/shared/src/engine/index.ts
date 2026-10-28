@@ -22,6 +22,7 @@ export { available, hasBundle, isTradable, transfer } from './bundles';
 export { BUYOUT_PRICE, OPEN_BIDDING_MS, SEALED_BIDS_MS, itemTitle, lotTitle } from './lots';
 export { altarResults, computeClosing, goalDone } from './closing';
 export { freeze } from './close';
+export { CLOSED_OFFERS_KEPT, compactOffers, newestFirst } from './offers';
 
 // Новые группы команд подключаются добавлением в эти списки.
 const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands, ...closeCommands };

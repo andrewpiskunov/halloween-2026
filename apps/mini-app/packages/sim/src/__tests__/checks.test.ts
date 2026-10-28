@@ -149,7 +149,55 @@ describe('снимки, воспроизведение, золото', () => {
     // Накопленные симулятором просьбы и обмены сверяются с полным состоянием из журнала.
     expect(checkReplay(g.s, g.s, g.s, structuredClone(g.s)).ok).toBe(true);
     const lost = checkReplay(g.s, g.s, { ...g.s, trades: [] }, { ...g.s, trades: [{ id: 't', at: 1, from: 'o1', to: 'o2', service: false, give: { gold: 1, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] }, get: { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] } }] });
-    expect(lost.details).toEqual(['накопленные за вечер предложения, просьбы и обмены расходятся с журналом: trades']);
+    expect(lost.details).toEqual(['накопленные за вечер просьбы и обмены расходятся с журналом: trades']);
+  });
+});
+
+describe('checkReplay: предложения после уплотнения', () => {
+  const none = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
+  const coin = { ...none, gold: 1 };
+  /** Два закрытых предложения o1 → o2 и одно ожидающее. */
+  const offers = () => {
+    const g = new Game(12);
+    for (let i = 0; i < 3; i++) g.must({ type: 'offer.create', to: 'o2', give: coin, get: none }, 'o1');
+    const [x, y] = Object.keys(g.s.offers);
+    g.must({ type: 'offer.decline', id: x }, 'o2');
+    g.must({ type: 'offer.cancel', id: y }, 'o1');
+    return { g, closed: [x, y] };
+  };
+  const without = (s: GameState, id: string): GameState => {
+    const { [id]: _drop, ...rest } = s.offers;
+    return { ...s, offers: rest };
+  };
+
+  test('в журнале подмножество накопленных предложений — ok', () => {
+    const { g, closed } = offers();
+    expect(checkReplay(g.s, g.s, g.s, without(g.s, closed[0])).ok).toBe(true);
+  });
+
+  test('в журнале есть предложение, которого не накоплено — ошибка', () => {
+    const { g, closed } = offers();
+    const r = checkReplay(g.s, g.s, without(g.s, closed[0]), g.s);
+    expect(r.ok).toBe(false);
+    expect(r.details.join('\n')).toContain('предложени');
+    expect(r.details.join('\n')).toContain(closed[0]);
+  });
+
+  test('поля одного предложения различаются — ошибка', () => {
+    const { g, closed } = offers();
+    const acc = { ...g.s, offers: { ...g.s.offers, [closed[0]]: { ...g.s.offers[closed[0]], status: 'expired' as const } } };
+    const r = checkReplay(g.s, g.s, acc, g.s);
+    expect(r.ok).toBe(false);
+    expect(r.details).toEqual([`предложения расходятся с журналом по полям: ${closed[0]}`]);
+  });
+
+  test('множества ожидающих расходятся — ошибка', () => {
+    const { g } = offers();
+    g.must({ type: 'offer.create', to: 'o4', give: coin, get: none }, 'o1');
+    const extra = Object.keys(g.s.offers).at(-1)!;
+    const r = checkReplay(g.s, g.s, g.s, without(g.s, extra));
+    expect(r.ok).toBe(false);
+    expect(r.details.join('\n')).toMatch(/ожидающие предложения расходятся/);
   });
 });
 

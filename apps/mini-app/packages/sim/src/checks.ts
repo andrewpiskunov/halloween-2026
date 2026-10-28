@@ -260,7 +260,10 @@ function diffKeys(a: Record<string, unknown>, b: Record<string, unknown>): strin
 /**
  * §3.4: состояние из журнала базы совпадает с последней проекцией ведущего; без replay — пропуск.
  * replayed — уже в виде проекции ведущего (gmStateView). replayedFull и accumulated — полное состояние
- * из журнала и накопленное симулятором: предложения, просьбы и обмены за весь вечер обязаны совпасть.
+ * из журнала и накопленное симулятором. Просьбы и обмены за весь вечер обязаны совпасть целиком.
+ * Предложения движок уплотняет (этап 8): в журнале остаются ожидающие и по 20 последних закрытых
+ * у каждого игрока, поэтому каждое предложение из журнала должно найтись в накопленном с теми же полями,
+ * а множества ожидающих совпасть. Лишние закрытые в накопленном допустимы.
  */
 export function checkReplay(final: GameState, replayed?: GameState, accumulated?: GameState, replayedFull?: GameState): CheckResult {
   if (!replayed) return { name: 'replay', ok: true, details: ['пропущено: воспроизведение журнала не передано'] };
@@ -269,10 +272,20 @@ export function checkReplay(final: GameState, replayed?: GameState, accumulated?
   const b = JSON.parse(JSON.stringify(final)) as Record<string, unknown>;
   if (!isDeepStrictEqual(a, b)) bad.push(`состояние из журнала расходится с проекцией ведущего: ${diffKeys(a, b).join(', ')}`);
   if (accumulated && replayedFull) {
-    const pick = (x: GameState) => JSON.parse(JSON.stringify({ offers: x.offers, requests: x.requests, trades: x.trades })) as Record<string, unknown>;
+    const pick = (x: GameState) => JSON.parse(JSON.stringify({ requests: x.requests, trades: x.trades })) as Record<string, unknown>;
     const full = pick(replayedFull);
     const acc = pick(accumulated);
-    if (!isDeepStrictEqual(full, acc)) bad.push(`накопленные за вечер предложения, просьбы и обмены расходятся с журналом: ${diffKeys(full, acc).join(', ')}`);
+    if (!isDeepStrictEqual(full, acc)) bad.push(`накопленные за вечер просьбы и обмены расходятся с журналом: ${diffKeys(full, acc).join(', ')}`);
+    const fullOffers = JSON.parse(JSON.stringify(replayedFull.offers)) as GameState['offers'];
+    const accOffers = JSON.parse(JSON.stringify(accumulated.offers)) as GameState['offers'];
+    const missing = Object.keys(fullOffers).filter(id => !(id in accOffers));
+    const differ = Object.keys(fullOffers).filter(id => id in accOffers && !isDeepStrictEqual(fullOffers[id], accOffers[id]));
+    if (missing.length) bad.push(`предложения из журнала не накоплены симулятором: ${missing.sort().join(', ')}`);
+    if (differ.length) bad.push(`предложения расходятся с журналом по полям: ${differ.sort().join(', ')}`);
+    const pending = (x: GameState['offers']) => Object.values(x).filter(o => o.status === 'pending').map(o => o.id).sort();
+    if (!isDeepStrictEqual(pending(fullOffers), pending(accOffers))) {
+      bad.push(`ожидающие предложения расходятся с журналом: в журнале ${pending(fullOffers).join(', ') || 'нет'}, накоплено ${pending(accOffers).join(', ') || 'нет'}`);
+    }
   }
   return result('replay', bad);
 }

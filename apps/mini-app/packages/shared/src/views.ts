@@ -1,7 +1,7 @@
 import type { AbilityKind, CopyableKind, TargetMode } from './abilities';
 import type { Clue, Content, Faction, Recipe, Resource, Role } from './content';
 import type { Actor } from './commands';
-import { available } from './engine';
+import { CLOSED_OFFERS_KEPT, available, newestFirst } from './engine';
 import type {
   ActionRecord, AltarSide, Announcement, ConsentStatus, Contribution, Counts, GameState, Item, Lot, Offer, Phase, Player,
 } from './types';
@@ -92,18 +92,19 @@ function shardStatuses(state: GameState, content: Content): PlayerView['public']
   });
 }
 
-/** Лимиты проекций (этап 7): закрытые сделки не копятся весь вечер. */
-export const PLAYER_CLOSED_OFFERS = 20;
+/** Лимиты проекций (этап 7): закрытые сделки не копятся весь вечер. Порог закрытых предложений общий с движком. */
+export const PLAYER_CLOSED_OFFERS = CLOSED_OFFERS_KEPT;
 export const GM_TRADES = 100;
 
 /**
  * Предложения игрока: ожидающие с его участием и не больше PLAYER_CLOSED_OFFERS последних закрытых
- * (по createdAt убыв., при равенстве по id). Порядок как в состоянии.
+ * (по createdAt убыв., при равенстве по id). Порядок как в состоянии. Словарь уже уплотнён движком
+ * (compactOffers) по тому же порогу, поэтому результат такой же, как на полном словаре.
  */
 export function offersFor(state: GameState, key: string): Offer[] {
   const mine = Object.values(state.offers).filter(o => o.from === key || o.to === key);
   const closed = new Set(mine.filter(o => o.status !== 'pending')
-    .sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .sort(newestFirst)
     .slice(0, PLAYER_CLOSED_OFFERS)
     .map(o => o.id));
   return mine.filter(o => o.status === 'pending' || closed.has(o.id));

@@ -10,7 +10,8 @@
     "start": "pnpm --filter @fair/server start",
     "e2e": "playwright test -c e2e",
     "sim": "pnpm --filter @fair/sim sim",
-    "sim:load": "pnpm --filter @fair/sim load"
+    "sim:load": "pnpm --filter @fair/sim load",
+    "sim:bench": "pnpm --filter @fair/sim bench"
   },
   "engines": {
     "node": ">=20"
