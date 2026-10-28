@@ -191,13 +191,32 @@ describe('checkReplay: предложения после уплотнения', 
     expect(r.details).toEqual([`предложения расходятся с журналом по полям: ${closed[0]}`]);
   });
 
-  test('множества ожидающих расходятся — ошибка', () => {
+  test('ожидающее в журнале закрыто в накопленном — ошибка', () => {
     const { g } = offers();
     g.must({ type: 'offer.create', to: 'o4', give: coin, get: none }, 'o1');
     const extra = Object.keys(g.s.offers).at(-1)!;
-    const r = checkReplay(g.s, g.s, g.s, without(g.s, extra));
+    const acc = { ...g.s, offers: { ...g.s.offers, [extra]: { ...g.s.offers[extra], status: 'declined' as const } } };
+    const r = checkReplay(g.s, g.s, acc, g.s);
     expect(r.ok).toBe(false);
-    expect(r.details.join('\n')).toMatch(/ожидающие предложения расходятся/);
+    expect(r.details).toContain(`ожидающие предложения расходятся с журналом: ${extra}`);
+  });
+
+  test('в накопленном ожидающее, в журнале закрыто — ошибка', () => {
+    const { g } = offers();
+    g.must({ type: 'offer.create', to: 'o4', give: coin, get: none }, 'o1');
+    const extra = Object.keys(g.s.offers).at(-1)!;
+    const acc = g.s;
+    g.must({ type: 'offer.decline', id: extra }, 'o4');
+    const r = checkReplay(g.s, g.s, acc, g.s);
+    expect(r.ok).toBe(false);
+    expect(r.details).toContain(`ожидающие предложения расходятся с журналом: ${extra}`);
+  });
+
+  test('в накопленном ожидающее, в журнале отсутствует — ok', () => {
+    const { g } = offers();
+    g.must({ type: 'offer.create', to: 'o4', give: coin, get: none }, 'o1');
+    const extra = Object.keys(g.s.offers).at(-1)!;
+    expect(checkReplay(g.s, g.s, g.s, without(g.s, extra)).ok).toBe(true);
   });
 });
 

@@ -263,7 +263,8 @@ function diffKeys(a: Record<string, unknown>, b: Record<string, unknown>): strin
  * из журнала и накопленное симулятором. Просьбы и обмены за весь вечер обязаны совпасть целиком.
  * Предложения движок уплотняет (этап 8): в журнале остаются ожидающие и по 20 последних закрытых
  * у каждого игрока, поэтому каждое предложение из журнала должно найтись в накопленном с теми же полями,
- * а множества ожидающих совпасть. Лишние закрытые в накопленном допустимы.
+ * и ожидающим в одном оно может быть только вместе с другим. Лишние предложения в накопленном допустимы,
+ * в том числе ожидающие: предложение может удалиться тем же событием, которое его закрывает.
  */
 export function checkReplay(final: GameState, replayed?: GameState, accumulated?: GameState, replayedFull?: GameState): CheckResult {
   if (!replayed) return { name: 'replay', ok: true, details: ['пропущено: воспроизведение журнала не передано'] };
@@ -282,10 +283,12 @@ export function checkReplay(final: GameState, replayed?: GameState, accumulated?
     const differ = Object.keys(fullOffers).filter(id => id in accOffers && !isDeepStrictEqual(fullOffers[id], accOffers[id]));
     if (missing.length) bad.push(`предложения из журнала не накоплены симулятором: ${missing.sort().join(', ')}`);
     if (differ.length) bad.push(`предложения расходятся с журналом по полям: ${differ.sort().join(', ')}`);
-    const pending = (x: GameState['offers']) => Object.values(x).filter(o => o.status === 'pending').map(o => o.id).sort();
-    if (!isDeepStrictEqual(pending(fullOffers), pending(accOffers))) {
-      bad.push(`ожидающие предложения расходятся с журналом: в журнале ${pending(fullOffers).join(', ') || 'нет'}, накоплено ${pending(accOffers).join(', ') || 'нет'}`);
-    }
+    // Ожидающее накопленного, которого в журнале нет совсем, удалено уплотнением в момент закрытия: это не ошибка.
+    const isPending = (x: GameState['offers'], id: string) => x[id]?.status === 'pending';
+    const pendingMismatch = [...new Set([...Object.keys(fullOffers), ...Object.keys(accOffers)])]
+      .filter(id => id in fullOffers && isPending(fullOffers, id) !== isPending(accOffers, id))
+      .sort();
+    if (pendingMismatch.length) bad.push(`ожидающие предложения расходятся с журналом: ${pendingMismatch.join(', ')}`);
   }
   return result('replay', bad);
 }

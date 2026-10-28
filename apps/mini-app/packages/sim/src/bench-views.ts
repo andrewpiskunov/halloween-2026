@@ -2,7 +2,7 @@
 // Печатает таблицу в stdout, файлов не пишет. Часы и id детерминированы.
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { decide, initialState, loadContent, reduce, viewFor, type Actor, type Command, type GameState } from '@fair/shared';
+import { decide, initialState, loadContent, reduce, viewFor, type Actor, type Command, type Event, type GameState } from '@fair/shared';
 import { defaultContentPath } from '@fair/shared/node';
 
 const content = loadContent(JSON.parse(readFileSync(defaultContentPath(), 'utf8')));
@@ -27,19 +27,21 @@ class Bench {
     this.run({ type: 'session.open' }, { type: 'gm' });
   }
 
-  run(cmd: Command, actor: Actor): void {
+  run(cmd: Command, actor: Actor): Event[] {
     this.now += 1000;
     const r = decide(this.s, content, cmd, { now: this.now, actor, newId: () => `id${++this.ids}`, random: () => 0.5 });
     if (!r.ok) throw new Error(`${cmd.type}: ${r.error} ${r.detail ?? ''}`);
     for (const e of r.events) this.s = reduce(this.s, content, e);
+    return r.events;
   }
 
   /** Предложение from → to на 1 золотой, затем отказ или принятие адресатом. */
   cycle(from: string, to: string, variant: Variant): void {
     const none = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
-    this.run({ type: 'offer.create', to, give: { ...none, gold: 1 }, get: none }, { type: 'player', roleKey: from });
-    const id = `id${this.ids}`;
-    this.run({ type: variant === 'приняты' ? 'offer.accept' : 'offer.decline', id }, { type: 'player', roleKey: to });
+    const created = this.run({ type: 'offer.create', to, give: { ...none, gold: 1 }, get: none }, { type: 'player', roleKey: from })
+      .find(e => e.type === 'OfferCreated');
+    if (created?.type !== 'OfferCreated') throw new Error('нет OfferCreated');
+    this.run({ type: variant === 'приняты' ? 'offer.accept' : 'offer.decline', id: created.offer.id }, { type: 'player', roleKey: to });
   }
 }
 
