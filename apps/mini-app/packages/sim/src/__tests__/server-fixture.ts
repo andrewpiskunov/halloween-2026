@@ -23,7 +23,7 @@ export interface TestServer {
 
 const config: Config = {
   botToken: '', botName: 'test_bot', sessionSecret: 'test', clientUrl: 'http://localhost',
-  dbPath: ':memory:', contentPath: '', port: 0, allowDevAuth: true, botPolling: false,
+  dbPath: ':memory:', contentPath: '', contentPatchPath: '', port: 0, allowDevAuth: true, botPolling: false,
 };
 
 /** Как в index.ts: часы Date.now, id из randomUUID, раз в секунду tick; случайность фиксирована. */

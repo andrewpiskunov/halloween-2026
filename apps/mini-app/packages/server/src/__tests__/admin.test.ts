@@ -14,7 +14,7 @@ import { content, openFair, testOpts } from './fixtures';
 const SECRET = 'test-admin-secret';
 const config: Config = {
   botToken: '', botName: 'test_bot', sessionSecret: SECRET, clientUrl: 'http://localhost',
-  dbPath: ':memory:', contentPath: '', port: 0, allowDevAuth: true, botPolling: false,
+  dbPath: ':memory:', contentPath: '', contentPatchPath: '', port: 0, allowDevAuth: true, botPolling: false,
 };
 
 const GM_ID = 4242;

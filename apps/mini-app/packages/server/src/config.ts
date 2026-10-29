@@ -4,7 +4,7 @@ import { defaultContentPath } from '@fair/shared/node';
 
 export interface Config {
   botToken: string; botName: string; sessionSecret: string; clientUrl: string;
-  dbPath: string; contentPath: string; port: number; allowDevAuth: boolean; botPolling: boolean;
+  dbPath: string; contentPath: string; contentPatchPath: string; port: number; allowDevAuth: boolean; botPolling: boolean;
 }
 
 /** apps/mini-app/.env относительно этого файла. */
@@ -54,6 +54,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, envFile = DEFAU
     clientUrl: get('CLIENT_URL'),
     dbPath: get('DB_PATH') || './data/session.sqlite',
     contentPath: get('CONTENT_PATH') || defaultContentPath(),
+    contentPatchPath: get('CONTENT_PATCH_PATH'),
     port,
     allowDevAuth,
     botPolling: flag(get('BOT_POLLING')),

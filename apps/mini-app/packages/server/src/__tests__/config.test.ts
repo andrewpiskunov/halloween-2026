@@ -14,7 +14,7 @@ test('значения по умолчанию как в .env.example; без с
   const c = loadConfig({ SESSION_SECRET: 's', BOT_TOKEN: 't' }, missing);
   expect(c).toEqual({
     botToken: 't', botName: '', sessionSecret: 's', clientUrl: '', dbPath: './data/session.sqlite',
-    contentPath: defaultContentPath(), port: 8080, allowDevAuth: false, botPolling: false,
+    contentPath: defaultContentPath(), contentPatchPath: '', port: 8080, allowDevAuth: false, botPolling: false,
   });
 });
 

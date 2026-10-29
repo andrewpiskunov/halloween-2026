@@ -14,6 +14,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/mini-app/packages packages
 COPY docs/design/game-data-v0.2.json /repo/docs/design/game-data-v0.2.json
+COPY apps/mini-app/content /repo/apps/mini-app/content
 
 # Базовый путь клиента: «/fair/», когда приложение живёт под путём домена
 ARG BASE_PATH=/

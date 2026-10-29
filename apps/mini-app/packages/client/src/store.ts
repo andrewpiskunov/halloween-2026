@@ -1,6 +1,7 @@
 import { computed, signal } from '@preact/signals';
 import type { Command, ContentData } from '@fair/shared';
 import { auth, authAs, connect, exportUrlFor, type CmdResult, type Connection, type ErrorCode, type Status, type View } from './api';
+import { setFemaleNames } from './labels';
 import { collectNotices, noticeToast, type Seen } from './notices';
 import { nextTab } from './rules';
 import { BASE } from './base';
@@ -100,6 +101,7 @@ let seen: Seen | null = null;
 /** Новая проекция: уведомления о чужих действиях и просьбах (§7.5), затем сама проекция. */
 function onView(v: View): void {
   if (v.kind === 'player') {
+    setFemaleNames([...(v.me.role.female ? [v.me.role.name] : []), ...v.others.filter(o => o.female).map(o => o.name)]);
     const r = collectNotices(seen, v);
     seen = r.seen;
     const text = noticeToast(r.texts);
@@ -116,6 +118,7 @@ function onView(v: View): void {
 /** Содержимое при каждом подключении: версия могла смениться после перезапуска сервера, берётся новое. */
 function onContent(data: ContentData): void {
   content.value = data;
+  setFemaleNames(data.roles.filter(r => r.female).map(r => r.name));
 }
 
 /**

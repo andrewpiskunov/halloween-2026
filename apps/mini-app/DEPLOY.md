@@ -17,7 +17,7 @@
 cp .env.production.example .env
 ```
 
-Заполнить `BOT_TOKEN`, `BOT_NAME` (без `@`), `SESSION_SECRET` (`openssl rand -base64 32`), `CLIENT_URL` (адрес, который открывает бот, например `https://example.org/fair/`). `BASE_PATH` это путь, под которым живёт клиент; на отдельном домене оставить `/`. `.env` в Git не кладите.
+Заполнить `BOT_TOKEN`, `BOT_NAME` (без `@`), `SESSION_SECRET` (`openssl rand -base64 32`), `CLIENT_URL` (адрес, который открывает бот, например `https://example.org/fair/`). Поправки ролей на вечер, если есть: `CONTENT_PATCH_PATH=/repo/apps/mini-app/content/<файл>.json` (папка копируется в образ, см. «Поправки содержимого» в README). `BASE_PATH` это путь, под которым живёт клиент; на отдельном домене оставить `/`. `.env` в Git не кладите.
 
 Бот работает на long polling: хостер режет входящие от подсетей Telegram, webhook не доставляется. В `docker-compose.yml` `api.telegram.org` пришпилен к `149.154.167.220`; если у вашего хостера доступ свободный, уберите `extra_hosts`.
 

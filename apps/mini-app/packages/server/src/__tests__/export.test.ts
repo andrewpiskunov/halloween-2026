@@ -15,7 +15,7 @@ import { content, gm, nextCmd } from './fixtures';
 
 const config: Config = {
   botToken: '', botName: 'test_bot', sessionSecret: 'test', clientUrl: 'http://localhost',
-  dbPath: ':memory:', contentPath: '', port: 0, allowDevAuth: true, botPolling: false,
+  dbPath: ':memory:', contentPath: '', contentPatchPath: '', port: 0, allowDevAuth: true, botPolling: false,
 };
 
 // Большие вымышленные id: их не должно быть в выгрузке ни в каком виде.

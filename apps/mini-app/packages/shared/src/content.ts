@@ -9,6 +9,13 @@ export interface Role {
   skill: string; effect: string; extra: string; bundle: Counts;
   contacts: Contact[]; joke: string; style: string; acting: Acting;
   secret: string; rumor: string; backstory: string; motivation: string; emoji: string;
+  /** Женская роль с именем не на -а/-я (Сив): без поля клиент судит о роде по окончанию имени. */
+  female?: boolean;
+}
+
+/** Поправки к содержимому на конкретный вечер: поля ролей по ключу. `acting` сливается по полям, остальные поля заменяются целиком. */
+export interface ContentPatch {
+  roles?: Record<string, Partial<Omit<Role, 'key' | 'acting'>> & { acting?: Partial<Acting> }>;
 }
 export interface Relic { name: string; owner: string; wants: string[]; lore: string; emoji: string }
 export interface Shard { id: string; owner?: string; hidden?: string; lot?: number }
@@ -64,6 +71,28 @@ function checkRole(r: unknown, i: number): void {
   if (!Array.isArray(r.contacts)) fail(`у роли ${String(r.key)} нет «contacts»`);
   if (!isObject(r.bundle)) fail(`у роли ${String(r.key)} нет «bundle»`);
   if (!isObject(r.acting)) fail(`у роли ${String(r.key)} нет «acting»`);
+  if (r.female !== undefined && typeof r.female !== 'boolean') fail(`у роли ${String(r.key)} «female» не булево`);
+}
+
+/** Накладывает поправки на сырой JSON до проверки: роли ищутся по ключу, неизвестный ключ это ошибка. Исходный объект не меняется. */
+export function applyContentPatch(json: unknown, patch: unknown): unknown {
+  if (!isObject(patch)) fail('поправки не объект');
+  if (patch.roles === undefined) return json;
+  if (!isObject(patch.roles)) fail('в поправках «roles» не объект');
+  if (!isObject(json) || !Array.isArray(json.roles)) fail('нет массива «roles»');
+  const roles = json.roles.map(r => (isObject(r) ? { ...r } : r)) as Record<string, unknown>[];
+  for (const [key, over] of Object.entries(patch.roles)) {
+    if (!isObject(over)) fail(`поправка к роли «${key}» не объект`);
+    const role = roles.find(r => isObject(r) && r.key === key);
+    if (!role) fail(`поправка к неизвестной роли «${key}»`);
+    const { key: _k, acting, ...rest } = over;
+    Object.assign(role, rest);
+    if (acting !== undefined) {
+      if (!isObject(acting) || !isObject(role.acting)) fail(`у поправки к роли «${key}» «acting» не объект`);
+      role.acting = { ...role.acting, ...acting };
+    }
+  }
+  return { ...json, roles };
 }
 
 function checkRecipe(r: unknown, i: number): void {
@@ -73,8 +102,9 @@ function checkRecipe(r: unknown, i: number): void {
   if (!isObject(r.cost)) fail(`у рецепта ${r.id} нет «cost»`);
 }
 
-/** Проверяет структуру JSON игры вручную и строит индексы по ключу роли и id рецепта. */
-export function loadContent(json: unknown): Content {
+/** Проверяет структуру JSON игры вручную и строит индексы по ключу роли и id рецепта. Поправки (`patch`) накладываются до проверки. */
+export function loadContent(json: unknown, patch?: unknown): Content {
+  if (patch !== undefined) json = applyContentPatch(json, patch);
   if (!isObject(json)) fail('корень не объект');
   if (typeof json.version !== 'string') fail('нет «version»');
   for (const name of ARRAYS) if (!Array.isArray(json[name])) fail(`нет массива «${name}»`);

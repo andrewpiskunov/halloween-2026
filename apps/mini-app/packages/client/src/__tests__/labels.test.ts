@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { ActionRecord, ConsentRequestView, Offer, PlayerView } from '@fair/shared';
-import { actionText, clueText, countsText, goldText, nameCase, offerClosedText, offerItem, ownActionText, plural, recordItemText, requestOutcomeText, roleName, roman } from '../labels';
+import { actionText, clueText, countsText, goldText, isFemaleName, nameCase, setFemaleNames, verb, offerClosedText, offerItem, ownActionText, plural, recordItemText, requestOutcomeText, roleName, roman } from '../labels';
 
 test('римские номера карт', () => {
   expect([1, 4, 9, 14, 19, 24, 28, 30].map(roman)).toEqual(['I', 'IV', 'IX', 'XIV', 'XIX', 'XXIV', 'XXVIII', 'XXX']);
@@ -109,4 +109,21 @@ test('улика в сумке показывает свой текст, но н
   const v = { public: { clues: [{ id: 'c1', name: 'Письмо', text: 'Встреча у колодца в полночь', where: 'под прилавком' }] } } as unknown as PlayerView;
   expect(clueText({ kind: 'clue', ref: 'c1' }, v)).toBe('Встреча у колодца в полночь');
   expect(clueText({ kind: 'relic', ref: 'c1' }, v)).toBeUndefined();
+});
+
+test('женская роль с именем не на -а/-я: по полю female не склоняется и в женском роде', () => {
+  expect(nameCase('Сив', 'dat')).toBe('Сиву');
+  expect(isFemaleName('Сив')).toBe(false);
+  setFemaleNames(['Сив']);
+  try {
+    expect(nameCase('Сив', 'dat')).toBe('Сив');
+    expect(nameCase('Сив', 'gen')).toBe('Сив');
+    expect(isFemaleName('Сив')).toBe(true);
+    expect(verb('Сив', 'пришёл', 'пришла')).toBe('пришла');
+    expect(nameCase('Корвин', 'dat')).toBe('Корвину');
+    expect(isFemaleName('Ада')).toBe(true);
+  } finally {
+    setFemaleNames([]);
+  }
+  expect(nameCase('Сив', 'dat')).toBe('Сиву');
 });

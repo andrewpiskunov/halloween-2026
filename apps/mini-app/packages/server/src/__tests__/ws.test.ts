@@ -12,7 +12,7 @@ import { content, empty, nextCmd, gm } from './fixtures';
 
 const config: Config = {
   botToken: '', botName: 'test_bot', sessionSecret: 'test', clientUrl: 'http://localhost',
-  dbPath: ':memory:', contentPath: '', port: 0, allowDevAuth: true, botPolling: false,
+  dbPath: ':memory:', contentPath: '', contentPatchPath: '', port: 0, allowDevAuth: true, botPolling: false,
 };
 
 type Msg = { kind: string; [key: string]: unknown };

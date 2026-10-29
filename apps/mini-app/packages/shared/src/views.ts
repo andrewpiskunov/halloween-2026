@@ -37,8 +37,8 @@ export interface PlayerView {
     goals: GoalView[];
   };
   contacts: { role: string | null; name?: string; text: string; absent: boolean }[];
-  /** guise: облик присутствующего после Камня, виден всем. */
-  others: { roleKey: string; name: string; title: string; emoji: string; guise?: string }[];
+  /** guise: облик присутствующего после Камня, виден всем. female: женская роль с именем не на -а/-я. */
+  others: { roleKey: string; name: string; title: string; emoji: string; guise?: string; female?: boolean }[];
   offers: Offer[];
   /** Вид и ref вещей из моих предложений (в обе стороны): адресат должен видеть, что ему предлагают. Без владельца. */
   offerItems: Record<string, { kind: Item['kind']; ref: string }>;
@@ -212,7 +212,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     others: state.roster.filter(k => k !== key && presentInGame(k)).map(k => {
       const r = content.roleByKey[k];
       const guise = state.players[k].guise?.name;
-      return { roleKey: k, name: r.name, title: r.title, emoji: r.emoji, ...(guise !== undefined ? { guise } : {}) };
+      return { roleKey: k, name: r.name, title: r.title, emoji: r.emoji, ...(guise !== undefined ? { guise } : {}), ...(r.female ? { female: true } : {}) };
     }),
     offers,
     offerItems,

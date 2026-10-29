@@ -12,7 +12,10 @@ import { writeExportOnClose } from './export';
 
 const config = loadConfig();
 if (config.dbPath !== ':memory:') mkdirSync(dirname(config.dbPath), { recursive: true });
-const content = loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')));
+// Поправки содержимого на вечер (имена и тексты ролей): файл по CONTENT_PATCH_PATH, см. README.
+const patch = config.contentPatchPath ? JSON.parse(readFileSync(config.contentPatchPath, 'utf8')) : undefined;
+const content = loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')), patch);
+if (patch) console.log(`Поправки содержимого: ${config.contentPatchPath}`);
 const store = new EventStore(config.dbPath);
 const game = Game.open(store, content, { now: Date.now, newId: () => randomUUID(), random: Math.random });
 const ticker = setInterval(() => game.tick(), 1000);

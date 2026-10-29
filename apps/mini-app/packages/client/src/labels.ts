@@ -152,10 +152,18 @@ const NAME_CASES: Record<string, Record<NameCase, string>> = {
   'Бубен': { gen: 'Бубна', dat: 'Бубну', acc: 'Бубна' },
 };
 const HUSHING = /[гкхжшчщ]$/;
+/** Имена женских ролей с именем не на -а/-я (поле female в содержимом): их не склоняют и говорят о них в женском роде. */
+const FEMALE = new Set<string>();
+/** Запоминает такие имена из проекции или содержимого; вызывается при каждой проекции, список заменяется целиком. */
+export function setFemaleNames(names: Iterable<string>): void {
+  FEMALE.clear();
+  for (const n of names) FEMALE.add(n.split(' ')[0]);
+}
 
 /** Склонение слова-имени: «Ива» → «Ивы», «Корвин» → «Корвину». Остальные окончания не меняются. */
 function declineWord(w: string, c: NameCase): string {
   if (NAME_CASES[w]) return NAME_CASES[w][c];
+  if (FEMALE.has(w) && !/[ая]$/.test(w)) return w;
   if (/[ая]$/.test(w)) {
     const stem = w.slice(0, -1);
     if (c === 'dat') return `${stem}е`;
@@ -174,8 +182,11 @@ export function nameCase(name: string, c: NameCase): string {
   return [first, ...rest].map(w => declineWord(w, c)).join(' ');
 }
 
-/** Пола в содержимом нет: имена на -а/-я считаются женскими (Ада, Хельга, Клёпа). */
-export const isFemaleName = (name: string) => /[ая]$/.test(name.split(' ')[0]);
+/** Имена на -а/-я считаются женскими (Ада, Хельга, Клёпа); остальные только если отмечены полем female (Сив). */
+export function isFemaleName(name: string): boolean {
+  const first = name.split(' ')[0];
+  return FEMALE.has(first) || /[ая]$/.test(first);
+}
 /** Глагол прошедшего времени по имени: verb('Ада', 'дал', 'дала'). */
 export const verb = (name: string, m: string, f: string) => (isFemaleName(name) ? f : m);
 
