@@ -226,6 +226,11 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .item-text .item-desc { margin: 2px 0 4px; font-size: 15px; color: var(--fg); line-height: 1.4; overflow-wrap: anywhere; }
 .item-text b .m-tag { margin: 0 0 0 8px; vertical-align: 2px; }
 .item-actions { display: flex; gap: 6px; align-items: center; flex: none; }
+@media (max-width:480px) {
+  .item-card { display:grid; grid-template-columns:auto minmax(0,1fr); }
+  .item-card .item-actions { grid-column:1/-1; flex-wrap:wrap; }
+  .item-card .item-actions .m-btn { flex:1 1 110px; min-width:0; overflow-wrap:anywhere; }
+}
 /* Вещь — тёмная карточка на поле */
 .item-block { padding: 6px 12px 12px; }
 .item-block .item { border-bottom: 0; }
@@ -575,6 +580,9 @@ button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: po
 .goal-done { color:#acc48b; }
 .m-card blockquote { margin:16px 0; padding-left:16px; border-left:2px solid #c2a873; font:italic 18px/1.6 Georgia,serif; }
 .m-card summary { cursor:pointer; line-height:1.6; font-weight:600; }
+.finale-guide dl { margin:14px 0; }
+.finale-guide dt { margin-top:16px; padding-top:12px; border-top:1px solid var(--rule); font-weight:700; color:var(--cinnabar); }
+.finale-guide dd { margin:5px 0 0; line-height:1.5; overflow-wrap:anywhere; }
 @media (min-width:780px) { .ritual-scene { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .ritual-scene > :last-child { grid-column:1/-1; } }
 .ritual-stone { color:#eee1bd; }
 .ritual-stone .m-note { color:#c4baa0; }

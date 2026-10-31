@@ -34,7 +34,7 @@ export function Role({ v }: { v: PlayerView }) {
       {v.hidden17 && <details class="m-card"><summary>Общие правила ярмарки</summary><ul class="list">{v.hidden17.publicRules.map(t => <li key={t}>{t}</li>)}</ul></details>}
       <StoryInvite />
       <StoryCards v={v} />
-      {r.intro && <p class="lead">{r.intro}</p>}
+      {!v.hidden17 && r.intro && <p class="lead">{r.intro}</p>}
 
       <div class="m-card">
         <h5>Ваши цели</h5>
@@ -67,30 +67,40 @@ export function Role({ v }: { v: PlayerView }) {
       {v.hidden17 && <>
         <div class="m-card"><h5>Что вы знаете</h5><ul class="list">{v.hidden17.briefing.knowledge.map(t => <li key={t}>{t}</li>)}</ul></div>
         <div class="m-card"><h5>С чего начать</h5><ol class="list">{v.hidden17.briefing.firstSteps.map(t => <li key={t}>{t}</li>)}</ol></div>
-        <details class="m-card"><summary>Ваш выбор в финале</summary><p class="text">{v.hidden17.briefing.finale.prepare}</p><p class="text">{v.hidden17.briefing.finale.action}</p><p class="text"><b>{v.hidden17.briefing.finale.choice}</b></p><p class="m-note">{v.hidden17.briefing.finale.impact}</p></details>
+        <section class="m-card finale-guide" aria-labelledby="finale-guide-title">
+          <h5 id="finale-guide-title">Что вы можете сделать в финале</h5>
+          <p class="m-note">Ваша личная памятка к обряду у могилы Сарна. Вы сами решаете, как поступить.</p>
+          <dl>
+            <dt>Подготовка</dt><dd>{v.hidden17.briefing.finale.prepare}</dd>
+            <dt>Действия у могилы</dt><dd>{v.hidden17.briefing.finale.action}</dd>
+            <dt>Личный выбор</dt><dd>{v.hidden17.briefing.finale.choice}</dd>
+            <dt>Возможные последствия</dt><dd>{v.hidden17.briefing.finale.impact}</dd>
+          </dl>
+          <p class="m-note">Кнопки обряда находятся во вкладке «Ритуал». Для просьбы к Сарну или другой сюжетной сцены обратитесь к ведущему.</p>
+        </section>
       </>}
       {gameFrozen(v) ? <ClosedCard v={v} /> : <AbilityCard v={v} />}
       <IntelCard v={v} />
       <UsesCard v={v} />
 
-      <div class="m-card">
+      {v.contacts.length > 0 && <div class="m-card">
         <h5>Контакты</h5>
         {v.contacts.map((c, i) => (
           <div class="item" key={i}>
             {c.role ? <Portrait roleKey={c.role} emoji={roleEmoji(c.role, v)} size="sm" /> : <span class="portrait sm" aria-hidden="true">☉</span>}
             <div class="item-text">
-              <b>{c.name ?? 'По функции'}{c.absent && <span class="m-tag warn">не на ярмарке</span>}</b>
+              {c.name && <b>{c.name}{c.absent && <span class="m-tag warn">не на ярмарке</span>}</b>}
               <span>{c.text}</span>
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
-      <div class="secret rumor">
+      {r.rumor.trim() && <div class="secret rumor">
         <span class="seal" aria-hidden="true">☽</span>
         <b>Слух</b>
         <p>{r.rumor}</p>
-      </div>
+      </div>}
 
       <div class="m-card">
         <h5>Как играть</h5>
@@ -156,6 +166,7 @@ function ClosedCard({ v }: { v: PlayerView }) {
 /** Строка состояния способности (§7.1). */
 function stateLine(v: PlayerView): string {
   const ab = v.me.ability;
+  if (v.hidden17 && v.hidden17.ritual.step !== 'preparation') return 'Обычные способности завершены. Действия финала — во вкладке «Ритуал».';
   switch (ab.state) {
     case 'available': return 'Доступна в этом акте';
     case 'used': return `Применена в акте ${roman(v.act)}`;

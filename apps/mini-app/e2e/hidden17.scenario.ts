@@ -17,6 +17,20 @@ async function state(page: Page): Promise<any> {
 const nav = (p: Page, name: string) => p.locator('nav.tabs').getByRole('button', { name, exact: true }).click();
 const confirm = (p: Page, name: string) => p.getByRole('dialog').getByRole('button', { name, exact: true }).click();
 async function pick(p: Page, name: string, choice: string) { await p.getByRole('combobox', { name, exact: true }).click(); await p.getByRole('option', { name: choice, exact: true }).click(); }
+async function checkScreen(p: Page, name: string) {
+  await p.evaluate(() => document.fonts.ready);
+  const overflow = await p.evaluate(() => [...document.querySelectorAll('main *')].filter(el => {
+    const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > innerWidth + 1 || r.left < -1);
+  }).map(el => ({ tag: el.tagName, class: el.className, text: el.textContent?.slice(0, 80) })));
+  if (overflow.length) await p.screenshot({ path: test.info().outputPath(`overflow-${name.replace(/[^a-z0-9]/gi, '_')}.png`), fullPage: true });
+  expect.soft(overflow, name).toEqual([]);
+  expect.soft(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), name).toBe(true);
+  const broken = await p.locator('img').evaluateAll(async imgs => {
+    await Promise.all(imgs.map(i => (i as HTMLImageElement).decode().catch(() => undefined)));
+    return imgs.filter(i => !(i as HTMLImageElement).naturalWidth).map(i => i.getAttribute('src'));
+  });
+  expect(broken, `${name}: картинки`).toEqual([]);
+}
 
 test('17 закрытых вводных, производство, заказ, кости и финал у могилы', async ({ browser, request }, info) => {
   test.setTimeout(180000);
@@ -28,20 +42,40 @@ test('17 закрытых вводных, производство, заказ, 
   for (const roleKey of Object.keys(source.roles)) await cmd(gm, { type: 'player.setPresent', roleKey, present: true });
   await cmd(gm, { type: 'session.open' });
   const players: Record<string, Page> = {}; let tid = 2000;
+  const errors: string[] = [];
   try {
     for (const key of Object.keys(source.roles)) {
       const p = await browser.newPage({ viewport: { width: 320, height: 780 } }); players[key] = p;
+      p.on('pageerror', error => errors.push(`${key}: ${error.message}`));
       await p.goto(`/?dev=${++tid}&code=${codes.roles[key]}`);
       await expect(p.getByText('Только ваша история')).toBeVisible();
       await expect(p.getByText('Общие правила ярмарки', { exact: true })).toBeVisible();
+      await expect(p.locator('.secret.rumor')).toHaveCount(0);
+      await expect(p.getByText('По функции', { exact: true })).toHaveCount(0);
+      await expect(p.getByText(source.roles[key].publicFace, { exact: true })).toHaveCount(1);
+      await expect(p.getByRole('heading', { name: 'Что вы можете сделать в финале', exact: true })).toBeVisible();
+      for (const text of Object.values(source.roles[key].finale) as string[]) await expect(p.getByText(text, { exact: true })).toBeVisible();
+      for (const text of source.roles[key].firstSteps) await expect(p.getByText(text, { exact: true })).toHaveCount(1);
+      await checkScreen(p, `${key}: Роль`);
+      await p.screenshot({ path: info.outputPath(`role-${key}.png`), fullPage: true });
+      if (key === 'o2') await p.locator('.finale-guide').screenshot({ path: info.outputPath('bram-finale.png') });
       const v = await state(p), payload = JSON.stringify(v);
       expect(v.hidden17.briefing.secret).toBe(source.roles[key].secret);
       for (const [other, role] of Object.entries(source.roles) as [string, any][]) if (other !== key) expect(payload).not.toContain(role.secret);
       expect(v.public.factions).toEqual([]); expect(v.altars).toEqual([]);
       await nav(p, 'Мастерская'); await expect(p.getByText('Работа мастера', { exact: true })).toBeVisible();
+      await checkScreen(p, `${key}: Мастерская`);
+      if (key === 'o3') await p.screenshot({ path: info.outputPath('miron-workshop.png'), fullPage: true });
+      await p.getByRole('button', { name: 'Моё ремесло', exact: true }).click();
+      await checkScreen(p, `${key}: Моё ремесло`);
       await nav(p, 'Сумка'); await expect(p.getByRole('button', { name: 'На алтарь' })).toHaveCount(0);
+      await checkScreen(p, `${key}: Сумка`);
+      await nav(p, 'Сделки'); await checkScreen(p, `${key}: Сделки`);
+      await nav(p, 'Таверна'); await checkScreen(p, `${key}: Доска`);
+      await p.getByRole('button', { name: 'Кости', exact: true }).click(); await checkScreen(p, `${key}: Кости`);
+      await p.getByRole('button', { name: 'Заявки и события', exact: true }).click(); await checkScreen(p, `${key}: Заявки`);
       await nav(p, 'Ритуал'); await expect(p.getByText('Надпись у обвалившейся стены')).toBeVisible();
-      expect(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), key).toBe(true);
+      await checkScreen(p, `${key}: Ритуал`);
     }
     const a = players.o1, maker = players.o6, velda = players.o5, elmar = players.o9;
     for (const key of ['o1', 'o5', 'o6']) {
@@ -68,6 +102,8 @@ test('17 закрытых вводных, производство, заказ, 
     await cmd(gm, { type: 'hidden17.dice.start', id: dice.id }); await cmd(gm, { type: 'hidden17.dice.resolve', id: dice.id, rolls: [6, 2] });
     await cmd(gm, { type: 'act.next' }); await cmd(gm, { type: 'act.next' });
     await nav(gm, 'Ритуал'); await gm.getByRole('button', { name: '1 · Начать сборку' }).click(); await confirm(gm, 'Собрать у могилы');
+    await nav(a, 'Роль');
+    await expect(a.getByText('Обычные способности завершены. Действия финала — во вкладке «Ритуал».', { exact: true })).toBeVisible();
     for (const p of [a, velda, elmar]) {
       await nav(p, 'Ритуал');
       for (const item of (await state(p)).me.items.filter((i: any) => i.kind === 'shard' || i.kind === 'focus')) await cmd(p, { type: 'hidden17.ritual.offer', itemId: item.id, include: true });
@@ -92,5 +128,6 @@ test('17 закрытых вводных, производство, заказ, 
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     await a.screenshot({ path: info.outputPath('player.png'), fullPage: true }); await gm.screenshot({ path: info.outputPath('gm.png'), fullPage: true });
+    expect(errors).toEqual([]);
   } finally { await Promise.all([gm.close(), ...Object.values(players).map(p => p.close())]); }
 });
