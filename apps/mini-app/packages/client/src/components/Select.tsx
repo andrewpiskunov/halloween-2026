@@ -71,7 +71,7 @@ export function Select({ value, onChange, options, placeholder = 'Выберит
             <div class="sheet-list" role="listbox" aria-label={label} ref={listRef} onKeyDown={onListKey}>
               {options.map(o => (
                 <div
-                  key={o.value} role="option" tabIndex={-1} aria-selected={o.value === value}
+                  key={o.value} role="option" tabIndex={-1} aria-label={o.label} aria-selected={o.value === value}
                   class={`sheet-item ${o.value === value ? 'on' : ''}`}
                   onClick={e => { e.preventDefault(); pick(o.value); }}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(o.value); } }}

@@ -12,6 +12,7 @@ import { Tavern } from './screens/Tavern';
 import { Ritual } from './screens/Ritual';
 import { GmStory } from './screens/gm/Story';
 import type { GmView, PlayerView } from '@fair/shared';
+import { PortraitViewer } from './components/PortraitViewer';
 import { Confirm } from './components/Confirm';
 import { GmTabs } from './components/GmTabs';
 import { Button } from './components/Button';
@@ -60,6 +61,7 @@ export function App() {
       )}
       {v.kind === 'gm' ? <GmApp v={v} /> : <PlayerApp v={v} />}
       <Confirm />
+      <PortraitViewer />
       {toast.value && <div class="toast" role="alert" onClick={() => { toast.value = null; }}>{toast.value}</div>}
     </div>
   );

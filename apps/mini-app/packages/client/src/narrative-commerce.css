@@ -11,7 +11,9 @@
 .nc-back { display: block; border: 0; background: none; color: inherit; font: inherit; min-height: 48px; padding: 10px 0; text-align: left; }
 .nc-back:focus-visible, .nc-stock-card:focus-visible, .nc-trade-link:focus-visible { outline: 3px solid var(--cinnabar, #a64432); outline-offset: 3px; }
 .nc-trade-link { display: flex; align-items: center; gap: 12px; width: 100%; padding: 18px 12px; border: 0; border-bottom: 1px solid currentColor; background: none; color: inherit; text-align: left; font: inherit; }
-.nc-trade-link > span:nth-child(2) { flex: 1; min-width: 0; }
+.nc-trade-open { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; align-self: stretch; padding: 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.nc-trade-open > span:first-child { flex: 1; min-width: 0; }
+.nc-trade-open:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 .nc-trade-link b, .nc-trade-link small, .nc-wish-preview { display: block; }
 .nc-trade-link b { font-size: 19px; }
 .nc-trade-link small { font-size: 14px; line-height: 1.5; margin-top: 4px; }

@@ -66,7 +66,7 @@ export function NarrativeTrades({v}: {v:PlayerView}) {
 }
 function TradeLink({trade:t,v}:{trade:NarrativeTrade;v:PlayerView}) {
   const other = t.from === v.me.role.key ? t.to : t.from;
-  return <button type="button" class="nc-trade-link" onClick={() => openPage({kind:'trade',id:t.id})}><Portrait roleKey={other} emoji={roleEmoji(other,v)} /><span><b>{roleName(other,v)}</b><small>{t.from === v.me.role.key ? 'Ваше предложение' : 'Предложение вам'} · {STATUS[t.status]}</small>{t.wish && <span class="nc-wish-preview">{t.wish}</span>}</span><span aria-hidden="true">→</span></button>;
+  return <div class="nc-trade-link"><Portrait roleKey={other} emoji={roleEmoji(other,v)} /><button type="button" class="nc-trade-open" onClick={() => openPage({kind:'trade',id:t.id})}><span><b>{roleName(other,v)}</b><small>{t.from === v.me.role.key ? 'Ваше предложение' : 'Предложение вам'} · {STATUS[t.status]}</small>{t.wish && <span class="nc-wish-preview">{t.wish}</span>}</span><span aria-hidden="true">→</span></button></div>;
 }
 function NewTrade({v}:{v:PlayerView}) {
   const [to,setTo] = useState(''); const [give,setGive] = useState<Bundle>(emptyBundle); const [wish,setWish] = useState(''); const [sending,setSending] = useState(false);

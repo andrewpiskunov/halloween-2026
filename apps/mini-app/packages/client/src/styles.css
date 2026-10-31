@@ -154,6 +154,7 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 
 /* Портрет: круг с лицом; card — портрет карты роли */
 .portrait {
+  padding: 0; color: inherit; cursor: zoom-in; font-family: inherit;
   width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: none; position: relative;
   display: grid; place-items: center; font-size: 30px; line-height: 1;
   background: var(--paper); border: 2px solid var(--av-ring); box-shadow: 0 0 0 2px rgba(0, 0, 0, .35);
@@ -587,3 +588,25 @@ button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: po
 .ritual-stone { color:#eee1bd; }
 .ritual-stone .m-note { color:#c4baa0; }
 @media (max-width:360px) { .tabs button { font-size:10px; letter-spacing:0; } }
+
+/* Просмотр полного портрета поверх любых экранов приложения. */
+.portrait:focus-visible { outline: 3px solid #e2b770; outline-offset: 3px; }
+.portrait-viewer {
+  position: fixed; inset: 0; width: 100%; height: 100%; height: 100dvh;
+  max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  background: #090807; color: #e9dfc7; overflow: hidden;
+}
+.portrait-viewer[open] { display: flex; flex-direction: column; }
+.portrait-viewer::backdrop { background: #090807; }
+.portrait-viewer-bar {
+  display: flex; align-items: center; gap: 10px; flex: none;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+  border-bottom: 1px solid #5f513b;
+}
+.portrait-viewer-bar strong { flex: 1; min-width: 0; font-size: 20px; }
+.portrait-viewer-bar button { min-height: 44px; min-width: 44px; padding: 8px; border: 1px solid #8b7856; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.portrait-viewer-bar button:focus-visible { outline: 2px solid #e2b770; outline-offset: 2px; }
+.portrait-viewer-canvas { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+.portrait-viewer-canvas img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.portrait-viewer-canvas.zoomed img { width: 200%; height: 200%; max-width: none; object-fit: contain; }
+.portrait-viewer-canvas p { padding: 24px; }
