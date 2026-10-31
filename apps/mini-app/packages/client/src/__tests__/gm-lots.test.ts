@@ -20,7 +20,7 @@ function view(roster: string[], presentKeys: string[], phase = 'setup', extra: o
 
 test('в лоты уходят вещи отсутствующих владельцев', () => {
   const v = view(['o1', 'o3', 'o10'], ['o1']);
-  expect(lotsPreview(v, content)).toEqual(['Осколок II', 'Осколок III', 'Улика C', 'Улика B', 'Жезл']);
+  expect(lotsPreview(v, content)).toEqual(['Осколок 2', 'Осколок 3', 'Улика C', 'Улика B', 'Жезл']);
 });
 
 test('если все пришли, лотов нет; реликвия без желающих не уходит', () => {
@@ -29,10 +29,10 @@ test('если все пришли, лотов нет; реликвия без �
   expect(lotsPreview(view(['o1', 'o4'], ['o1', 'o4']), content)).not.toContain('Чаша');
 });
 
-test('последствия акта: пополнение и осколок V', () => {
+test('последствия акта: пополнение и осколок 5', () => {
   const v = view(['o14'], ['o14'], 'act2');
   const p = actNextPreview(v)!;
   expect(p.act).toBe('III');
-  expect(p.lines.join(' ')).toContain('Осколок V откроется у Лиры');
+  expect(p.lines.join(' ')).toContain('Осколок 5 откроется у Лиры');
   expect(actNextPreview(view(['o1'], [], 'act3'))).toBeNull();
 });

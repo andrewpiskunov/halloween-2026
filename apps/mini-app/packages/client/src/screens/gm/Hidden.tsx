@@ -1,3 +1,4 @@
+import { shardNumber } from '../../shard-label';
 import { ItemText } from '../../components/ItemText';
 import { GmNarrativeGoals } from './Narrative';
 import { useState } from 'preact/hooks';
@@ -24,7 +25,7 @@ export function GmRitual({ v }: { v: GmView }) {
   const signs = Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && v.state.players[c.controller!]?.present);
   const single = new Set(signs.map(c => c.controller)).size === 1;
   const orders = [...new Set(signs.map(c => c.order!))];
-  const at = (id: string) => { const it = v.state.items[id]; return it ? it.kind === 'shard' ? `Осколок ${it.ref}` : SPECIAL_NAMES[it.ref] ?? it.ref : 'расходованный предмет'; };
+  const at = (id: string) => { const it = v.state.items[id]; return it ? it.kind === 'shard' ? `Осколок ${shardNumber(it.ref)}` : SPECIAL_NAMES[it.ref] ?? it.ref : 'расходованный предмет'; };
   return <>
     <h2 class="scr-h">Финал у могилы <small>{STEPS[r.step]}</small></h2>
     <div class="ritual-progress" aria-label="Этапы финала">{['Сборка', 'Пыль', 'Формула', 'Ответ', 'Выбор'].map((s, i) => <span class={i === idx ? 'on' : ''} key={s}>{i + 1}<small>{s}</small></span>)}</div>

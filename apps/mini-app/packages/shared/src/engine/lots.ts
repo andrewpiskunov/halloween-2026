@@ -1,3 +1,4 @@
+import { shardNumber } from '../shard-label';
 import type { Content } from '../content';
 import type { GameState, Item, Lot } from '../types';
 import { available } from './bundles';
@@ -12,10 +13,10 @@ export const BUYOUT_PRICE = 4;
 const isGm = (s: GameState, a: { type: string }) => a.type === 'gm';
 const roleName = (content: Content, key: string) => content.roles.find(r => r.key === key)?.name ?? key;
 
-/** Название вещи для объявлений: «Осколок IV», «Улика „Обрывок договора“», имя реликвии, название изделия. */
+/** Название вещи для объявлений: «Осколок 4», «Улика „Обрывок договора“», имя реликвии, название изделия. */
 export function itemTitle(content: Content, it: Pick<Item, 'kind' | 'ref'>): string {
   switch (it.kind) {
-    case 'shard': return `Осколок ${it.ref}`;
+    case 'shard': return `Осколок ${shardNumber(it.ref)}`;
     case 'clue': return `улика «${content.clues.find(c => c.id === it.ref)?.name ?? it.ref}»`;
     case 'relic': return it.ref;
     default: return content.recipes.find(r => r.id === it.ref)?.name ?? it.ref;

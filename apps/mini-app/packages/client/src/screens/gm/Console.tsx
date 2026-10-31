@@ -1,3 +1,4 @@
+import { shardNumber } from '../../shard-label';
 import { ItemText } from '../../components/ItemText';
 import { GmTavern } from './Hidden';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -144,7 +145,7 @@ export function Console({ v }: { v: GmView }) {
 
 /** Название вещи по содержимому для пульта: улики и изделия по имени, осколки и реликвии по ref. */
 function gmItemName(it: { kind: string; ref: string }, content: ContentData): string {
-  if (it.kind === 'shard') return `Осколок ${it.ref}`;
+  if (it.kind === 'shard') return `Осколок ${shardNumber(it.ref)}`;
   if (it.kind === 'clue') return content.clues.find(c => c.id === it.ref)?.name ?? `Улика ${it.ref}`;
   if (it.kind === 'relic') return it.ref;
   return content.recipes.find(r => r.id === it.ref)?.name ?? it.ref;
@@ -241,7 +242,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
     o.type === 'player' ? name(o.key) : o.type === 'altar' ? ALTAR_PLACE[o.side] : 'лот';
   const itemIcon = (kind: string) => kind === 'shard' ? '💠' : kind === 'clue' ? '🔍' : kind === 'relic' ? '🏺' : '⚗️';
   const roleOption = (k: string) => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji, avatar: k });
-  const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${it.ref}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
+  const itemName = (it: (typeof items)[number]) => it.kind === 'shard' ? `Осколок ${shardNumber(it.ref)}` : it.kind === 'clue' ? `Улика ${it.ref}` : it.ref;
   const itemLabel = (it: (typeof items)[number]) => it.owner.type === 'altar' ? `${itemName(it)} (${ALTAR_PLACE[it.owner.side]})` : itemName(it);
 
   const curItem = items.some(i => i.id === itemId) ? itemId : items[0]?.id ?? '';

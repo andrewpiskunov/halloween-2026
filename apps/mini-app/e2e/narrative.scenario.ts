@@ -84,6 +84,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await screen(players.o15,'Сив: знакомые лица');
     await sivFaces.screenshot({path:info.outputPath('siv-acquaintances.png')});
     await nav(players.o5,'Персонаж');
+    await expect(players.o5.locator('main')).toContainText('Вы привезли осколок 2 и свои выписки. В старой заметке футляр флейты назван тайником для осколка 5');
     const veldaFaces=players.o5.locator('.narrative-acquaintances');
     await expect(veldaFaces.getByRole('heading',{name:'Никс',exact:true})).toBeVisible();
     await expect(veldaFaces.getByRole('heading',{name:'Астра',exact:true})).toHaveCount(0);
@@ -242,7 +243,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await expect.poll(async () => (await state(a)).lots.some((l:any)=>l.id===auction.id)).toBe(true);
     const lotRef=(id:string)=> (state(a).then(v=>v.lots.find((l:any)=>l.id===id).items[0]));
     const auctionItem=await lotRef(auction.id);
-    const auctionName=auctionItem.kind==='shard'?`Осколок ${auctionItem.ref}`:auctionItem.ref;
+    const auctionName=auctionItem.kind==='shard'?`Осколок ${({I:1,II:2,III:3,IV:4,V:5} as Record<string,number>)[auctionItem.ref]}`:auctionItem.ref;
     const auctionCard=a.locator('.lot').filter({hasText:auctionName});
     await expect(auctionCard).toBeVisible();
     await cmd(gm,{type:'lot.sealedBids',id:auction.id});
@@ -268,7 +269,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await cmd(gm,{type:'hidden17.ritual.powder'});
     await nav(b,'Застава');await b.getByRole('button',{name:'Формула произнесена',exact:true}).click();
     await expect.poll(async () => (await state(a)).hidden17.ritual.step).toBe('choices');
-    await nav(a,'Сумка');await a.getByRole('button',{name:`Осколок ${ownShard.ref}`,exact:true}).click();
+    await nav(a,'Сумка');await a.getByRole('button',{name:`Осколок ${({I:1,II:2,III:3,IV:4,V:5} as Record<string,number>)[ownShard.ref]}`,exact:true}).click();
     await a.getByText('Позволить коснуться части сердца',{exact:true}).click();
     await pick(a,'Кому разрешить обряд над частью',(await state(maker)).me.role.name);
     await expect(a.getByRole('button',{name:'Разрешить',exact:true})).toBeEnabled();
@@ -311,7 +312,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
     const fixed=(Object.values((await state(gm)).state.lots) as any[]).find(l=>l.act===2&&l.status==='announced');
     expect(fixed).toBeTruthy();
     await cmd(gm,{type:'lot.sealedBids',id:fixed.id});await cmd(gm,{type:'lot.close',id:fixed.id});
-    const fixedCard=a.locator('.lot').filter({hasText:'Осколок IV'});
+    const fixedCard=a.locator('.lot').filter({hasText:'Осколок 4'});
     await expect(fixedCard.getByRole('button',{name:'Выкупить',exact:true})).toBeEnabled();
     const fixedGold=(await state(a)).me.available.gold;
     await fixedCard.getByRole('button',{name:'Выкупить',exact:true}).click();await confirm(a,'Выкупить');

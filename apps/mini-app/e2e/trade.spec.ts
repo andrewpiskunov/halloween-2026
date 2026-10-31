@@ -84,25 +84,25 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(wake.locator('.altar-need')).toContainText('золото 2/6');
     await expect(wake.locator('.altar-need')).toContainText('вкладчики золота 1/3');
 
-    // 6. Просьба по названию: Грета просит у Серафины Осколок I за 1 золото, не видя её сумки.
+    // 6. Просьба по названию: Грета просит у Серафины Осколок 1 за 1 золото, не видя её сумки.
     await greta.locator('nav.tabs').getByRole('button', { name: 'Сделки' }).click();
     await greta.getByRole('combobox', { name: 'Кому' }).click();
     await greta.getByRole('option', { name: /Серафина/ }).click();
     await greta.locator('.bundle').nth(0).locator('.m-row', { hasText: 'Золото' }).getByRole('button', { name: '+' }).click();
     await greta.getByRole('combobox', { name: 'Вещь по названию' }).click();
-    await greta.getByRole('option', { name: /^Осколок I\b/ }).click();
-    await expect(greta.locator('.want', { hasText: 'Осколок I' })).toBeVisible();
+    await greta.getByRole('option', { name: /^Осколок 1\b/ }).click();
+    await expect(greta.locator('.want', { hasText: 'Осколок 1' })).toBeVisible();
     await greta.getByRole('button', { name: 'Запечатать и отправить' }).click();
-    await expect(greta.locator('.m-card', { hasText: 'Исходящее' }).locator('.bl li', { hasText: 'Осколок I' })).toBeVisible();
+    await expect(greta.locator('.m-card', { hasText: 'Исходящее' }).locator('.bl li', { hasText: 'Осколок 1' })).toBeVisible();
 
     await serafina.locator('nav.tabs').getByRole('button', { name: 'Сделки' }).click();
-    const askShard = serafina.locator('.m-card.hot', { hasText: 'Осколок I' });
-    await expect(askShard.locator('.bl li', { hasText: 'Осколок I' }).locator('img')).toHaveAttribute('src', '/assets/items/shard.jpg');
+    const askShard = serafina.locator('.m-card.hot', { hasText: 'Осколок 1' });
+    await expect(askShard.locator('.bl li', { hasText: 'Осколок 1' }).locator('img')).toHaveAttribute('src', '/assets/items/shard.jpg');
     await askShard.getByRole('button', { name: 'Принять' }).click();
     await serafina.getByRole('dialog').getByRole('button', { name: 'Принять' }).click();
     await expect(serafina.getByText('принято')).toBeVisible();
     await greta.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
-    await expect(greta.locator('.item-block', { hasText: 'Осколок I' })).toBeVisible();
+    await expect(greta.locator('.item-block', { hasText: 'Осколок 1' })).toBeVisible();
 
     // 7. Ведущий открывает экраны Серафины: видит её сумку с купленным Фокусом, возвращается к пульту.
     await gm.locator('.gm-role', { hasText: 'Серафина' }).getByRole('button', { name: 'Играть за' }).click();
@@ -117,13 +117,13 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await gm.locator('nav.tabs').getByRole('button', { name: 'Пульт' }).click();
     await gm.getByRole('button', { name: 'Начать акт II' }).click();
     await gm.getByRole('dialog').getByRole('button', { name: 'Акт II' }).click();
-    const gmLot = gm.locator('.gm-lot', { hasText: 'Осколок IV' });
+    const gmLot = gm.locator('.gm-lot', { hasText: 'Осколок 4' });
     await expect(gmLot).toContainText('ждёт торга');
     await gmLot.getByRole('button', { name: 'Закрытые ставки' }).click();
     await expect(gmLot).toContainText('закрытые ставки');
 
     await serafina.locator('nav.tabs').getByRole('button', { name: 'События' }).click();
-    const lot = serafina.locator('.lot', { hasText: 'Осколок IV' });
+    const lot = serafina.locator('.lot', { hasText: 'Осколок 4' });
     await expect(lot).toContainText('закрытые ставки');
     const bidRow = lot.locator('.lot-bid');
     await bidRow.getByRole('button', { name: '+' }).click();
@@ -138,7 +138,7 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(gmLot).toContainText('Серафина за 2 золотых');
     await expect(lot).toContainText('вам за 2 золотых');
     await serafina.locator('nav.tabs').getByRole('button', { name: 'Сумка' }).click();
-    await expect(serafina.locator('.item-block', { hasText: 'Осколок IV' })).toBeVisible();
+    await expect(serafina.locator('.item-block', { hasText: 'Осколок 4' })).toBeVisible();
 
     // 9. Способность и вещь: Грета «Заменой ингредиента» делает Защитный талисман из двух Рос и активирует его;
     //    ведущий видит обе записи в журнале применений и защиту в отметках.

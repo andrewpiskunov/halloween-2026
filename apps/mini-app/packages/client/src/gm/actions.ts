@@ -1,3 +1,4 @@
+import { shardNumber } from '../shard-label';
 import type { ActionRecord, ConsentRequest, ContentData, Effect, GmView, Intel, Player } from '@fair/shared';
 import { abilityTitle, goldText, ingredientName, nameCase, plural, roman } from '../labels';
 
@@ -80,7 +81,7 @@ function removedText(r: NonNullable<ActionRecord['removed']>): string {
 function itemName(item: NonNullable<ActionRecord['item']>, c: ContentData): string {
   switch (item.kind) {
     case 'relic': return item.ref;
-    case 'shard': return `Осколок ${item.ref}`;
+    case 'shard': return `Осколок ${shardNumber(item.ref)}`;
     case 'clue': return c.clues?.find(x => x.id === item.ref)?.name ?? 'Улика';
     default: return c.recipes?.find(r => r.id === item.ref)?.name ?? item.ref;
   }
