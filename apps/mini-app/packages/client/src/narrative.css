@@ -56,3 +56,5 @@
 .narrative-rule p { margin: 4px 0 0; line-height: 1.4; }
 @media(min-width:600px) { .narrative-satchel { padding: 90px 55px 80px; } .narrative-inventory {grid-template-columns:repeat(4,minmax(0,1fr));} .narrative-slot {min-height:130px;} }
 @media(max-width:360px) { .narrative-person { grid-template-columns:90px 1fr; gap:12px;} .narrative-person .portrait.card {width:90px;height:125px;} .narrative-person h2 {font-size:26px;} .narrative-satchel { padding-left:25px; padding-right:25px;} .narrative-slot span:not(.thumb) {font-size:11px;} }
+
+.narrative-empty-bag { grid-column: 1 / -1; margin: 22px 0 0; padding: 20px 15px; border: 1px solid #a1855466; border-radius: 7px; background: #100c08dd; color: #f0dfb9; text-align: center; font-size: 16px; line-height: 1.5; }

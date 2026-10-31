@@ -53,11 +53,16 @@ function ItemPage({v,id}:{v:PlayerView;id:string}){
 export function NarrativeBag({v}:{v:PlayerView}){
  const page=detailPage.value;if(page?.kind==='item')return <ItemPage key={page.id} v={v} id={page.id}/>;if(page?.kind==='resource')return <ResourcePage v={v} id={page.id}/>;if(page?.kind==='document')return <DocumentPage key={page.id} v={v} id={page.id}/>;
  const marks=marksText(v),n=v.hidden17!.narrative!;
+ const resources=(['gold','ash','moon','dew'] as const).map(key=>({
+  key, total:key==='gold'?v.me.player.gold:v.me.player.ingredients[key], available:key==='gold'?v.me.available.gold:v.me.available.ingredients[key],
+ })).filter(resource=>resource.total>0);
+ const emptyBag=resources.length===0&&v.me.items.length===0;
  const shown=Object.entries(v.hidden17!.knownItems).filter(([id,i])=>!v.me.items.some(it=>it.id===id)&&i.owner&&i.owner!==v.me.role.key);
- return <><h2 class="scr-h">Ваша сумка <small>нажмите на вещь</small></h2><div class="narrative-satchel" style={{backgroundImage:`url(${BASE}assets/scenes/bag.webp)`}}><div class="narrative-inventory">
- {(['gold','ash','moon','dew'] as const).map(key=><button class="narrative-slot" key={key} onClick={()=>openPage({kind:'resource',id:key})}><img src={resourceImageUrl(key)} alt=""/><b>{key==='gold'?v.me.available.gold:v.me.available.ingredients[key]}</b><span>{key==='gold'?'Золото':INGREDIENTS.find(i=>i.key===key)!.name}</span></button>)}
+ return <><h2 class="scr-h">Ваша сумка {!emptyBag&&<small>нажмите на вещь</small>}</h2><div class="narrative-satchel" style={{backgroundImage:`url(${BASE}assets/scenes/bag.webp)`}}><div class="narrative-inventory">
+ {resources.map(({key,total,available})=><button class={`narrative-slot ${total>available?'reserved':''}`} key={key} onClick={()=>openPage({kind:'resource',id:key})}><img src={resourceImageUrl(key)} alt=""/><b>{total}</b><span>{key==='gold'?'Золото':INGREDIENTS.find(i=>i.key===key)!.name}</span>{total>available&&<small>{total-available} обещано</small>}</button>)}
+ {emptyBag&&<p class="narrative-empty-bag">В сумке пока нет вещей и ресурсов. Их можно получить в обмене или купить в мастерской.</p>}
  {v.me.items.map(item=><button class={`narrative-slot ${item.reservedFor?'reserved':''}`} key={item.id} onClick={()=>openPage({kind:'item',id:item.id})}><Thumb src={itemImageUrl(item)} emoji="✦" size="md"/><span>{specialLabel(item,v)}</span>{item.reservedFor&&<small>обещано</small>}</button>)}
- </div></div><p class="m-note">Показано доступное. Обещанные вещи и материалы ждут завершения сделки; подробности — внутри.</p>
+ </div></div>{!emptyBag&&<p class="m-note">Показано всё, что у вас есть, включая обещанное. Свободное количество и подробности — внутри.</p>}
  <StoryCards v={v} items/>
  {shown.length>0&&<section class="m-card"><h5>Вам показали</h5>{shown.map(([id,it])=><button class="narrative-document-link" key={id} onClick={()=>openPage({kind:'item',id})}><Thumb src={itemImageUrl(it)} emoji="✦" size="sm"/><span>{specialLabel(it,v)}<small>{it.owner&&roleName(it.owner,v)}</small></span><span>›</span></button>)}</section>}
  {n.documents.length>0&&<section class="m-card"><h5>Письма и свидетельства</h5>{n.documents.map(d=><button class="narrative-document-link" key={d.id} onClick={()=>openPage({kind:'document',id:d.id})}><span>✉</span><span>{d.title}</span><span>›</span></button>)}</section>}

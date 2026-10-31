@@ -41,8 +41,7 @@ function migrate(s:GameState,content:Content,now:number) {
  for(const d of Object.values(h.dice))if(['pending','accepted'].includes(d.status)){s.players[d.from].reservedGold-=d.stake;if(d.status==='accepted')s.players[d.to].reservedGold-=d.stake;d.status='cancelled';}
  for(const p of Object.values(h.production))if(p.status==='pending')p.status='cancelled';
  h.narrative=newNarrative(content.hidden17!.narrative!);
- if(s.phase!=='setup')for(const key of s.roster)if(s.players[key]?.startIssuedAt!==undefined)h.narrative.knowledge[key]=[...new Set([...(h.narrative.knowledge[key]??[]),'joining' as const])];
- h.narrative.announcements.push({id:`migration:${now}`,author:'gm',title:'Сюжетная редакция',text:s.phase==='setup'?'Открываются личные истории и документы.':'Прежние предложения и заказы отменены, резервы возвращены. Участники сохраняют уже известное соединение. Новые стремления оценивает ведущий отдельно.',at:now});
+ h.narrative.announcements.push({id:`migration:${now}`,author:'gm',title:'Сюжетная редакция',text:s.phase==='setup'?'Открываются личные истории и документы.':'Прежние предложения и заказы отменены, резервы возвращены. Знание обряда открывается только из личных источников или после игровой сцены. Новые стремления оценивает ведущий отдельно.',at:now});
 }
 export function narrativeDecide(state:GameState,content:Content,command:Command,ctx:Ctx):Result|undefined {
  if(!command.type.startsWith('narrative.'))return;
