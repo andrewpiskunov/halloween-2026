@@ -61,7 +61,7 @@ print('OK: 17 изолированных вводных, публичная па
 assert 'добровольно снять свою' in ' '.join(h['phases'][1]['steps']), 'Не задан отказ от раскрытого вмешательства'
 assert any('сосуд' in k['topic'].lower() and k['fallback'] for k in h['knowledgeRoutes']), 'Нет резервного рецепта сосуда'
 for key in ['o5','o17']:
- assert any('разными именами' in k for k in h['roles'][key]['knowledge']), 'Противоречие правила знаков в короткой вводной'
+ assert any('разных доноров' in k for k in h['roles'][key]['knowledge']), 'Противоречие правила крови в короткой вводной'
 assert 'О V' not in ' '.join(h['roles']['o8']['knowledge']), 'Никсу раскрыто существование V'
 g=json.loads((DATA/'game-data.json').read_text())
 for key,clue in [('o10','B'),('o16','C')]:
@@ -111,14 +111,14 @@ assert 'при призыве ведущий говорит' not in h['historica
 assert 'договориться о воспоминании' not in ' '.join(h['roles']['o3']['acts'])
 for file in ['magic-fair-v2.html','finale-sheet.html']:
  text=(OUT/file).read_text()
- assert text.count('class="ritual-step"')==5
- assert text.count('class="ritual-script"')==text.count('class="ritual-actions"')==5
+ assert text.count('class="ritual-step"')==4
+ assert text.count('class="ritual-script"')==text.count('class="ritual-actions"')==4
  assert 'Сарн, вернись к своему сердцу.' in text
 stone=Page(OUT/'ritual-stone.html');stone_text=' '.join(stone.text)
 assert all(ref.startswith('#') or ref.startswith('data:') for ref in stone.refs)
 for method in h['methods']:assert method['private'] not in stone_text
 for role in h['roles'].values():assert role['secret'] not in stone_text
-print('OK: пять физических шагов, два представления, надпись без секретов; речь Сарна только после исхода, исторического экзамена нет.')
+print('OK: четыре физических этапа, два представления, надпись без секретов; речь Сарна только после исхода, исторического экзамена нет.')
 
 # Новая редакция: семантика целей, источники знания и публичные описания.
 docs={d['id']:d for d in n['documents']}

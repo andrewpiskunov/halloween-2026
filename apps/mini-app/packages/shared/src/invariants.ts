@@ -18,7 +18,7 @@ export function checkInvariants(state: GameState): void {
   const fail = (msg: string) => { throw new Error(`инвариант: ${msg}`); };
   const present = (k: string) => state.roster.includes(k) && state.players[k]?.present === true;
   const act = ACT_BY_PHASE[state.phase];
-  const current = act === undefined ? [] : state.actions.filter(a => a.act === act);
+  const current = act === undefined ? [] : state.hidden17?.fair ? state.actions.slice(state.hidden17.fair.actionStart ?? 0).filter(a => a.act === act) : state.actions.filter(a => a.act === act);
   const abilityRecords = current.filter(a => a.source.type === 'ability');
   for (const [key, p] of Object.entries(state.players)) {
     // Этап 7, §2.2: присутствующий после открытия получил стартовый набор.

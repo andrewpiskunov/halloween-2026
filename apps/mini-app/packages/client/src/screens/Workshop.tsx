@@ -1,3 +1,4 @@
+import { fairWording } from '../labels';
 import { ItemText } from '../components/ItemText';
 import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -65,7 +66,7 @@ export function Workshop({ v }: { v: PlayerView }) {
     onOk: () => void run({ type: 'shop.craft', recipeId: r.id }),
   });
   const buyCheap = (ing: Ingredient) => sendAbility({ kind: 'buyCheap', ingredient: ing },
-    { title: `Купить «${ingredientName(ing)}» за ${goldText(CHEAP_PRICE)}?`, text: `Способность «${ab.name}», раз в акт.` });
+    { title: `Купить «${ingredientName(ing)}» за ${goldText(CHEAP_PRICE)}?`, text: `Способность «${ab.name}», ${v.hidden17?.fair?'раз до обновления сил':'раз в акт'}.` });
   const buyBank = (ing: Ingredient) => sendAbility({ kind: 'buyFromBank', ingredient: ing },
     { title: `Купить «${ingredientName(ing)}» из банка за ${goldText(BANK_PRICE)}?`, text: 'Запас мастерской не уменьшится.' });
 
@@ -77,8 +78,8 @@ export function Workshop({ v }: { v: PlayerView }) {
         <div class="m-card" ref={block}>
           <h5>Способность</h5>
           <AbilityIdentity roleKey={v.me.role.key} name={ab.name}/>
-          <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
-          {!live && <p class="ab-state"><ItemText>{ab.state === 'used' ? 'Уже применена в этом акте' : 'Сейчас недоступна'}</ItemText></p>}
+          <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={fairWording(ab.text,!!v.hidden17?.fair)}/>
+          {!live && <p class="ab-state"><ItemText>{ab.state === 'used' ? (v.hidden17?.fair?'Применена до обновления сил':'Уже применена в этом акте') : 'Сейчас недоступна'}</ItemText></p>}
           {live && INLINE_WORKSHOP.includes(kind) && <p class="m-note"><ItemText>Кнопка способности — рядом с {kind === 'buyCheap' || kind === 'buyFromBank' ? '«Купить» в запасе' : 'рецептом'}.</ItemText></p>}
           {standalone && <div class="ab-form"><AbilityForm v={v} /></div>}
         </div>

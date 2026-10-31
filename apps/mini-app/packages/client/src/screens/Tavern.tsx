@@ -1,3 +1,4 @@
+import { FairScenes } from './ContinuousFair';
 import { ItemText } from '../components/ItemText';
 import { AbilityArt } from '../components/AbilityIdentity';
 import { useState } from 'preact/hooks';
@@ -20,6 +21,7 @@ export function Tavern({ v }: { v: PlayerView }) {
   const [compose, setCompose] = useState(false);
   const [rumor, setRumor] = useState('');
   return <>
+    <FairScenes v={v}/>
     <h2 class="scr-h">Таверна <small>заказы, слухи, разговоры</small></h2>
     <div class="hidden-switch" role="group" aria-label="Залы таверны">{([['board', 'Доска'], ['dice', 'Кости'], ['events', 'Заявки и события']] as const).map(([key, label]) => <button class={panel === key ? 'on' : ''} onClick={() => setPanel(key)}>{label}</button>)}</div>
     {panel === 'events' ? <Events v={v} /> : panel === 'dice' ? <Dice v={v} /> : <>

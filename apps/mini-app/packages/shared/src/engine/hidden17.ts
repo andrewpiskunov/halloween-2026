@@ -1,3 +1,4 @@
+import { newFair } from '../fair';
 import { newNarrative } from './narrative';
 import { ABILITY_BY_ROLE } from '../abilities';
 import { storyReplacesAbility } from '../story';
@@ -22,7 +23,7 @@ const activeBoard = (b: HiddenState['board'][string]) => b.status === 'open' || 
 export function newHiddenState(content: Content): HiddenState {
   const learned: HiddenState['learned'] = {};
   for (const key of Object.keys(content.hidden17!.roles)) learned[key] = content.hidden17!.methods.filter(m => ['salt', 'command', 'vessel'].includes(m.id) && m.holders.includes(key)).map(m => m.id === 'command' ? 'sign' : m.id as HiddenMethod);
-  return { ...(content.hidden17?.narrative ? { narrative: newNarrative(content.hidden17.narrative) } : {}), version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
+  return { ...(content.hidden17?.continuousFair ? { fair: newFair() } : {}), ...(content.hidden17?.narrative ? { narrative: newNarrative(content.hidden17.narrative) } : {}), version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
 }
 export function enableHidden(state: GameState, content: Content, at: number): Event {
   const roster = Object.keys(content.hidden17!.roles);
@@ -118,6 +119,19 @@ function finalGoals(s: GameState, content: Content): Record<string, [boolean, bo
 }
 export { finalGoals as hiddenGoals };
 
+/** Завершает обычные дела перед финалом, сохраняя вещи и возвращая резервы. */
+export function closeHiddenBusiness(s: GameState, at: number) {
+  const h=s.hidden17!;
+        requireThat(!Object.values(h.dice).some(d => d.status === 'started'), 'Сначала закончите начатые броски');
+        for (const b of Object.values(h.board)) if (activeBoard(b)) { reserve(s, b.author, b.reward, b.id, -1); b.status = 'expired'; }
+        for (const d of Object.values(h.dice)) if (['pending', 'accepted'].includes(d.status)) { s.players[d.from].reservedGold -= d.stake; if (d.status === 'accepted') s.players[d.to].reservedGold -= d.stake; d.status = 'cancelled'; }
+        for (const p of Object.values(h.production)) if (p.status === 'pending') p.status = 'cancelled';
+        for (const u of Object.values(h.uses)) if (u.status === 'pending') cancelUse(s, u);
+        for (const o of Object.values(s.offers)) if (o.status === 'pending') { reserve(s, o.from, o.give, o.id, -1); o.status = 'expired'; }
+        for (const q of Object.values(s.requests)) if (q.status === 'pending') { q.status = 'expired'; q.closedAt = at; q.reason = 'closed'; if (s.players[q.author].abilityPending === q.id) delete s.players[q.author].abilityPending; for (const i of Object.values(s.items)) if (i.reservedFor === q.id) delete i.reservedFor; }
+        for (const l of Object.values(s.lots)) { for (const b of l.bids) { if (['openBidding', 'sealedBidding'].includes(l.status)) s.players[b.player].reservedGold -= b.amount; } if (['openBidding', 'sealedBidding', 'announced', 'fixedPrice'].includes(l.status)) l.status = 'unsold'; }
+}
+
 /** Дополнительные команды: валидация на отдельном снимке гарантирует атомарный отказ. */
 export function hiddenDecide(state: GameState, content: Content, command: Command, ctx: Ctx): Result | undefined {
   if (!command.type.startsWith('hidden17.')) return undefined;
@@ -162,10 +176,10 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
       }
       case 'hidden17.signature.craft': {
         player(); before(); const recipe = content.hidden17.signatureGoods.find(g => g.id === cmd.recipeId && g.maker === key); requireThat(recipe, 'Авторский рецепт недоступен', 'forbidden');
-        requireThat(h.signatureActs[key] !== s.phase, 'Одно авторское изделие за акт', 'limit');
+        requireThat(h.signatureActs[key] !== (h.fair ? `fair:${h.fair.refreshes}` : s.phase), 'Дождитесь восстановления сил для следующего авторского изделия', 'limit');
         const cost = { ...blank(), gold: recipe.gold, ingredients: { ...blank().ingredients, ...recipe.cost } }; checkBundle(s, key, cost);
         s.players[key].gold -= cost.gold; for (const k of INGREDIENTS) s.players[key].ingredients[k] -= cost.ingredients[k];
-        const id = ctx.newId(); s.items[id] = { id, kind: 'special', ref: recipe.id, createdBy: key, owner: { type: 'player', key } }; h.signatureActs[key] = s.phase; break;
+        const id = ctx.newId(); s.items[id] = { id, kind: 'special', ref: recipe.id, createdBy: key, owner: { type: 'player', key } }; h.signatureActs[key] = h.fair ? `fair:${h.fair.refreshes}` : s.phase; break;
       }
       case 'hidden17.signature.use': {
         player(); before(); const item = owned(s, key, cmd.itemId); requireThat(content.hidden17.signatureGoods.some(g => g.id === item.ref) && item.kind === 'special', 'Нужно авторское изделие');
@@ -233,19 +247,19 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
       case 'hidden17.learn': { master(); before(); requireThat(s.roster.includes(cmd.player) && ['salt', 'sign', 'vessel'].includes(cmd.method), 'Неверная роль или способ'); if (!h.learned[cmd.player].includes(cmd.method)) h.learned[cmd.player].push(cmd.method); break; }
       case 'hidden17.prepare': {
         player(); before(); requireThat(h.learned[key]?.includes(cmd.method), 'Способ ещё не изучен', 'forbidden'); const item = owned(s, key, cmd.itemId); requireThat(item.kind === (cmd.method === 'sign' ? 'focus' : 'potion'), 'Неверный компонент');
-        if (cmd.method === 'sign') requireThat(cmd.controller && s.roster.includes(cmd.controller) && ['leave', 'stay', 'restore'].includes(cmd.order ?? ''), 'Запишите управляющего и одно распоряжение');
-        delete s.items[item.id]; const id = ctx.newId(); s.items[id] = { id, kind: 'special', ref: cmd.method, owner: { type: 'player', key } }; h.prepared[id] = { method: cmd.method, ...(cmd.method === 'sign' ? { controller: cmd.controller, order: cmd.order } : {}) }; break;
+        if (cmd.method === 'sign' && h.fair) requireThat(!cmd.controller || cmd.controller === key, 'Можно вложить только собственную кровь');
+        if (cmd.method === 'sign' && !h.fair) requireThat(cmd.controller && s.roster.includes(cmd.controller) && ['leave', 'stay', 'restore'].includes(cmd.order ?? ''), 'Запишите управляющего и одно распоряжение');
+        delete s.items[item.id]; const id = ctx.newId(); s.items[id] = { id, kind: 'special', ref: cmd.method === 'sign' && h.fair ? 'blood-vial' : cmd.method, owner: { type: 'player', key } }; h.prepared[id] = { method: cmd.method, ...(cmd.method === 'sign' ? (h.fair ? { controller: key } : { controller: cmd.controller, order: cmd.order }) : {}) }; break;
       }
       case 'hidden17.ritual.start': {
-        master(); before(); requireThat(s.phase === 'act3', 'Финал начинается в III акте', 'phase');
-        requireThat(!Object.values(h.dice).some(d => d.status === 'started'), 'Сначала закончите начатые броски');
-        for (const b of Object.values(h.board)) if (activeBoard(b)) { reserve(s, b.author, b.reward, b.id, -1); b.status = 'expired'; }
-        for (const d of Object.values(h.dice)) if (['pending', 'accepted'].includes(d.status)) { s.players[d.from].reservedGold -= d.stake; if (d.status === 'accepted') s.players[d.to].reservedGold -= d.stake; d.status = 'cancelled'; }
-        for (const p of Object.values(h.production)) if (p.status === 'pending') p.status = 'cancelled';
-        for (const u of Object.values(h.uses)) if (u.status === 'pending') cancelUse(s, u);
-        for (const o of Object.values(s.offers)) if (o.status === 'pending') { reserve(s, o.from, o.give, o.id, -1); o.status = 'expired'; }
-        for (const q of Object.values(s.requests)) if (q.status === 'pending') { q.status = 'expired'; q.closedAt = ctx.now; q.reason = 'closed'; if (s.players[q.author].abilityPending === q.id) delete s.players[q.author].abilityPending; for (const i of Object.values(s.items)) if (i.reservedFor === q.id) delete i.reservedFor; }
-        for (const l of Object.values(s.lots)) { for (const b of l.bids) { if (['openBidding', 'sealedBidding'].includes(l.status)) s.players[b.player].reservedGold -= b.amount; } if (['openBidding', 'sealedBidding', 'announced', 'fixedPrice'].includes(l.status)) l.status = 'unsold'; }
+        master(); before();
+        if (h.fair) {
+          requireThat(!Object.values(h.fair.destruction).some(d => ['pending','active'].includes(d.status)), 'Сначала завершите сцены с осколками');
+          const participants = Object.entries(h.fair.admissions).filter(([k,a]) => { const q=s.story?.requests[a.requestId]; return s.players[k]?.present && a.at <= ctx.now && q?.author===k && !['cancelled','rejected'].includes(q.status); }).map(([k]) => k);
+          requireThat(participants.length && participants.some(k => h.narrative?.knowledge[k]?.includes('joining')), 'Нужны прибывшие по заявкам участники и хотя бы один знающий обряд');
+          h.fair.participants = participants; h.fair.sealedAt = ctx.now; r.exposedShards=[];
+        } else requireThat(s.phase === 'act3', 'Финал начинается в III акте', 'phase');
+        closeHiddenBusiness(s, ctx.now);
         r.step = 'assembly'; break;
       }
       case 'hidden17.ritual.offer': {
@@ -253,7 +267,7 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         const item = owned(s, key, cmd.itemId, false); const ownReserve = item.reservedFor === 'hidden17:ritual'; requireThat(!item.reservedFor || ownReserve, 'Вещь зарезервирована', 'reserved');
         requireThat(item.kind === 'shard' || (item.kind === 'focus' && r.step !== 'last-choice'), 'Нужна целая часть или Фокус'); requireThat(!r.extinguished.includes(item.ref), 'Часть погашена');
         const list = item.kind === 'shard' ? r.circle : r.focuses;
-        if (cmd.include) { if (!list.includes(item.id)) list.push(item.id); item.reservedFor = 'hidden17:ritual'; }
+        if (cmd.include) { if(h.fair && item.kind==='shard') r.exposedShards=[...new Set([...(r.exposedShards??[]),item.id])]; if (!list.includes(item.id)) list.push(item.id); item.reservedFor = 'hidden17:ritual'; }
         else { const index = list.indexOf(item.id); if (index >= 0) list.splice(index, 1); if (ownReserve) delete item.reservedFor; } break;
       }
       case 'hidden17.ritual.permission': {
@@ -266,19 +280,20 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         for (const id of r.focuses.slice(0, 2)) { const i = s.items[id]; requireThat(i?.kind === 'focus' && i.reservedFor === 'hidden17:ritual' && i.owner.type === 'player' && s.players[i.owner.key]?.present, 'Фокус недоступен'); delete s.items[id]; }
         for (const id of r.focuses.slice(2)) delete s.items[id].reservedFor; r.focuses = []; r.step = 'powder'; break;
       }
-      case 'hidden17.ritual.formula': { player(); step('powder'); requireThat(cmd.text.trim() === content.hidden17.ritual.formula, 'Прочтите формулу с надписи'); r.formulaSpoken = true; r.step = 'choices'; break; }
+      case 'hidden17.ritual.formula': { player(); step('powder'); if(h.fair) requireThat(h.narrative?.knowledge[key]?.includes('joining'), 'Вы ещё не знаете формулу', 'forbidden'); requireThat(cmd.text.trim() === content.hidden17.ritual.formula, 'Прочтите формулу с надписи'); r.formulaSpoken = true; r.step = 'choices'; break; }
       case 'hidden17.ritual.choice': {
-        player(); step('choices'); requireThat(!r.choices[key], 'Один основной выбор на участника', 'limit');
+        player(); step('choices'); if(!h.fair) requireThat(!r.choices[key], 'Один основной выбор на участника', 'limit');
+        if(h.fair && ['withdraw','pass'].includes(cmd.kind)) requireThat(!Object.values(r.choices).some(c=>c.player===key&&c.kind===cmd.kind),'Этот выбор уже сделан','limit');
         requireThat(['salt', 'sign', 'vessel', 'withdraw', 'pass'].includes(cmd.kind), 'Неверный выбор');
-        const choice: HiddenChoice = { player: key, kind: cmd.kind, status: 'hidden' };
+        const choice: HiddenChoice = { ...(h.fair ? {id:ctx.newId()} : {}), player: key, kind: cmd.kind, status: 'hidden' };
         if (cmd.kind === 'withdraw') { requireThat(cmd.shardIds?.length && new Set(cmd.shardIds).size === cmd.shardIds.length, 'Укажите свои части'); for (const id of cmd.shardIds) { requireThat(owned(s, key, id, false).kind === 'shard' && r.circle.includes(id), 'В круге нет этой части'); } choice.shardIds = cmd.shardIds; }
         else if (cmd.kind !== 'pass') {
           requireThat(cmd.itemId, 'Нужен подготовленный компонент'); const item = owned(s, key, cmd.itemId); const prepared = h.prepared[item.id]; requireThat(prepared?.method === cmd.kind, 'Неверный подготовленный компонент');
           choice.itemId = item.id; item.reservedFor = 'hidden17:choice';
-          if (cmd.kind === 'salt') { const target = s.items[cmd.targetId ?? '']; requireThat(target?.kind === 'shard' && !r.extinguished.includes(target.ref), 'Нужна целая часть'); requireThat(r.circle.includes(target.id) || (target.owner.type === 'player' && target.owner.key === key) || r.permissions[target.id]?.includes(key), 'Чужая часть вне круга недоступна', 'forbidden'); choice.targetId = target.id; }
-          if (cmd.kind === 'sign') { choice.controller = prepared.controller; choice.order = prepared.order; }
+          if (cmd.kind === 'salt') { const target = s.items[cmd.targetId ?? '']; requireThat(target?.kind === 'shard' && !r.extinguished.includes(target.ref), 'Нужна целая часть'); requireThat(r.circle.includes(target.id) || (h.fair && r.exposedShards?.includes(target.id)) || (target.owner.type === 'player' && target.owner.key === key) || r.permissions[target.id]?.includes(key), 'Чужая часть вне круга недоступна', 'forbidden'); choice.targetId = target.id; if(h.fair) choice.targetRef=target.ref; }
+          if (cmd.kind === 'sign') { choice.controller = prepared.controller; if(!h.fair) choice.order = prepared.order; }
         }
-        r.choices[key] = choice; break;
+        r.choices[choice.id ?? key] = choice; break;
       }
       case 'hidden17.ritual.reveal': {
         master(); step('choices');
@@ -286,15 +301,15 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         for (const c of Object.values(r.choices)) {
           if (c.kind === 'withdraw' || c.kind === 'pass') continue;
           const target = s.items[c.targetId ?? ''];
-          const accessible = c.kind !== 'salt' || (target && (r.circle.includes(target.id) || (target.owner.type === 'player' && target.owner.key === c.player) || r.permissions[target.id]?.includes(c.player)));
+          const accessible = c.kind !== 'salt' || (target && (r.circle.includes(target.id) || (h.fair && r.exposedShards?.includes(target.id)) || (target.owner.type === 'player' && target.owner.key === c.player) || r.permissions[target.id]?.includes(c.player)));
           if (!accessible) { c.status = 'invalid'; if (c.itemId && s.items[c.itemId]) delete s.items[c.itemId].reservedFor; continue; }
           c.status = 'active'; if (c.itemId) delete s.items[c.itemId];
-          r.observed.push(c.kind === 'salt' ? `Часть ${target!.ref} темнеет.` : c.kind === 'sign' ? 'От сердца тянется нить к управляющему знаку.' : 'В сосуд стекает тонкая струя света.');
+          r.observed.push(c.kind === 'salt' ? `Осколок ${target!.ref} темнеет.` : c.kind === 'sign' ? (h.fair ? 'Кровь в бутылочке тянется к сердцу дракона.' : 'От сердца тянется нить к управляющему знаку.') : 'В сосуд стекает тонкая струя света.');
         }
         r.step = 'responses'; break;
       }
       case 'hidden17.ritual.cancel': {
-        player(); step('responses'); const c = r.choices[key]; requireThat(c?.status === 'active' && ['salt','sign','vessel'].includes(c.kind), 'Нет своей раскрытой попытки'); c.status = 'cancelled'; break;
+        player(); step('responses'); const c = r.choices[h.fair ? cmd.id ?? '' : key]; requireThat(c?.player === key && c.status === 'active' && ['salt','sign','vessel'].includes(c.kind), 'Нет своей раскрытой попытки'); c.status = 'cancelled'; break;
       }
       case 'hidden17.ritual.ward': {
         player(); step('responses'); const c = r.choices[cmd.against]; requireThat(c?.status === 'active' && ['salt','sign','vessel'].includes(c.kind), 'Щит не отменяет отзыв или уже отменённую попытку');
@@ -314,12 +329,13 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         }
         for (const id of Object.values(r.wardItems)) if (s.items[id]?.reservedFor === 'hidden17:ward') delete s.items[id].reservedFor;
         r.wards = spent; r.wardItems = {};
-        for (const c of Object.values(r.choices)) if (c.kind === 'salt' && c.status === 'active') { const target = s.items[c.targetId!]; if (target && !r.extinguished.includes(target.ref)) r.extinguished.push(target.ref); }
-        r.circle = r.circle.filter(id => !r.extinguished.includes(s.items[id]?.ref)); r.step = 'last-choice'; break;
+        for (const c of Object.values(r.choices)) if (c.kind === 'salt' && c.status === 'active') { const target = s.items[c.targetId!]; if (target && !r.extinguished.includes(target.ref)) { r.extinguished.push(target.ref); if(h.fair) {delete s.items[target.id]; delete h.presentations[target.id]; delete r.permissions[target.id];} } }
+        r.circle = r.circle.filter(id => s.items[id] && !r.extinguished.includes(s.items[id].ref)); r.step = 'last-choice'; break;
       }
       case 'hidden17.ritual.order': {
+        requireThat(!h.fair,'Приказ произносят после пробуждения');
         step('last-choice');
-        const signs = Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && s.players[c.controller!]?.present);
+        const signs = Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && (h.fair ? !!s.players[c.controller!] : s.players[c.controller!]?.present));
         const names = [...new Set(signs.map(c => c.controller!))];
         requireThat(names.length === 1 && (gm || (player() === names[0])), 'Распоряжение выбирает единственный управляющий или ведущий', 'forbidden');
         requireThat(signs.some(c => c.order === cmd.order), 'Можно выбрать только заранее записанное распоряжение');
@@ -328,13 +344,13 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
       case 'hidden17.ritual.finish': {
         master(); step('assembly', 'powder', 'last-choice');
         const life = r.extinguished.length >= 3 ? 'destroyed' : r.formulaSpoken && new Set(r.circle.map(id => s.items[id]).filter(i => i?.kind === 'shard' && !r.extinguished.includes(i.ref) && i.owner.type === 'player' && s.players[i.owner.key]?.present).map(i => i.ref)).size >= 3 ? 'awake' : 'sleep';
-        const signs = Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && s.players[c.controller!]?.present);
+        const signs = Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && (h.fair ? !!s.players[c.controller!] : s.players[c.controller!]?.present));
         const controllers = [...new Set(signs.map(c => c.controller!))]; const controlled = life === 'awake' && controllers.length === 1;
         const orders = [...new Set(signs.map(c => c.order!))];
         const order = r.orderController === controllers[0] && orders.includes(r.orderSelected!) ? r.orderSelected : orders.length === 1 ? orders[0] : undefined;
-        requireThat(!controlled || order, 'Управляющий или ведущий должен выбрать одно из заранее записанных распоряжений');
+        requireThat(h.fair || !controlled || order, 'Управляющий или ведущий должен выбрать одно из заранее записанных распоряжений');
         const vessels = Object.values(r.choices).filter(c => c.kind === 'vessel' && c.status === 'active'); const portion = life !== 'awake' ? 'empty' : vessels.length === 1 ? 'full' : 'weak';
-        const outcome: HiddenOutcome = { life, freedom: controlled ? 'controlled' : 'free', ...(controlled ? { controller: controllers[0], order } : {}), power: life !== 'awake' ? 'empty' : vessels.length === 0 ? 'whole' : portion, vessels: Object.fromEntries(vessels.map(c => [c.player, portion])), goals: {} };
+        const outcome: HiddenOutcome = { life, freedom: controlled ? 'controlled' : 'free', ...(controlled ? { controller: controllers[0], ...(!h.fair ? {order} : {}) } : {}), power: life !== 'awake' ? 'empty' : vessels.length === 0 ? 'whole' : portion, vessels: Object.fromEntries(vessels.map(c => [c.player, portion])), goals: {} };
         r.outcome = outcome; outcome.goals = finalGoals(s, content); r.step = 'finished'; for (const i of Object.values(s.items)) if (i.reservedFor === 'hidden17:ritual') delete i.reservedFor; break;
       }
       case 'hidden17.fact': { master(); requireThat(['truth','serafinaOffer','veldaRenounced'].includes(cmd.fact) && typeof cmd.value === 'boolean', 'Неверная отметка'); h.facts[cmd.fact] = cmd.value; if (r.outcome) r.outcome.goals = finalGoals(s, content); break; }
@@ -352,7 +368,7 @@ export function hiddenGuard(state: GameState, cmd: Command): Result | undefined 
   if (state.hidden17.ritual.step !== 'preparation' && /^(shop\.|ability\.|item\.|offer\.|consent\.accept|lot\.|act\.next)/.test(cmd.type)) return fail('phase', 'Обычные действия остановлены на финал');
   if (cmd.type === 'gm.correct' && cmd.change.field === 'ingredient' && available(state, cmd.playerKey).ingredients[cmd.change.ingredient] + cmd.change.delta < 0) return fail('reserved', 'Ингредиент обещан в сделке или награде');
   if (cmd.type === 'gm.correct' && cmd.change.field === 'itemOwner' && state.items[cmd.change.itemId]?.reservedFor) return fail('reserved', 'Сначала снимите резерв вещи');
-  if (cmd.type === 'session.close' && state.hidden17.ritual.step !== 'finished') return fail('phase', 'Сначала завершите пять шагов обряда');
+  if (cmd.type === 'session.close' && state.hidden17.ritual.step !== 'finished') return fail('phase', 'Сначала завершите обряд или закончите вечер без него');
 }
 
 /** Согласие предъявить вещь/дать доступ к части принадлежит её текущему владельцу. */

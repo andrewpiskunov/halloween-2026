@@ -101,7 +101,8 @@ function TopBar({ v, gold }: { v: PlayerView | GmView; gold?: number }) {
   const phase = v.kind === 'player' ? v.phase : v.state.phase;
   const act = phase === 'act1' || phase === 'act2' || phase === 'act3' ? ACT_NUM[phase] : null;
   const paused = v.kind === 'player' ? v.clock.paused : v.state.clock.pausedAt !== undefined;
-  const actLabel = act ? `Акт ${roman(act)}` : phaseLabel(phase);
+  const fair = v.kind === 'player' ? v.hidden17?.fair : v.state.hidden17?.fair;
+  const actLabel = act ? (fair ? 'Ярмарка' : `Акт ${roman(act)}`) : phaseLabel(phase);
   let time: string | null = null;
   if (act && v.kind === 'player') {
     const elapsed = v.clock.elapsedMs + (v.clock.paused ? 0 : Math.max(0, now.value - viewAt.value));

@@ -41,7 +41,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
   /** Отметки игрока: подпись и поле исправления; без поля — только показ (ожидание ответа). */
   const marks = (p: Player): { label: string; field?: MarkField }[] => {
     const out: { label: string; field?: MarkField }[] = [];
-    if (p.abilityUsedInAct) out.push({ label: 'применено в акте', field: 'abilityUsed' });
+    if (p.abilityUsedInAct) out.push({ label: state.hidden17?.fair ? 'дар использован' : 'применено в акте', field: 'abilityUsed' });
     if (p.abilityPending) out.push({ label: 'ждёт ответа на просьбу' });
     if (p.protection) {
       const src = p.protection.source === 'ward' ? 'талисман' : p.protection.source === 'gm' ? 'от ведущего' : `от ${nameCase(name(p.protection.by), 'gen')}`;

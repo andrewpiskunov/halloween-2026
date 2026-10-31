@@ -16,13 +16,13 @@ export function StoryText({ label, value, onChange, max = 2000, small = false }:
     : <textarea rows={3} value={value} maxLength={max} onInput={e => onChange(e.currentTarget.value)} />}</label>;
 }
 
-export function StoryCardBody({ c, phase }: { c: StoryCard; phase: PlayerView['phase'] }) {
+export function StoryCardBody({ c, phase, fair = false }: { c: StoryCard; fair?: boolean; phase: PlayerView['phase'] }) {
   const active = storyCardActive(c, phase);
   return <>
     <h5>{STORY_KIND[c.kind]}{!c.active ? ' · снято' : !active ? ' · срок истёк' : ''}{c.kind === 'goal' && c.completed ? ' · выполнено' : ''}</h5>
     <h4>{c.title}</h4><p class="text story-prose"><ItemText>{c.text}</ItemText></p>
     {c.price && <p class="text story-prose"><ItemText><b>Цена и условия:</b> {c.price}</ItemText></p>}
-    <p class="m-note"><ItemText>{c.expiresAct === null ? 'До конца игры или отмены ведущим' : `До конца акта ${c.expiresAct}`}.
+    <p class="m-note"><ItemText>{c.expiresAct === null ? 'До конца игры или отмены ведущим' : fair ? 'До обновления сил' : `До конца акта ${c.expiresAct}`}.
       {['ability', 'item'].includes(c.kind) && ` Применений: ${c.uses === null ? 'без ограничения' : c.uses}. Результат подтверждает ведущий.`}
       {c.replacesAbility && ' Основная способность заменена, пока действует эта карточка.'}
       {c.kind === 'state' && ' Следуйте описанию состояния; вы продолжаете участвовать в игре.'}
@@ -58,7 +58,7 @@ function PlayerCard({ c, v }: { c: StoryCard; v: PlayerView }) {
   const pending = v.story?.requests.some(q => q.cardId === c.id && ['pending', 'conditions'].includes(q.status));
   const usable = mine && storyAct(v.phase) > 0 && storyCardActive(c, v.phase) && c.uses !== 0 && ['ability', 'item'].includes(c.kind);
   return <div class="m-card story-card">
-    <StoryCardBody c={c} phase={v.phase} />
+    <StoryCardBody c={c} phase={v.phase} fair={!!v.hidden17?.fair} />
     {!mine && <p class="m-note"><ItemText>Владелец: {plainName(c.owner, v)}</ItemText></p>}
     {pending && <p class="ab-state"><ItemText>Применение ждёт решения ведущего. Ответ — в «Событиях».</ItemText></p>}
     {usable && !pending && <Button kind="sec" onClick={() => setUsing(!using)}>Попросить применить</Button>}
@@ -81,7 +81,7 @@ export function PlayerStory({ v }: { v: PlayerView }) {
     <div class="m-card">
       <h5>Свободная заявка ведущему</h5>
       <p class="text"><ItemText>Придумайте обряд, сделку с магией или необычный поступок. Расскажите, чего хотите добиться, как и чем готовы рискнуть. Ведущий предложит условия и последствия.</ItemText></p>
-      {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note"><ItemText>Заявки доступны во время актов.</ItemText></p>}
+      {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note"><ItemText>{v.hidden17?.fair?'Заявки доступны во время ярмарки.':'Заявки доступны во время актов.'}</ItemText></p>}
       {compose && live && <RequestForm onDone={() => setCompose(false)} />}
     </div>
     {[...(v.story?.messages ?? [])].reverse().map(m => <div class="m-card hot" key={m.id}><h5>Послание ведущего{m.recipients.length ? ' · личное' : ' · всем'}</h5><h4>{m.title}</h4><p class="text story-prose"><ItemText>{m.text}</ItemText></p></div>)}

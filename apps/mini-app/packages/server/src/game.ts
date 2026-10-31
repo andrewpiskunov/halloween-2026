@@ -66,7 +66,14 @@ export class Game {
     }
     // Основа без кодов: SessionCreated из журнала сам выставит приглашения и код ведущего.
     const base = initialState(content, {});
-    const state = events.reduce((s, e) => reduce(s, content, e), base);
+    let state = events.reduce((s, e) => reduce(s, content, e), base);
+    // Отдельное событие миграции: старый журнал воспроизводится без переписывания.
+    // Уже начатый финал проходит по прежним правилам до следующей партии.
+    if (content.hidden17?.continuousFair && state.hidden17?.narrative && !state.hidden17.fair && state.hidden17.ritual.step === 'preparation' && ['setup','act1','act2','act3'].includes(state.phase)) {
+      const migrated = execute(state, content, {type:'fair.enable'}, {now:opts.now(),newId:opts.newId,random:opts.random,actor:{type:'gm'}});
+      if(!migrated.ok)throw new Error(`Не удалось включить непрерывную ярмарку: ${migrated.detail ?? migrated.error}`);
+      state = store.append(migrated.events).reduce((s,e)=>reduce(s,content,e),state);
+    }
     return new Game(store, content, opts, state);
   }
 

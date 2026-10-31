@@ -38,7 +38,7 @@ export const closeCommands: CommandHandlers = {
   /** Ведущий закрывает ярмарку из третьего акта; на паузе можно, во время торга нельзя (§2.1). */
   'session.close': (state, content, _cmd, ctx) => {
     if (ctx.actor.type !== 'gm') return fail('forbidden');
-    if (state.phase !== 'act3') return fail('phase');
+    if (state.hidden17?.fair ? !['act1','act2','act3'].includes(state.phase) : state.phase !== 'act3') return fail('phase');
     if (biddingInProgress(state)) return fail('invalid', 'идёт торг за лот: сначала закройте его');
     const closure = {
       at: ctx.now,

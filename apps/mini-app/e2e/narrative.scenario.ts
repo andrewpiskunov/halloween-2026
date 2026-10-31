@@ -84,30 +84,23 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await screen(players.o15,'Сив: знакомые лица');
     await sivFaces.screenshot({path:info.outputPath('siv-acquaintances.png')});
     await nav(players.o5,'Персонаж');
-    await expect(players.o5.locator('main')).toContainText('Вы привезли осколок II и свои выписки. В старой заметке футляр флейты назван тайником для осколка V');
+    await expect(players.o5.locator('main')).toContainText('Вы привезли осколок II и выписки Орвика. В старой заметке футляр флейты назван тайником для осколка V');
     const veldaFaces=players.o5.locator('.narrative-acquaintances');
     await expect(veldaFaces.getByRole('heading',{name:'Никс',exact:true})).toBeVisible();
     await expect(veldaFaces.getByRole('heading',{name:'Астра',exact:true})).toHaveCount(0);
     await veldaFaces.screenshot({path:info.outputPath('velda-acquaintances.png')});
     const signMage=players.o5;
-    await nav(signMage,'Застава');
-    await expect(signMage.getByRole('heading',{name:'Из записей Орвика: знак на Фокусе'})).toBeVisible();
-    await expect(signMage.getByRole('combobox',{name:'Способ подготовки'})).toHaveCount(0);
-    await expect(signMage.getByRole('combobox',{name:'Управляющий знаком'})).toHaveCount(0);
+    await nav(signMage,'Мастерская');
+    await expect(signMage.getByRole('heading',{name:'Наполнить бутылёк своей кровью',exact:true})).toBeVisible();
     await expect(signMage.getByRole('radio')).toHaveCount(0);
-    await signMage.getByRole('button',{name:'Заказать Фокус в мастерской',exact:true}).click();
-    await expect(signMage.locator('.nc-detail:visible').getByRole('heading',{name:'Фокус силы',exact:true})).toBeVisible();
-    await nav(signMage,'Застава');
-    for(const ingredient of ['ash','moon'])await cmd(gm,{type:'gm.correct',playerKey:'o5',change:{field:'ingredient',ingredient,delta:2},reason:'Тест подготовки знака'});
+    for(const ingredient of ['ash','moon'])await cmd(gm,{type:'gm.correct',playerKey:'o5',change:{field:'ingredient',ingredient,delta:2},reason:'Тест крови'});
     await cmd(signMage,{type:'shop.craft',recipeId:'focus'});
-    await expect(signMage.getByRole('radio')).toHaveCount(3);
-    await signMage.getByRole('radio',{name:'Остаться до рассвета',exact:true}).check();
-    await screen(signMage,'понятная подготовка знака');
-    await signMage.screenshot({path:info.outputPath('sign-preparation.png'),fullPage:true});
-    await signMage.getByRole('button',{name:'Начертить знак на Фокусе',exact:true}).click();
-    await confirm(signMage,'Начертить знак');
-    await expect(signMage.getByRole('status')).toContainText('Управляющий знак готов');
-    await expect.poll(async()=>Object.values((await state(signMage)).hidden17.prepared).some((p:any)=>p.method==='sign'&&p.controller==='o5'&&p.order==='stay')).toBe(true);
+    await signMage.getByRole('button',{name:'Наполнить бутылёк своей кровью',exact:true}).click();
+    await confirm(signMage,'Подготовить');
+    await expect(signMage.getByRole('status')).toContainText('Бутылёк крови готов');
+    await expect.poll(async()=>Object.values((await state(signMage)).hidden17.prepared).some((p:any)=>p.method==='sign'&&p.controller==='o5'&&p.order===undefined)).toBe(true);
+    await screen(signMage,'личная подготовка крови');
+    await signMage.screenshot({path:info.outputPath('blood-preparation.png'),fullPage:true});
     const a = players.o1, b = players.o2, maker = players.o6;
     // Показ вещи подтверждается владельцу, выбор сбрасывается; отзыв тоже виден.
     await nav(b,'Мастерская');
@@ -233,12 +226,31 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await nav(a,'Персонаж');expect((await state(a)).hidden17.narrative.evaluations).toEqual({});
     await expect(a.getByText(evaluationNote,{exact:false})).toHaveCount(0);
 
+    // Разрушение запускается до обряда, другой герой спасает осколок через интерфейс.
+    await cmd(gm,{type:'hidden17.learn',player:'o1',method:'salt'});
+    for(const key of ['o1','o2'])for(const ingredient of ['ash','moon','dew'])await cmd(gm,{type:'gm.correct',playerKey:key,change:{field:'ingredient',ingredient,delta:3},reason:'Проверка сцены спасения'});
+    await cmd(a,{type:'shop.craft',recipeId:'cleanse'});
+    const potion=(await state(a)).me.items.find((i:any)=>i.kind==='potion');
+    await cmd(a,{type:'hidden17.prepare',method:'salt',itemId:potion.id});
+    await cmd(b,{type:'shop.craft',recipeId:'ward'});
+    const endangered=(await state(a)).me.items.find((i:any)=>i.kind==='shard');
+    await nav(a,'Сумка');await a.getByRole('button',{name:`Осколок ${endangered.ref}`,exact:true}).click();
+    await a.getByRole('button',{name:'Попросить сцену разрушения',exact:true}).click();await confirm(a,'Попросить сцену');
+    await expect.poll(async()=>Object.keys((await state(gm)).state.hidden17.fair.destruction).length).toBe(1);
+    const scene=(Object.values((await state(gm)).state.hidden17.fair.destruction) as any[]).at(-1);
+    expect((await state(b)).hidden17.fair.scenes).toEqual([]);
+    await cmd(gm,{type:'fair.destroy.start',id:scene.id});
+    await nav(b,'Таверна');await b.getByRole('button',{name:'Спасти талисманом',exact:true}).click();await confirm(b,'Спасти осколок');
+    await expect.poll(async()=>(await state(a)).hidden17.fair.scenes.find((d:any)=>d.id===scene.id)?.status).toBe('saved');
+    await screen(b,'осколок спасён до обряда');
+    await b.screenshot({path:info.outputPath('saved-shard.png'),fullPage:true});
+
     // Настоящий лот второго акта остаётся доступен в новой таверне: ставка и получение вещей.
-    await cmd(gm,{type:'act.next'});
-    await expect.poll(async () => (await state(a)).phase).toBe('act2');
+    await cmd(gm,{type:'fair.auction'});
+    await expect.poll(async () => (await state(a)).phase).toBe('act1');
     await nav(a,'Таверна');
     const lots=Object.values((await state(gm)).state.lots).filter((l:any)=>l.status==='announced') as any[];
-    const auction=lots.find(l=>l.act===2);expect(auction).toBeTruthy();
+    const auction=lots.find(l=>l.status==='announced');expect(auction).toBeTruthy();
     await expect(a.getByText('Торг на ярмарке',{exact:true})).toBeVisible();
     await expect.poll(async () => (await state(a)).lots.some((l:any)=>l.id===auction.id)).toBe(true);
     const lotRef=(id:string)=> (state(a).then(v=>v.lots.find((l:any)=>l.id===id).items[0]));
@@ -257,13 +269,25 @@ test('сюжетная редакция: 17 закрытых историй, с�
 
     // Разрешение на свою часть остаётся действующим управлением в сумке на шаге выбора финала.
     await cmd(a,{type:'shop.craft',recipeId:'focus'});
-    await cmd(gm,{type:'act.next'});
+    await cmd(gm,{type:'fair.refresh'});
     const finaleState=(await state(gm)).state;
     const ownShard=(await state(a)).me.items.find((i:any)=>i.kind==='shard');expect(ownShard).toBeTruthy();
     const circleParts=(Object.values(finaleState.items) as any[]).filter(i=>i.kind==='shard'&&i.id!==ownShard.id&&i.owner.type==='player').slice(0,3);
     expect(circleParts).toHaveLength(3);
     const focuses=(await state(a)).me.items.filter((i:any)=>i.kind==='focus').slice(0,2);expect(focuses).toHaveLength(2);
+    const entrants=new Set(['o1','o2','o5','o6',...circleParts.map((i:any)=>i.owner.key)]);
+    for(const key of entrants){
+      await cmd(players[key],{type:'story.request',title:'Поход во двор',text:'В условленное время иду во внутренний двор к плите.',stake:''});
+      const requests=Object.values((await state(gm)).state.story.requests) as any[];
+      const q=requests.filter(q=>q.author===key).at(-1);
+      await cmd(gm,{type:'fair.admit',player:key,requestId:q.id,at:Date.now()-1000});
+    }
+    await nav(gm,'Ритуал');await screen(gm,'допуски по личным заявкам');
     await cmd(gm,{type:'hidden17.ritual.start'});
+    const outsider=Object.keys(players).find(k=>!entrants.has(k))!;
+    await nav(players[outsider],'Застава');
+    await expect(players[outsider].getByText('Вы наблюдаете за закрытой сценой.',{exact:false})).toBeVisible();
+    await expect(players[outsider].getByRole('button',{name:'Положить',exact:true})).toHaveCount(0);
     for(const item of circleParts)await cmd(players[item.owner.key],{type:'hidden17.ritual.offer',itemId:item.id,include:true});
     for(const item of focuses)await cmd(a,{type:'hidden17.ritual.offer',itemId:item.id,include:true});
     await cmd(gm,{type:'hidden17.ritual.powder'});
@@ -304,12 +328,12 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await cmd(gm,{type:'session.reset'});
     await expect.poll(async () => (await state(gm)).state.phase).toBe('setup');
     for(const roleKey of Object.keys(source.roles))await cmd(gm,{type:'player.setPresent',roleKey,present:true});
-    await cmd(gm,{type:'session.open'});await cmd(gm,{type:'act.next'});
+    await cmd(gm,{type:'session.open'});await cmd(gm,{type:'fair.auction'});
     const newCodes=await (await request.get('http://localhost:8092/api/dev/codes')).json();
     await a.goto(`/?dev=8400&code=${newCodes.roles.o1}`);
-    await expect.poll(async () => (await state(a))?.phase).toBe('act2');
+    await expect.poll(async () => (await state(a))?.phase).toBe('act1');
     await nav(a,'Таверна');
-    const fixed=(Object.values((await state(gm)).state.lots) as any[]).find(l=>l.act===2&&l.status==='announced');
+    const fixed=(Object.values((await state(gm)).state.lots) as any[]).find(l=>l.status==='announced'&&l.status==='announced');
     expect(fixed).toBeTruthy();
     await cmd(gm,{type:'lot.sealedBids',id:fixed.id});await cmd(gm,{type:'lot.close',id:fixed.id});
     const fixedCard=a.locator('.lot').filter({hasText:'Осколок IV'});

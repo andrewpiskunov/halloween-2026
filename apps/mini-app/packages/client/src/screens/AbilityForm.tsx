@@ -59,7 +59,7 @@ export function AbilityForm({ v, onDone }: { v: PlayerView; onDone?: () => void 
 function KindForm({ v, kind, mode, send }: { v: PlayerView; kind: AbilityKind; mode: TargetMode; send: Send }) {
   switch (kind) {
     case 'protectSelf':
-      return <Apply onClick={() => send({ kind }, { title: 'Наложить на себя защиту до конца акта?' })} />;
+      return <Apply onClick={() => send({ kind }, { title: v.hidden17?.fair ? 'Защитить себя до обновления сил?' : 'Наложить на себя защиту до конца акта?' })} />;
     case 'protectOther': case 'cleanseOther': case 'discountOther':
     case 'inspectInventory': case 'knowGold': case 'askSide': case 'stealGold': case 'thorns':
       return <TargetForm v={v} mode={mode} onApply={t => send({ kind, target: t }, targetConf(kind, t, v))} />;
@@ -81,7 +81,7 @@ function targetConf(kind: AbilityKind, t: string, v: PlayerView): Conf {
   const n = name(t, v);
   const self = t === v.me.role.key;
   switch (kind) {
-    case 'protectOther': return { title: `Дать защиту ${nameCase(n, 'dat')} до конца акта?` };
+    case 'protectOther': return { title: `Дать защиту ${nameCase(n, 'dat')} ${v.hidden17?.fair?'до обновления сил':'до конца акта'}?` };
     case 'cleanseOther': return { title: `Попросить ${nameCase(n, 'acc')} согласиться на очищение?`, text: 'Снимет проклятие и шипы. Сначала договоритесь голосом.' };
     case 'discountOther': return self
       ? { title: 'Дать скидку себе?', text: 'Следующее изготовление на 1 золото дешевле.' }

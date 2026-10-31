@@ -1,3 +1,4 @@
+import { FairConsole, FairMigration } from './ContinuousFair';
 import { ItemText } from '../../components/ItemText';
 import { GmTavern } from './Hidden';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -60,6 +61,7 @@ export function Console({ v }: { v: GmView }) {
 
   return (
     <>
+      {state.hidden17?.fair ? <FairConsole v={v}/> : <>
       <div class="m-card clock">
         <div class="act">{head}</div>
         <div class={`big ${running ? '' : 'idle'} ${plan?.over ? 'over' : ''}`} role="timer">{plan ? `${plan.over ? '−' : ''}${mmss(remaining)}` : '00:00'}</div>
@@ -104,6 +106,8 @@ export function Console({ v }: { v: GmView }) {
         </span>
       </div>
 
+      </>}
+      <FairMigration v={v}/>
       {state.hidden17 && <GmTavern v={v} />}
       <Lots v={v} />
 
@@ -169,7 +173,7 @@ function Lots({ v }: { v: GmView }) {
         const left = until === undefined ? 0 : Math.max(0, remainingMs(until, clock, now.value));
         return (
           <div class="lot gm-lot" key={l.id}>
-            <div class="lot-title"><b>{title(l)}</b><small>акт {roman(l.act)}</small></div>
+            <div class="lot-title"><b>{title(l)}</b><small>{state.hidden17?.fair ? 'Аукцион ярмарки' : `акт ${roman(l.act)}`}</small></div>
             <div class="m-row"><span>Состояние</span><b>{LOT_STATUS[l.status]}{until !== undefined && ` · ${mmss(left)}`}</b></div>
             {l.status === 'announced' && (
               <div class="m-btns two">
@@ -277,7 +281,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
           : field === 'side' ? (curSide === 'none' ? 'сторона: снять выбор' : `сторона: ${sideName(curSide)}`)
           : field === 'goal' ? `цель ${goalIndex + 1}: ${GOAL_MARK[goalMark]}`
           : field === 'guise' && on ? `облик «${guise.trim()}»`
-            : `${MARK_LABEL[field]}: ${on ? 'поставить' : 'снять'}`;
+            : `${(v.state.hidden17?.fair&&field==='abilityUsed'?'Применение дара':MARK_LABEL[field])}: ${on ? 'поставить' : 'снять'}`;
     ask({
       title: 'Исправить?', text: `${name(p)}: ${what}. Причина: ${reason.trim()}`, okLabel: 'Исправить', danger: true,
       onOk: () => { void run({ type: 'gm.correct', playerKey: p, change, reason: reason.trim() }).then(r => { if (r.ok) { setReason(''); setDelta(0); setGuise(''); } }); },
@@ -298,7 +302,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
           { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
           ...(free ? [{ value: 'side', label: 'Сторона', icon: '⚑' }] : []),
           ...(!state.hidden17?.narrative ? [{ value: 'goal', label: 'Личная цель', icon: '✓' }] : []),
-          ...(Object.keys(MARK_LABEL) as MarkField[]).map(f => ({ value: f, label: MARK_LABEL[f], icon: MARK_ICON[f] })),
+          ...(Object.keys(MARK_LABEL) as MarkField[]).map(f => ({ value: f, label: v.state.hidden17?.fair&&f==='abilityUsed'?'Применение дара':MARK_LABEL[f], icon: MARK_ICON[f] })),
         ]} />
       </div>
       {field === 'ingredient' && (
@@ -343,7 +347,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
               <input type="text" value={guise} maxLength={40} placeholder="Например: Странник в сером" onInput={e => setGuise((e.currentTarget as HTMLInputElement).value)} />
             </label>
           )}
-          <p class="m-note"><ItemText>Отметки правятся только у игрока на ярмарке. {field === 'abilityUsed' ? 'Снять — вернуть применение в этом акте; если просьба ждёт ответа, сначала отмените её.' : field === 'protection' ? 'Защита одна: поставить можно только тому, у кого её нет.' : ''}</ItemText></p>
+          <p class="m-note"><ItemText>Отметки правятся только у игрока на ярмарке. {field === 'abilityUsed' ? (v.state.hidden17?.fair ? 'Снять — вернуть применение дара; если просьба ждёт ответа, сначала отмените её.' : 'Снять — вернуть применение в этом акте; если просьба ждёт ответа, сначала отмените её.') : field === 'protection' ? 'Защита одна: поставить можно только тому, у кого её нет.' : ''}</ItemText></p>
         </>
       ) : field !== 'itemOwner' ? (
         <div class="m-row"><span>Изменить на</span><Stepper value={delta} onChange={setDelta} min={-10} max={10} label="Изменение" /></div>

@@ -1,3 +1,4 @@
+import { DestroyShard } from './ContinuousFair';
 import { ItemText } from '../components/ItemText';
 import { SignatureGoods } from './SignatureGoods';
 import { StoryCards } from './Story';
@@ -28,7 +29,7 @@ export function Bag({ v }: { v: PlayerView }) {
   const use = (item: Item) => {
     if (item.kind !== 'ward') { toggle('use', item.id); return; }
     ask({
-      title: 'Активировать талисман?', text: 'Защита до конца акта. Талисман исчезнет.', okLabel: 'Активировать',
+      title: 'Активировать талисман?', text: v.hidden17?.fair?'Защита до обновления сил. Талисман исчезнет.':'Защита до конца акта. Талисман исчезнет.', okLabel: 'Активировать',
       onOk: () => void run({ type: 'item.use', itemId: item.id }),
     });
   };
@@ -88,6 +89,7 @@ export function Bag({ v }: { v: PlayerView }) {
               {hasUse && <Button small kind="sec" disabled={!usable.ok} onClick={() => use(item)}>Использовать</Button>}
             </div>
             {hasUse && !usable.ok && !reserved && <p class="m-note"><ItemText>{usable.why}</ItemText></p>}
+            {item.kind==='shard'&&v.hidden17?.fair&&<DestroyShard item={item} v={v}/>}
             {useFor === item.id && usable.ok && <UseChoice v={v} item={item} onDone={() => setUseFor(null)} />}
             {altarFor === item.id && (
               <div class="choice">

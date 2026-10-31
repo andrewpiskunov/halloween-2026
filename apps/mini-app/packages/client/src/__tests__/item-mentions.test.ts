@@ -23,3 +23,8 @@ test('номер входит в выделенное название оско�
   expect(parts.map(p => p.text).join('')).toBe(text);
   expect(parts.filter(p => p.src).map(p => p.text)).toEqual(['осколок II', 'осколка V', 'осколком III']);
 });
+
+test('бутылёк крови выделяется в склонениях отдельно от отводящего сосуда',()=>{
+ const parts=itemMentions('Передайте бутылёк крови, затем возьмите бутылёк с кровью.');
+ expect(parts.filter(p=>p.src).map(p=>p.text)).toEqual(['бутылёк крови','бутылёк с кровью']);
+});

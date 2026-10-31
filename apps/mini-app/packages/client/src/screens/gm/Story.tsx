@@ -37,7 +37,7 @@ function CardEditor({ v, initial, kind, owner, onDone }: { v: GmView; initial?: 
     <StoryText label="Название карточки" value={form.title} onChange={s => set('title', s)} max={120} small />
     <StoryText label="Что действует: эффект, задача или условия договора" value={form.text} onChange={s => set('text', s)} />
     <StoryText label="Цена, ограничения и способ освобождения" value={form.price} onChange={s => set('price', s)} max={500} />
-    <div class="field"><span>Срок действия</span><Select label="Срок действия" value={form.duration} onChange={s => set('duration', s as 'act' | 'game')} options={[{ value: 'game', label: 'До конца игры или отмены' }, { value: 'act', label: 'До конца текущего акта' }]} /></div>
+    <div class="field"><span>Срок действия</span><Select label="Срок действия" value={form.duration} onChange={s => set('duration', s as 'act' | 'game')} options={[{ value: 'game', label: 'До конца игры или отмены' }, { value: 'act', label: v.state.hidden17?.fair ? 'До обновления сил' : 'До конца текущего акта' }]} /></div>
     {['ability', 'item'].includes(form.kind) && <label class="field"><span>Оставшиеся применения (пусто — без ограничения)</span><input type="number" min={0} max={99} step={1} value={form.uses ?? ''} onInput={e => set('uses', e.currentTarget.value === '' ? null : Number(e.currentTarget.value))} /></label>}
     {form.kind === 'ability' && <label class="check"><input type="checkbox" checked={form.replacesAbility} onChange={e => set('replacesAbility', e.currentTarget.checked)} />Заменить основную способность на время действия</label>}
     {form.kind === 'goal' && <label class="check"><input type="checkbox" checked={form.completed} onChange={e => set('completed', e.currentTarget.checked)} />Цель выполнена</label>}
@@ -119,7 +119,7 @@ export function GmStory({ v }: { v: GmView }) {
   const create = (owner: string) => { setSection('cards'); setEdit({ kind: 'item', owner }); };
   return <>
     <h2 class="scr-h">Сюжет <small>{pending} новых заявок</small></h2>
-    {!live(v) && <p class="m-note"><ItemText>Вмешательства доступны во время актов. История сохранена для просмотра.</ItemText></p>}
+    {!live(v) && <p class="m-note"><ItemText>{v.state.hidden17?.fair?'Вмешательства доступны во время ярмарки.':'Вмешательства доступны во время актов.'} История сохранена для просмотра.</ItemText></p>}
     <div class="m-btns">{([['requests', 'Заявки'], ['cards', 'Карточки'], ['messages', 'Послания'], ['history', 'История']] as const).map(([key, label]) => <Button small key={key} kind={section === key ? 'main' : 'sec'} onClick={() => setSection(key)}>{label}</Button>)}</div>
     <GmNarrativePanel v={v} />
     {section === 'requests' && <>
@@ -132,7 +132,7 @@ export function GmStory({ v }: { v: GmView }) {
       <div class="m-btns">{(Object.keys(STORY_KIND) as StoryKind[]).map(kind => <Button small key={kind} disabled={!live(v)} onClick={() => setEdit({ kind, owner: edit?.owner })}>+ {STORY_KIND[kind]}</Button>)}</div>
       {edit && <CardEditor key={`${edit.card?.id ?? 'new'}-${edit.kind}-${edit.owner ?? ''}`} v={v} initial={edit.card} kind={edit.kind} owner={edit.owner} onDone={() => setEdit(null)} />}
       {Object.values(s?.cards ?? {}).reverse().map(c => <div class="m-card" key={c.id}>
-        <StoryCardBody c={c} phase={v.state.phase} /><p class="m-note"><ItemText>Владелец: {who(c.owner)} · {c.visibility === 'public' ? 'видят все' : `видят: ${[c.owner, ...c.readers].map(who).join(', ')}`}</ItemText></p>
+        <StoryCardBody c={c} phase={v.state.phase} fair={!!v.state.hidden17?.fair} /><p class="m-note"><ItemText>Владелец: {who(c.owner)} · {c.visibility === 'public' ? 'видят все' : `видят: ${[c.owner, ...c.readers].map(who).join(', ')}`}</ItemText></p>
         <Button small kind="sec" disabled={!live(v)} onClick={() => setEdit({ kind: c.kind, card: c })}>Изменить карточку</Button>
       </div>)}
       {!v.state.hidden17 && <SideForm v={v} />}

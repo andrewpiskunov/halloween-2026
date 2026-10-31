@@ -17,7 +17,7 @@ export const kindLabel = (kind: Item['kind']) => KIND_LABEL[kind];
 /** Название и эмодзи вещи по её виду и ref. */
 export function itemLabel(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): { name: string; emoji: string } {
   switch (item.kind) {
-    case 'special': return { name: ({ 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд', 'shape-fixative': 'Закрепитель облика', 'inspection-lens': 'Осмотровая линза', 'herbal-incense': 'Травяной ладан' } as Record<string, string>)[item.ref] ?? item.ref, emoji: '✦' };
+    case 'special': return { name: ({ 'blood-vial': 'Бутылёк крови', 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд', 'shape-fixative': 'Закрепитель облика', 'inspection-lens': 'Осмотровая линза', 'herbal-incense': 'Травяной ладан' } as Record<string, string>)[item.ref] ?? item.ref, emoji: '✦' };
     case 'relic': return { name: item.ref, emoji: '🏺' };
     case 'shard': return { name: `Осколок ${item.ref}`, emoji: '💠' };
     case 'clue': return { name: v.public.clues.find(c => c.id === item.ref)?.name ?? 'Улика', emoji: '🔍' };
@@ -244,11 +244,12 @@ export function recordItemText(a: ActionRecord, v: PlayerView): string | null {
 /** Своя запись журнала: «Акт I. Шипы → Грета: отражено защитой», «Акт I. Перековка: Защитный талисман, исполнено». */
 export function ownActionText(a: ActionRecord, v: PlayerView): string {
   const withItem = recordItemText(a, v);
-  if (withItem) return `Акт ${roman(a.act)}. ${withItem}, ${a.outcome === 'blocked' ? 'отражено защитой' : 'исполнено'}`;
+  const prefix = v.hidden17?.fair ? '' : `Акт ${roman(a.act)}. `;
+  if (withItem) return `${prefix}${withItem}, ${a.outcome === 'blocked' ? 'отражено защитой' : 'исполнено'}`;
   const head = a.source.type === 'ability'
     ? abilityText(a.source.ability, { target: a.target !== a.author ? a.target : undefined, from: a.from, to: a.to, copied: a.source.copied }, v)
     : `${ITEM_TITLE[a.source.kind]}${a.target && a.target !== a.author ? ` → ${roleName(a.target, v)}` : ''}${a.guise ? `: «${a.guise}»` : ''}`;
-  return `Акт ${roman(a.act)}. ${head}: ${a.outcome === 'blocked' ? 'отражено защитой' : 'исполнено'}`;
+  return `${prefix}${head}: ${a.outcome === 'blocked' ? 'отражено защитой' : 'исполнено'}`;
 }
 
 /**
@@ -273,7 +274,7 @@ export function actionText(a: ActionRecord, v: PlayerView): string {
       return `${n} ${verb(n, 'забрал', 'забрала')} у вас ${ing?.type === 'ingredientMove' ? ingredientAcc(ing.ingredient) : 'ингредиент'}`;
     }
     case 'thorns': return `${n} ${verb(n, 'наложил', 'наложила')} на вас шипы: следующее изготовление дороже`;
-    case 'protectOther': return `${n} ${verb(n, 'дал', 'дала')} вам защиту до конца акта`;
+    case 'protectOther': return `${n} ${verb(n, 'дал', 'дала')} вам защиту ${v.hidden17?.fair ? 'до обновления сил' : 'до конца акта'}`;
     case 'cleanseOther': {
       const what = removedText(a.removed);
       return what ? `${n} ${verb(n, 'снял', 'сняла')} с вас ${what}` : `${n} ${verb(n, 'провёл', 'провела')} очищение: снимать было нечего`;
@@ -330,7 +331,7 @@ export function requestOutcomeText(r: ConsentRequestView, v: PlayerView): string
     }
     // Кто именно из нескольких отказал, проекция не знает: без имён.
     case 'declined': return many ? 'Просьба отклонена' : `${first} ${verb(first, 'отказался', 'отказалась')}`;
-    case 'expired': return r.reason === 'act' ? 'Просьба закрыта: акт закончился' : `Просьба к ${names.map(n => nameCase(n, 'dat')).join(', ')} истекла`;
+    case 'expired': return r.reason === 'act' ? (v.hidden17?.fair ? 'Просьба закрыта: силы обновлены' : 'Просьба закрыта: акт закончился') : `Просьба к ${names.map(n => nameCase(n, 'dat')).join(', ')} истекла`;
     case 'failed': return `Не выполнено: ${r.reason ?? 'условия изменились'}`;
     // Свою отмену автор видит сам; уведомляем только об отмене ведущим.
     case 'cancelled':
@@ -351,11 +352,22 @@ export function marksText(v: PlayerView): { label: string; value: string }[] {
   const out: { label: string; value: string }[] = [];
   if (p.protection) {
     const src = p.protection.source === 'ward' ? 'от талисмана' : p.protection.source === 'gm' ? 'от ведущего' : `от ${nameCase(plainName(p.protection.by, v), 'gen')}`;
-    out.push({ label: 'Защита', value: `${src}, до конца акта` });
+    out.push({ label: 'Защита', value: `${src}, ${v.hidden17?.fair ? 'до обновления сил' : 'до конца акта'}` });
   }
   if (p.thorns) out.push({ label: 'Шипы: следующее изготовление на 1 золото дороже', value: p.thornsBy ? `от ${nameCase(plainName(p.thornsBy, v), 'gen')}` : '' });
   if (p.discount) out.push({ label: 'Скидка: следующее изготовление на 1 золото дешевле', value: p.discountBy ? `от ${nameCase(plainName(p.discountBy, v), 'gen')}` : '' });
   if (p.curse) out.push({ label: 'Проклятие', value: 'снимается только очищением' });
   if (p.guise) out.push({ label: 'Облик', value: p.guise.name });
   return out;
+}
+
+/** Подписи старых способностей в непрерывной редакции; серверные идентификаторы не меняются. */
+export function fairWording(text: string, fair: boolean): string {
+  if (!fair) return text;
+  return text.replace(/до конца (?:текущего )?акта/gi, 'до обновления сил')
+    .replace(/раз (?:за|в) акт/gi, 'раз до обновления сил')
+    .replace(/в этом акте/gi, 'до следующего обновления сил')
+    .replace(/на этот акт/gi, 'до обновления сил')
+    .replace(/во время активного акта/gi, 'во время ярмарки')
+    .replace(/во время актов/gi, 'во время ярмарки');
 }

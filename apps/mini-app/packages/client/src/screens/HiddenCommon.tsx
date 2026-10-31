@@ -4,7 +4,7 @@ import { Thumb } from '../components/Thumb';
 import { countsText, itemLabel, roleName } from '../labels';
 
 export const SPECIAL_NAMES: Record<string, string> = {
-  'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд',
+  'blood-vial': 'Бутылёк крови', 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд',
   'shape-fixative': 'Закрепитель облика', 'inspection-lens': 'Осмотровая линза', 'herbal-incense': 'Травяной ладан',
 };
 export const ORDERS: { value: HiddenOrder; label: string }[] = [
@@ -15,8 +15,14 @@ export const STEPS: Record<HiddenStep, string> = {
   preparation: 'Подготовка', assembly: '1 · Собраться у могилы', powder: '2 · Пыль и первый удар',
   choices: '3 · Слова возвращения', responses: '4 · Раскрытие и ответ', 'last-choice': '5 · Последний выбор', finished: 'Эпилог',
 };
-export const specialLabel = (it: Pick<Item, 'kind' | 'ref'>, v: PlayerView) => SPECIAL_NAMES[it.ref] ?? itemLabel(it, v).name;
-export function HiddenItem({ item, v }: { item: Pick<Item, 'kind' | 'ref'>; v: PlayerView }) {
+export const FAIR_STEPS: Record<HiddenStep, string> = { preparation: 'Подготовка', assembly: '1 · Сбор', powder: '2 · Пробуждение и вмешательства', choices: '2 · Пробуждение и вмешательства', responses: '3 · Раскрытие и ответы', 'last-choice': '4 · Последний выбор', finished: '4 · Исход' };
+export const methodLabel = (method: string, fair: boolean) => method === 'sign' && fair ? 'Бутылёк крови' : SPECIAL_NAMES[method];
+export const specialLabel = (it: Pick<Item, 'kind' | 'ref'> & { id?: string }, v: PlayerView) => {
+  const prepared = it.id ? v.hidden17?.prepared[it.id] : undefined;
+  if (it.ref === 'blood-vial' || (v.hidden17?.fair && prepared?.method === 'sign' && !prepared.order)) return prepared?.controller ? `Кровь ${roleName(prepared.controller, v)}` : 'Бутылёк крови';
+  return SPECIAL_NAMES[it.ref] ?? itemLabel(it, v).name;
+};
+export function HiddenItem({ item, v }: { item: Pick<Item, 'kind' | 'ref'> & { id?: string }; v: PlayerView }) {
   return <span class="hidden-item"><Thumb src={itemImageUrl(item)} emoji={item.kind === 'special' ? '✦' : itemLabel(item, v).emoji} size="sm" />{specialLabel(item, v)}</span>;
 }
 export function Reward({ reward, service, v }: { reward: Bundle; service?: string; v: PlayerView }) {

@@ -14,3 +14,5 @@ export * from './story';
 export * from './hidden17';
 
 export * from './narrative';
+
+export type { ContinuousFair, FairPlayerView, DestructionScene, FairCommand } from './fair';

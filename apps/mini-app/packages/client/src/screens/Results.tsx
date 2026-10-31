@@ -11,7 +11,7 @@ import type { PlayerView } from '@fair/shared';
  * Вкладки «События» в revealed нет, поэтому три последних объявления ведущего видны здесь.
  */
 export function Results({ v }: { v: PlayerView }) {
-  if (v.hidden17) return <><h2 class="scr-h">Ваш эпилог</h2>{v.hidden17.ritual.outcome ? <Outcome outcome={v.hidden17.ritual.outcome} name={k => roleName(k, v)} /> : <p class="m-note"><ItemText>Итоги ещё не объявлены.</ItemText></p>}{v.hidden17.narrative ? <NarrativeGoals v={v}/> : <div class="m-card"><h5>Личные достижения</h5>{v.me.goals.map((g, i) => <Row key={i} ok={g.done} text={g.text} />)}</div>}<PlayerStory v={v} /></>;
+  if (v.hidden17) return <><h2 class="scr-h">Ваш эпилог</h2>{v.hidden17.ritual.outcome ? <Outcome outcome={v.hidden17.ritual.outcome} name={k => roleName(k, v)} fair={!!v.hidden17.fair} /> : <p class="m-note"><ItemText>Итоги ещё не объявлены.</ItemText></p>}{v.hidden17.narrative ? <NarrativeGoals v={v}/> : <div class="m-card"><h5>Личные достижения</h5>{v.me.goals.map((g, i) => <Row key={i} ok={g.done} text={g.text} />)}</div>}<PlayerStory v={v} /></>;
   const c = v.closing;
   if (!c) return <div class="m-card"><p class="m-note"><ItemText>Итоги ещё не объявлены.</ItemText></p></div>;
   const recent = [...v.announcements].slice(-3).reverse();

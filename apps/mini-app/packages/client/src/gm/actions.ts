@@ -97,7 +97,7 @@ export function actionLine(a: ActionRecord, v: GmView, c: ContentData): string {
   let title = a.source.type === 'item' ? ITEM_TITLE[a.source.kind]
     : a.source.copied ? `${v.abilities[a.author]?.name ?? abilityTitle(a.source.ability)} (${abilityTitle(a.source.copied)})`
       : v.abilities[a.author]?.name ?? abilityTitle(a.source.ability);
-  const head = `Акт ${roman(a.act)}, ${hhmm(a.at)}. ${who}: `;
+  const head = `${v.state.hidden17?.fair ? '' : `Акт ${roman(a.act)}, `}${hhmm(a.at)}. ${who}: `;
   // Вещь способности (§5.2): «Перековка: Защитный талисман»; созданная вещь из эффектов тогда не повторяется.
   if (a.item) title = `${title}: ${itemName(a.item, c)}`;
   if (a.outcome === 'blocked') return `${head}${title} ${blockedVerb(title)} защитой (${protectorOf(a, v, c)})`;

@@ -73,7 +73,7 @@ export function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
   return (
     <div class="lot">
       <div class="m-row">
-        <span>Лот акта {roman(l.act)}</span>
+        <span>{v.hidden17?.fair?'Аукцион ярмарки':`Лот акта ${roman(l.act)}`}</span>
         <b>{LOT_STATUS[l.status]}{until !== undefined && ` · ${mmss(left)}`}</b>
       </div>
       {l.items.map(i => { const lb = itemLabel(i, v); return <ItemCard key={i.id} emoji={lb.emoji} img={itemImageUrl(i)} title={lb.name} />; })}

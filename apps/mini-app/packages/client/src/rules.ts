@@ -145,3 +145,18 @@ export function abilityTargets(v: PlayerView, mode: TargetMode = v.me.ability.ta
     default: return [];
   }
 }
+
+/** Наблюдение за закрытым обрядом не открывает действия участника. */
+export const ritualControls = (v: PlayerView): boolean => !v.hidden17?.fair || v.hidden17.fair.canParticipate;
+
+export function validAdmission(state: GameState, player: string): boolean {
+  const admission = state.hidden17?.fair?.admissions[player];
+  const request = admission ? state.story?.requests[admission.requestId] : undefined;
+  return !!request && request.author === player && !['cancelled', 'rejected'].includes(request.status);
+}
+/** Состав, который сервер зафиксирует при старте сейчас. */
+export function readyAdmissions(v: {state: GameState}, at: number): string[] {
+  return Object.entries(v.state.hidden17?.fair?.admissions ?? {})
+    .filter(([key, admission]) => v.state.players[key]?.present && admission.at <= at && validAdmission(v.state, key))
+    .map(([key]) => key);
+}

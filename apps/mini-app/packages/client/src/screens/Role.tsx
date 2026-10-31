@@ -1,3 +1,4 @@
+import { fairWording } from '../labels';
 import { ItemText } from '../components/ItemText';
 import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { navigateTab } from '../narrative-navigation';
@@ -171,15 +172,15 @@ function stateLine(v: PlayerView): string {
   const ab = v.me.ability;
   if (v.hidden17 && v.hidden17.ritual.step !== 'preparation') return 'Обычные способности завершены. Действия финала — во вкладке «Ритуал».';
   switch (ab.state) {
-    case 'available': return 'Доступна в этом акте';
-    case 'used': return `Применена в акте ${roman(v.act)}`;
+    case 'available': return v.hidden17?.fair ? 'Дар доступен' : 'Доступна в этом акте';
+    case 'used': return v.hidden17?.fair ? 'Дар использован до следующего обновления сил' : `Применена в акте ${roman(v.act)}`;
     case 'pending': {
       const req = v.requests.find(q => q.id === ab.pendingRequest);
       if (!req) return 'Ждёт ответа';
       const who = waitingFor(req).map(k => roleName(k, v)).join(', ');
       return `Ждёт ответа: ${who}, ${mmss(remainingMs(req.expiresAt, v.clock, now.value))}`;
     }
-    default: return v.phase === 'setup' ? 'Откроется с началом акта' : ['act1', 'act2', 'act3'].includes(v.phase) ? 'Заменена сюжетной способностью ведущего' : 'Ярмарка закрыта';
+    default: return v.phase === 'setup' ? (v.hidden17?.fair ? 'Откроется с началом ярмарки' : 'Откроется с началом акта') : ['act1', 'act2', 'act3'].includes(v.phase) ? 'Заменена сюжетной способностью ведущего' : 'Ярмарка закрыта';
   }
 }
 
@@ -189,7 +190,7 @@ export function AbilityCard({ v }: { v: PlayerView }) {
   const [open, setOpen] = useState(false);
   const toWorkshop = () => { abilityDraft.value = { kind: ab.kind }; navigateTab('workshop'); };
   const cancel = () => ask({
-    title: 'Отменить просьбу?', text: 'Способность останется неприменённой в этом акте.', okLabel: 'Отменить просьбу', danger: true,
+    title: 'Отменить просьбу?', text: v.hidden17?.fair ? 'Применение способности останется доступным.' : 'Способность останется неприменённой в этом акте.', okLabel: 'Отменить просьбу', danger: true,
     onOk: () => { if (ab.pendingRequest) void run({ type: 'consent.cancel', id: ab.pendingRequest }); },
   });
   return (
@@ -199,7 +200,7 @@ export function AbilityCard({ v }: { v: PlayerView }) {
         {ab.hostile && <span class="m-tag warn">враждебная</span>}
         {ab.verbal && <span class="m-tag">словесная</span>}
       </AbilityIdentity>
-      <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
+      <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={fairWording(ab.text,!!v.hidden17?.fair)}/>
       <p class={`ab-state ${ab.state}`}><ItemText>{stateLine(v)}</ItemText></p>
       {v.hidden17?.board.filter(p => p.author === v.me.role.key && p.serviceAbility && ['open', 'accepted'].includes(p.status)).map(p => <p class="m-note" key={p.id}><ItemText>Применение обещано по заказу «{p.title}». {p.worker ? `Получатель: ${roleName(p.worker, v)}. Примените способность к нему с согласия.` : 'Сначала дождитесь исполнителя.'}</ItemText></p>)}
       {ab.state === 'pending' && <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить просьбу</Button></div>}

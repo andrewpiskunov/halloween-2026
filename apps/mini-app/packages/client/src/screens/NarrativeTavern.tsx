@@ -1,3 +1,4 @@
+import { FairScenes } from './ContinuousFair';
 import { ItemText } from '../components/ItemText';
 import { LotCard } from './Events';
 import { useState } from 'preact/hooks';
@@ -14,7 +15,7 @@ export function NarrativeTavern({v}:{v:PlayerView}){
  const announcements=[...v.announcements.map((a,i)=>({...a,id:`gm-${i}`,author:'gm'})),...n.announcements].sort((a,b)=>b.at-a.at);
  const publish=async()=>{setBusy(true);try{const r=await run({type:'narrative.announce',title:title.trim(),text:text.trim()});if(r.ok){setTitle('');setText('');setCompose(false);showToast('Объявление на доске');}}finally{setBusy(false);}};
  return <><header class="narrative-scene"><img src={`${BASE}assets/scenes/tavern.webp`} alt="Тёплая таверна с доской объявлений у входа"/><div><span class="narrative-eyebrow">Главная площадь ярмарки</span><h2>Таверна</h2></div></header>
- <section class="narrative-board"><div class="narrative-section-head"><h2 class="scr-h">Объявления</h2><button class="narrative-back" onClick={()=>setCompose(!compose)}>{compose?'Закрыть':'+ Написать'}</button></div>
+ <FairScenes v={v}/><section class="narrative-board"><div class="narrative-section-head"><h2 class="scr-h">Объявления</h2><button class="narrative-back" onClick={()=>setCompose(!compose)}>{compose?'Закрыть':'+ Написать'}</button></div>
  {compose&&<div class="m-card"><h5>Ваше объявление</h5><StoryText label="Заголовок объявления" value={title} onChange={setTitle} max={100} small/><StoryText label="Текст объявления" value={text} onChange={setText} max={1000}/><p class="m-note"><ItemText>Объявление увидят все. Здесь можно найти нужную вещь, предложить работу или назначить награду. Когда договоритесь, передайте награду через сделку.</ItemText></p><Button disabled={busy||!title.trim()||!text.trim()} onClick={()=>void publish()}>Повесить объявление</Button></div>}
  {announcements.map(a=><article class="m-card narrative-announcement" key={a.id}><div class="item">{a.author!=='gm'&&<Portrait roleKey={a.author} emoji="☉" size="sm"/>}<div><small>{a.author==='gm'?'Ведущий':roleName(a.author,v)} · {new Date(a.at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small><h3>{a.title}</h3></div></div><p class="text story-prose"><ItemText>{a.text}</ItemText></p></article>)}
  {!announcements.length&&<p class="m-note"><ItemText>На доске пока нет объявлений. Оставьте первое.</ItemText></p>}

@@ -122,7 +122,7 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
   pool.forEach(({ kind, ref }, i) => {
     const itemId = newId();
     const id = newId();
-    const first = i < FIRST_ACT_LOTS;
+    const first = !!state.hidden17?.fair || i < FIRST_ACT_LOTS;
     items[itemId] = { id: itemId, kind, ref, owner: { type: 'lot', id } };
     lots[id] = { id, items: [itemId], act: first ? 1 : 2, status: first ? 'announced' : 'queued', bids: [] };
   });
