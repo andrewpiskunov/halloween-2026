@@ -47,3 +47,26 @@ test('GM assessments stay private until revealed',()=>{const g=new G();g.run({ty
 test('origin belongs to exact initial item and records only direct known exchanges',()=>{const g=new G();const shard=Object.values(g.s.items).find(i=>i.kind==='shard'&&i.owner.type==='player'&&i.owner.key==='o1')!;narrative.roles.o1.startingItems[`shard:${shard.ref}`]='Семейный сундук';const clone={...shard,id:'copy-shard'};g.s.items[clone.id]=clone;const own=viewFor(g.s,content,player('o1'),g.now);expect(own.kind==='player'&&own.hidden17!.narrative!.origins[shard.id]).toBe('Семейный сундук');expect(own.kind==='player'&&own.hidden17!.narrative!.origins[clone.id]).toBeUndefined();g.run({type:'narrative.trade.create',to:'o2',give:bundle({items:[shard.id]}),wish:''},player('o1'));const trade=Object.values(g.s.hidden17!.narrative!.trades)[0];g.run({type:'narrative.trade.reply',id:trade.id,give:bundle()},player('o2'));g.run({type:'narrative.trade.confirm',id:trade.id},player('o1'));const recipient=viewFor(g.s,content,player('o2'),g.now);expect(recipient.kind==='player'&&recipient.hidden17!.narrative!.origins[shard.id]).toContain(base.roleByKey.o1.name);expect(recipient.kind==='player'&&recipient.hidden17!.narrative!.origins[shard.id]).not.toContain('Семейный сундук');});
 test('explicitly learned joining remains readable after migration, without source ownership',()=>{for(const old of [false,true]){const g=new G(old);if(old)g.run({type:'narrative.enable'});g.run({type:'narrative.knowledge',player:'o2',knowledge:'joining'});const v=viewFor(g.s,content,player('o2'),g.now);expect(v.kind).toBe('player');if(v.kind!=='player')continue;const memory=v.hidden17!.narrative!.documents.find(d=>d.id==='memory:joining');expect(memory?.title).toBe('Запись услышанного обряда');expect(memory?.text).toContain(content.hidden17!.ritual.formula);expect(memory?.text).toContain(content.hidden17!.ritual.stone[0]);expect(v.hidden17!.narrative!.role.documents).not.toContain('memory:joining');expect(g.try({type:'narrative.document.show',documentId:'memory:joining',player:'o8',allow:true},player('o2')).ok).toBe(false);}const unknown=new G();const v=viewFor(unknown.s,content,player('o2'),unknown.now);expect(v.kind==='player'&&v.hidden17!.narrative!.documents.some(d=>d.id==='memory:joining')).toBe(false);});
 test('ordinary workshop description does not disclose the joining recipe',()=>{const g=new G();const v=viewFor(g.s,content,player('o2'),g.now);expect(v.kind).toBe('player');if(v.kind!=='player')return;const focus=v.recipes.find(r=>r.id==='focus')!;expect(focus.text).not.toContain('два Фокуса');expect(focus.lore).not.toContain('Два Фокуса');});
+
+
+test('acquaintances reveal only the viewer’s impressions, including an absent acquaintance',()=>{
+ const real: NarrativeContent=JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/narrative-17.json',import.meta.url),'utf8'));
+ const actual={...content,hidden17:{...content.hidden17!,narrative:real}};
+ const g=new G();
+ g.run({type:'player.setPresent',roleKey:'o2',present:false});
+ for(const key of g.s.roster){
+  const v=viewFor(g.s,actual,player(key),g.now);
+  if(v.kind!=='player')throw Error('Expected player view');
+  expect(v.hidden17!.narrative!.role.acquaintances).toMatchObject(real.roles[key].acquaintances!);
+  expect(v.hidden17!.narrative!.role.acquaintances).toHaveLength(real.roles[key].acquaintances!.length);
+  const raw=JSON.stringify(v);
+  for(const [otherKey,other] of Object.entries(real.roles)){
+   if(otherKey===key)continue;
+   for(const person of other.acquaintances??[])expect(raw).not.toContain(person.text);
+   for(const paragraph of other.story)expect(raw).not.toContain(paragraph);
+  }
+ }
+ const siv=viewFor(g.s,actual,player('o15'),g.now);
+ if(siv.kind!=='player')throw Error('Expected player view');
+ expect(siv.hidden17!.narrative!.role.acquaintances?.find(x=>x.role==='o2')).toMatchObject({name:'Брам',emoji:base.roleByKey.o2.emoji});
+});

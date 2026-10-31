@@ -5,6 +5,7 @@ import { portraitPreview } from './PortraitViewer';
 interface Props {
   roleKey: string;
   emoji: string;
+  name?: string;
   /** sm — 40 px, без размера — 64 px, big — 96 px, card — портрет на карте роли. */
   size?: 'sm' | 'big' | 'card';
   /** Приглушённая обработка с лёгкой штриховкой. Только для одного портрета на экране: фильтр дорог на слабых Android. */
@@ -12,8 +13,8 @@ interface Props {
 }
 
 /** Портрет роли: эмодзи под картинкой assets/portraits/<key>.jpg; круг обрезан по лицу. */
-export function Portrait({ roleKey, emoji, size, tint }: Props) {
-  const name = content.value?.roles.find(r => r.key === roleKey)?.name ?? 'Персонаж';
+export function Portrait({ roleKey, emoji, size, tint, name: providedName }: Props) {
+  const name = providedName ?? content.value?.roles.find(r => r.key === roleKey)?.name ?? 'Персонаж';
   return (
     <button type="button" aria-label={`Открыть портрет: ${name}`} title="Посмотреть портрет" onClick={e => {
       e.preventDefault(); e.stopPropagation(); portraitPreview.value = { roleKey, name };

@@ -9,6 +9,9 @@ export function narrativeProjection(state:GameState,content:Content,key:string,b
  const n=state.hidden17?.narrative, source=content.hidden17?.narrative, hidden=base.hidden17;
  if(!n||!source||!hidden)return base;
  const {gmGoals:_gm,startingItems, ...role}=source.roles[key];
+ const acquaintances=(role.acquaintances??[]).map(person=>({
+  ...person,name:content.roleByKey[person.role].name,emoji:content.roleByKey[person.role].emoji,
+ }));
  const knowledge=n.knowledge[key]??[], joining=knowledge.includes('joining');
  const trades=Object.values(n.trades).filter(t=>t.from===key||t.to===key);
  const knownItems={...hidden.knownItems};
@@ -35,7 +38,7 @@ export function narrativeProjection(state:GameState,content:Content,key:string,b
   id:'memory:joining',title:'Запись услышанного обряда',source:'Вы записали способ, который узнали во время игры',
   text:[...content.hidden17!.ritual.stone, `Формула: «${content.hidden17!.ritual.formula}»`].join('\n\n'),knowledge:['joining'],
  });
- const narrative={role:{...role,startingItems:ownStarting},documents,knowledge,evaluations:state.phase==='revealed'?(n.evaluations[key]??{}):{},trades,announcements:n.announcements,rules:source.rules,craftingRules:source.craftingRules,items,origins};
+ const narrative={role:{...role,acquaintances,startingItems:ownStarting},documents,knowledge,evaluations:state.phase==='revealed'?(n.evaluations[key]??{}):{},trades,announcements:n.announcements,rules:source.rules,craftingRules:source.craftingRules,items,origins};
  const briefing={...hidden.briefing,publicFace:role.story[0]??'',desire:'',secret:'',knowledge:[],firstSteps:[],goals:role.goals,finale:{prepare:'',action:'',choice:'',impact:''},acts:[],backstory:role.story.join('\n\n')};
  const recipes=base.recipes.map(r=>r.id==='focus'?{...r,text:source.items['focus:focus']?.description??'Изделие, удерживающее магическую связь.',lore:source.items['focus:focus']?.uses??'Способ применения нужно узнать в игре.'}:r);
  return {...base, recipes, hidden17:{...hidden,knownItems,briefing,narrative,publicRules:[],board:[],dice:[],rumors:[],ritual:{...hidden.ritual,stone:joining?hidden.ritual.stone:[],formula:joining?hidden.ritual.formula:'',...(hidden.ritual.outcome?{outcome:{...hidden.ritual.outcome,goals:{}}}:{})}},me:{...base.me,goals:[],role:{...base.me.role,intro:role.story[0]??'',backstory:role.story.join('\n\n'),goals:role.goals,secret:'',motivation:''}},offers:[],offerItems:{},public:{...base.public,relics:[],story:'Ярмарка украденной магии'}};

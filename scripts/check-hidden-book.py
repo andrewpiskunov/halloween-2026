@@ -8,6 +8,12 @@ ROOT=Path(__file__).resolve().parents[1]; OUT=ROOT/'docs/prototypes'; DATA=ROOT/
 h=json.loads((DATA/'hidden-17.json').read_text()); e=json.loads((DATA/'edition-17.json').read_text())
 n=json.loads((DATA/'narrative-17.json').read_text())
 assert set(n['roles'])==set(h['roles']) and n['version']==2
+for key,role in n['roles'].items():
+ people=role.get('acquaintances',[])
+ assert len({x['role'] for x in people})==len(people),(key,'повтор знакомого')
+ for person in people:
+  assert person['role'] in n['roles'] and person['role']!=key,(key,'неизвестная роль знакомого')
+  assert person['relation'].strip() and person['text'].strip(),(key,'пустое описание знакомого')
 assert set(h['roles'])==set(e['roleKeys']) and len(h['roles'])==17
 class Page(HTMLParser):
  def __init__(self,path):
@@ -30,7 +36,7 @@ for path in paths:
   if u.fragment and target.suffix=='.html':assert unquote(u.fragment) in Page(target).ids,(path,ref)
  if path.parent.name=='players':
   own=n['roles'][path.stem]
-  for v in [*own['story'],*own['goals'],own['abilityOrigin']]:assert v in text,(path,'утрачены личные сведения',v)
+  for v in [*own['story'],*own['goals'],own['abilityOrigin'],*(x['text'] for x in own.get('acquaintances',[]))]:assert v in text,(path,'утрачены личные сведения',v)
   for key,other in h['roles'].items():
    if key!=path.stem:assert other['secret'] not in text,(path,'чужой секрет',key)
   for ref in doc.refs:

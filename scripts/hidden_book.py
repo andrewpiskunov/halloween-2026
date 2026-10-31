@@ -137,6 +137,8 @@ def build(c):
         return ''.join(article(rule['title'],item_picture(rule['image'],rule['title'],prefix)+p(rule['text'])) for rule in narrative['rules'])
     def personal_documents(key):
         return ''.join(article(documents[id]['title'],labelled('Источник',documents[id]['source'])+p(documents[id]['text'])) for id in narrative['roles'][key]['documents'])
+    def acquaintances(key):
+        return ''.join(article(name(person['role']),f'<img src="{portrait(person["role"],"../")}" alt="{esc(name(person["role"]))}" width="64" height="64" loading="lazy">'+p(person['relation'],'aside-note')+p(person['text'])) for person in narrative['roles'][key].get('acquaintances',[]))
     public=section('welcome','01','На одну ночь у брода','',''.join(p(part) for part in h['publicIntro'].split('\n\n')))
     public+=section('rules','02','Что можно делать','',short_rules()+p(h['consentPolicy']))
     public+=section('workshop','03','Обычные изделия',h['venues']['workshop']['intro'],recipes()+p('Базовый ингредиент можно купить у ярмарки за 2 золота, если он есть в запасе. Торговля между игроками — по взаимной договорённости.'))
@@ -223,6 +225,7 @@ def build(c):
         header=f'<section class="chapter"><span class="eyebrow">{esc(r["title"])}</span><div class="dossier-hero"><img class="role-portrait" src="{portrait(key,"../")}" alt="{esc(r["name"])}"><div><h1>{esc(r["name"])}</h1>{p(b["publicFace"],"lead")}{labelled("Чего вы хотите",b["desire"])}</div></div></section>'
         nr=narrative['roles'][key]
         private=header+section('background','01','Ваша история','Личные сведения. Делитесь ими по своему выбору.',''.join(p(x) for x in nr['story']))
+        if nr.get('acquaintances'):private+=section('acquaintances','—','Знакомые лица','Ваши знакомства и впечатления.',acquaintances(key))
         private+=section('goals','02','Ваши стремления','Итог оценивает ведущий с учётом смысла поступков; отсутствие оценки не означает провал.',ordered(nr['goals']))
         private+=section('ability','03','Ваш дар','',p(nr['abilityOrigin'])+ability(r))
         private+=section('documents','04','Письма и записи','Вы можете показать выбранную запись другому человеку целиком.',personal_documents(key))
@@ -234,7 +237,8 @@ def build(c):
         private_html=standalone(r['name'],private,'../',True)
         css_url='../assets/gm-book/book.css?v='+hashlib.sha256((ASSETS/'book.css').read_bytes()).hexdigest()[:10]
         private_html=private_html.replace(f'<link rel="stylesheet" href="{css_url}">','<style>'+ (ASSETS/'book.css').read_text()+'</style>')
-        private_html=private_html.replace(portrait(key,'../'),'data:image/jpeg;base64,'+base64.b64encode((ASSETS/f'portraits/{key}.jpg').read_bytes()).decode())
+        for person_key in {key,*(x['role'] for x in nr.get('acquaintances',[]))}:
+            private_html=private_html.replace(portrait(person_key,'../'),'data:image/jpeg;base64,'+base64.b64encode((ASSETS/f'portraits/{person_key}.jpg').read_bytes()).decode())
         for file in (f for f in item_dir.iterdir() if f.suffix in ('.jpg','.webp')):
             version=hashlib.sha256(file.read_bytes()).hexdigest()[:10]
             private_html=private_html.replace(f'../assets/gm-book/items/{file.name}?v={version}',('data:image/webp;base64,' if file.suffix=='.webp' else 'data:image/jpeg;base64,')+base64.b64encode(file.read_bytes()).decode())
@@ -244,12 +248,12 @@ def build(c):
         dossier+=section('background','I','Предыстория','',''.join(p(x) for x in nr['story'])+labelled('Настоящее желание',b['desire']))
         dossier+=section('secrets','II','Граница знаний','Не дополняйте исходную карточку всей картиной.',personal_documents(key)+''.join(method(m) for m in private_methods))
         dossier+=section('mechanics','III','Цели и способность','Цели этой редакции проверяются вручную.',ordered(nr['goals'])+labelled('Оценка ведущему','')+ordered(nr['gmGoals'])+p(nr['abilityOrigin'])+ability(r)+gear(r)+profession(key,True))
-        relations=ordered(b['firstSteps'])
+        relations=acquaintances(key)
         for it in game['relics']:
             if key in it['wants'] or it['owner']==key:
                 participants=set(it['wants'])|{it['owner']}
                 relations+=article(it['name'],'<div class="people-links">'+''.join(link(k,True) for k in by if k in participants and k!=key)+'</div>'+p('Стартовый владелец: '+name(it['owner'])+'. Владение и обещание помощи обсуждаются отдельно.'))
-        dossier+=section('relations','IV','Связи и повод для разговора','Первые контакты известны персонажу; полный круг желающих — ориентир для ведущего.',relations)
+        dossier+=section('relations','IV','Связи и повод для разговора','Знакомые лица — личные впечатления персонажа; круг претендентов на вещи ниже предназначен ведущему.',relations)
         acts='<div class="act-strip">'+''.join(article('Акт '+str(j+1),p(t)) for j,t in enumerate(b['acts']))+'</div>'
         dossier+=section('role-acts','V','Участие по актам','Подсказки для движения, а не обязательный сценарий.',acts)
         dossier+=section('role-twists','VI','Личный выбор и его оценка','',ordered(nr['gmGoals'])+p('Прежние предметные пороги — ориентиры, а не автоматические проверки этих стремлений. Возможны достигнута, частично достигнута и не достигнута; запишите причину. Неоценённая цель не считается провалом.')+p(h['consentPolicy']))

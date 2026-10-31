@@ -4,7 +4,9 @@ export type RitualKnowledge = 'place' | 'joining';
 export type GoalStatus = 'achieved' | 'partial' | 'not-achieved';
 export interface GoalEvaluation { status: GoalStatus; note: string }
 export interface NarrativeDocument { id: string; title: string; source: string; text: string; holders: string[]; knowledge?: RitualKnowledge[] }
-export interface NarrativeRole { story: string[]; goals: [string, string]; gmGoals: [string, string]; abilityOrigin: string; documents: string[]; startingItems: Record<string, string> }
+/** Личное впечатление владельца карточки; не досье другого героя. */
+export interface NarrativeAcquaintance { role: string; relation: string; text: string }
+export interface NarrativeRole { story: string[]; goals: [string, string]; gmGoals: [string, string]; abilityOrigin: string; documents: string[]; startingItems: Record<string, string>; acquaintances?: NarrativeAcquaintance[] }
 export interface ItemLore { name: string; description: string; history: string; uses: string }
 export interface NarrativeContent { version: 2; roles: Record<string, NarrativeRole>; documents: NarrativeDocument[]; items: Record<string, ItemLore>; rules: { title: string; text: string; image: string }[]; craftingRules: string[] }
 export interface NarrativeTrade {
@@ -21,7 +23,7 @@ export interface NarrativeState {
   announcements: { id: string; author: string; title: string; text: string; at: number }[];
 }
 export interface NarrativePlayerView {
-  role: Omit<NarrativeRole, 'gmGoals'>; documents: Omit<NarrativeDocument, 'holders'>[];
+  role: Omit<NarrativeRole, 'gmGoals' | 'acquaintances'> & { acquaintances?: (NarrativeAcquaintance & { name: string; emoji: string })[] }; documents: Omit<NarrativeDocument, 'holders'>[];
   knowledge: RitualKnowledge[]; evaluations: Record<string, GoalEvaluation>; trades: NarrativeTrade[];
   announcements: NarrativeState['announcements']; rules: NarrativeContent['rules']; craftingRules: string[];
   items: Record<string, ItemLore>; origins: Record<string, string>;

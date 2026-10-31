@@ -22,6 +22,12 @@ export function NarrativeRole({ v }: { v: PlayerView }) {
   <header class="narrative-person"><Portrait roleKey={r.key} emoji={r.emoji} size="card" tint/><div><span class="narrative-eyebrow">Ваша роль</span><h2>{r.name}</h2><p><ItemText>{r.title}</ItemText></p></div></header>
   <p class="narrative-private"><ItemText>Личные сведения. Вы сами решаете, кому довериться.</ItemText></p>
   <article class="m-card narrative-story"><h5>Ваша история</h5>{n.role.story.map((p,i)=><p class="text" key={i}><ItemText>{p}</ItemText></p>)}</article>
+  {!!n.role.acquaintances?.length && <section class="m-card narrative-acquaintances" aria-label="Знакомые лица"><h5>Знакомые лица</h5>{n.role.acquaintances.map(person=>{
+   return <article class="narrative-acquaintance" key={person.role}>
+    <header><Portrait roleKey={person.role} emoji={person.emoji} name={person.name}/><div><h3>{person.name}</h3><p class="m-note">{person.relation}</p></div></header>
+    <p class="text"><ItemText>{person.text}</ItemText></p>
+   </article>;
+  })}</section>}
   <NarrativeGoals v={v}/>
   {n.documents.length>0 && <section class="narrative-documents"><h2 class="scr-h">Письма и свидетельства</h2>{n.documents.map(d=><button class="narrative-document-link" key={d.id} onClick={()=>openPage({kind:'document',id:d.id})}><Thumb src={documentImageUrl(d.id)} emoji="✉" size="sm"/><span><b>{d.title}</b><small>{d.source}</small></span><span aria-hidden="true">›</span></button>)}</section>}
   <AbilityCard v={v}/>

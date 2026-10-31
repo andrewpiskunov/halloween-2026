@@ -72,6 +72,21 @@ test('сюжетная редакция: 17 закрытых историй, с�
       await expect(p.getByRole('combobox', { name: 'Вещь по названию' })).toHaveCount(0);
       await expect(p.getByLabel('Слух', { exact: true })).toHaveCount(0);
     }
+    await nav(players.o15,'Персонаж');
+    const sivFaces=players.o15.locator('.narrative-acquaintances');
+    await expect(sivFaces.getByRole('heading',{name:'Брам',exact:true})).toBeVisible();
+    await expect(sivFaces).toContainText('Ваш сосед по холмам');
+    await expect(sivFaces).not.toContainText('рощу сожгли');
+    await sivFaces.getByRole('button',{name:'Открыть портрет: Брам',exact:true}).click();
+    await expect(players.o15.getByRole('dialog',{name:'Портрет: Брам',exact:true})).toBeVisible();
+    await players.o15.getByRole('button',{name:'Закрыть портрет',exact:true}).click();
+    await screen(players.o15,'Сив: знакомые лица');
+    await sivFaces.screenshot({path:info.outputPath('siv-acquaintances.png')});
+    await nav(players.o5,'Персонаж');
+    const veldaFaces=players.o5.locator('.narrative-acquaintances');
+    await expect(veldaFaces.getByRole('heading',{name:'Никс',exact:true})).toBeVisible();
+    await expect(veldaFaces.getByRole('heading',{name:'Астра',exact:true})).toHaveCount(0);
+    await veldaFaces.screenshot({path:info.outputPath('velda-acquaintances.png')});
     const signMage=players.o5;
     await nav(signMage,'Застава');
     await expect(signMage.getByRole('heading',{name:'Из записей Орвика: знак на Фокусе'})).toBeVisible();
