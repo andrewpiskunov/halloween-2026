@@ -94,7 +94,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await a.locator('.narrative-document-link').filter({hasText:'Лист семейной книги'}).click();
     await expect(a.locator('.narrative-letter-art')).toHaveAttribute('src', /family-book\.webp$/);
     await expect(a.locator('.narrative-letter-text .item-mention').filter({hasText:'Корона пепла'})).toBeVisible();
-    await expect(a.locator('.narrative-letter-text .item-mention img').first()).toHaveAttribute('src', /\/assets\/items\//);
+    await expect(a.locator('.item-mention img')).toHaveCount(0);
     await screen(a,'семейная книга с иллюстрацией');
     await a.screenshot({path:info.outputPath('family-book.png'),fullPage:true});
     await a.getByRole('button',{name:'← Назад',exact:true}).click();

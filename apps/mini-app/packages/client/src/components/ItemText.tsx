@@ -2,11 +2,11 @@ import { cloneElement, isValidElement, type ComponentChildren, type VNode } from
 import { itemMentions } from '../item-mentions';
 import './item-text.css';
 
-/** Сохраняет исходные слова и разметку. Названия вещей получают компактную иконку. */
+/** Сохраняет исходные слова и разметку. Названия вещей выделяются жирным без встроенных картинок. */
 export function ItemText({children}:{children?:ComponentChildren}) {
   const enrich=(child:ComponentChildren):ComponentChildren=>{
     if(typeof child==='string')return itemMentions(child).map((part,i)=>part.src
-      ? <strong class="item-mention" key={i}><img src={part.src} alt="" aria-hidden="true" width="22" height="22" loading="lazy" decoding="async"/>{part.text}</strong>
+      ? <strong class="item-mention" key={i}>{part.text}</strong>
       : part.text);
     if(Array.isArray(child))return child.map(enrich);
     if(isValidElement(child)&&typeof child.type==='string'&&['span','b','strong','em','i','small','a'].includes(child.type)){
