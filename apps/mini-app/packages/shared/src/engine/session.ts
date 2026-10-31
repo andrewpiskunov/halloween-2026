@@ -109,7 +109,7 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
     if (sh.owner) place('shard', sh.id, sh.owner, true);
     else if (sh.id === HIDDEN_SHARD && sh.hidden && present(sh.hidden)) {
       const id = newId();
-      items[id] = { id, kind: 'shard', ref: sh.id, owner: { type: 'player', key: sh.hidden }, hiddenUntilAct: 3 };
+      items[id] = { id, kind: 'shard', ref: sh.id, owner: { type: 'player', key: sh.hidden }, ...(state.hidden17 ? {} : { hiddenUntilAct: 3 as const }) };
     }
   }
   for (const c of content.clues) {
@@ -127,6 +127,10 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
     lots[id] = { id, items: [itemId], act: first ? 1 : 2, status: first ? 'announced' : 'queued', bids: [] };
   });
 
+  if (state.hidden17 && !Object.values(items).some(i => i.kind === 'shard' && i.ref === 'V')) {
+    const id = newId(), itemId = newId(); items[itemId] = { id: itemId, kind: 'shard', ref: 'V', owner: { type: 'lot', id } };
+    lots[id] = { id, items: [itemId], act: 1, status: 'announced', bids: [] };
+  }
   const each = Math.ceil(nPresent / 3);
   const altars: Partial<Record<AltarSide, Altar>> = {};
   const hasShip = state.roster.some(k => content.roleByKey[k]?.side === 'ship');
@@ -134,8 +138,8 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
 
   const ev = content.events.find(e => e.when === 'Открытие');
   return {
-    type: 'FairOpened', at, nPresent, players, items, lots, workshop: { ash: each, moon: each, dew: each }, altars,
-    announcement: { at, title: ev?.title ?? 'Ярмарка открыта', text: ev?.text ?? '' },
+    type: 'FairOpened', at, nPresent, players, items, lots, workshop: { ash: each, moon: each, dew: each }, altars: state.hidden17 ? {} : altars,
+    announcement: { at, title: state.hidden17 ? 'Ярмарка открыта' : ev?.title ?? 'Ярмарка открыта', text: state.hidden17 ? content.hidden17!.timing[0].announcement : ev?.text ?? '' },
   };
 }
 

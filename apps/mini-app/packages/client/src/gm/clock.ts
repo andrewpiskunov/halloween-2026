@@ -28,7 +28,7 @@ export function actPlan(state: GameState, nowMs: number): ActPlan | null {
   const elapsedMs = (state.clock.pausedAt ?? nowMs) - state.clock.actStartedAt - state.clock.pausedTotal;
   const remainingMs = ACT_MS - elapsedMs;
   const act = phase === 'act1' ? 1 : phase === 'act2' ? 2 : 3;
-  const todo = act === 1
+  const todo = state.hidden17 ? (act === 1 ? ['Объявить акт II: пополнение мастерской, лот с осколком IV и уликой A.'] : act === 2 ? ['Объявить акт III: завершайте заказы и подготовку к могиле. Личные намерения остаются скрытыми.'] : ['Позвать участников к могиле Сарна. Завершить начатые партии в кости.', 'Открыть «Ритуал»: сборка, пыль, формула, ответ и последний выбор.']) : act === 1
     ? ['Объявить акт II: склад пополнится, выйдет лот с осколком IV.']
     : act === 2
       ? ['Напомнить свободным: сторона выбирается до конца акта II.', 'Объявить акт III: склад пополнится, откроется осколок V.']

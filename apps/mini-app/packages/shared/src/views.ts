@@ -1,3 +1,5 @@
+import { hiddenProjection } from './views-hidden17';
+import { storyFor, type StoryView } from './story';
 import type { AbilityKind, CopyableKind, TargetMode } from './abilities';
 import type { Clue, Content, Faction, Recipe, Resource, Role } from './content';
 import type { Actor } from './commands';
@@ -30,6 +32,8 @@ export interface ConsentRequestView {
 }
 
 export interface PlayerView {
+  hidden17?: import('./hidden17').HiddenPlayerView;
+  story?: StoryView;
   kind: 'player'; phase: Phase; act: 0 | 1 | 2 | 3; clock: { elapsedMs: number; paused: boolean; pausedAt?: number };
   me: {
     role: Role; player: Player; items: Item[]; available: { gold: number; ingredients: Counts; items: string[] }; ability: AbilityView;
@@ -188,7 +192,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
   // telegramId игроку не нужен: аккаунт Telegram остаётся только в проекции ведущего.
   const { telegramId: _telegramId, ...player } = me;
 
-  return {
+  return hiddenProjection(state, content, key, {
     kind: 'player',
     phase: state.phase,
     act: actOf(state.phase),
@@ -197,7 +201,8 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       ...(state.clock.pausedAt !== undefined ? { pausedAt: state.clock.pausedAt } : {}),
     },
     me: {
-      role, player,
+      role: state.story?.sides[key] ? { ...role, side: state.story.sides[key] } : role,
+      player: state.story?.sides[key] ? { ...player, side: state.story.sides[key] } : player,
       items: items.filter(i => i.owner.type === 'player' && i.owner.key === key),
       available: available(state, key),
       ability: abilityView(state, content, key),
@@ -235,8 +240,9 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
       story: content.story.public,
       relics: content.relics.map(r => ({ name: r.name, emoji: r.emoji, lore: r.lore })),
     },
+    story: storyFor(state.story, key),
     requests: requestsFor(state, key),
     actions: actionsFor(state, key),
     ...(closing ? { closing } : {}),
-  };
+  });
 }

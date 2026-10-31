@@ -52,7 +52,7 @@ export function checkInvariants(state: GameState): void {
       if (!only) fail(`отражённая запись ${r.id} меняет не только защиту цели`);
     }
     // 11. Скрытый осколок V не виден наблюдению до акта III.
-    if (r.act < 3 && r.intel?.kind === 'inventory' && r.intel.items.some(i => i.kind === 'shard' && i.ref === 'V')) {
+    if (!state.hidden17 && r.act < 3 && r.intel?.kind === 'inventory' && r.intel.items.some(i => i.kind === 'shard' && i.ref === 'V')) {
       fail(`осколок V в Intel записи ${r.id}`);
     }
     // 12. Применённая или уничтоженная вещь исчезла.
@@ -131,6 +131,7 @@ function goldInPlay(state: GameState): number {
 /** Сколько золота событие выдало из банка (плюс) или забрало в банк (минус). */
 function bankFlow(e: Event): number {
   switch (e.type) {
+    case 'Hidden17Changed': return e.bankDelta ?? 0;
     case 'IngredientBought': case 'ItemCrafted': return -e.paidGold;
     case 'LotClosed': return e.winner !== undefined ? -(e.amount ?? 0) : 0;
     case 'LotBought': return -e.price;

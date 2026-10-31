@@ -2,6 +2,7 @@
 *
 !apps/mini-app
 !docs/design/game-data-v0.2.json
+!docs/design/gm-book/hidden-17.json
 apps/mini-app/node_modules
 apps/mini-app/**/node_modules
 apps/mini-app/**/dist

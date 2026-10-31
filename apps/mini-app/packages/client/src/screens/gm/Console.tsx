@@ -1,3 +1,4 @@
+import { GmTavern } from './Hidden';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { AltarSide, ContentData, Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
 import { Button } from '../../components/Button';
@@ -98,20 +99,21 @@ export function Console({ v }: { v: GmView }) {
           {/* одна кнопка закрытия: ведёт на «Итоги», где чек-лист и подтверждение (§6.5) */}
           {state.closing
             ? <Button kind="sec" onClick={() => { gmTab.value = 'results'; }}>К итогам</Button>
-            : <Button kind="sec" disabled={state.phase !== 'act3'} onClick={() => { gmTab.value = 'results'; }}>Закрыть ярмарку</Button>}
+            : <Button kind="sec" disabled={state.phase !== 'act3'} onClick={() => { gmTab.value = state.hidden17 ? 'ritual' : 'results'; }}>{state.hidden17 ? 'Финал у могилы' : 'Закрыть ярмарку'}</Button>}
         </span>
       </div>
 
+      {state.hidden17 && <GmTavern v={v} />}
       <Lots v={v} />
 
       <Abilities v={v} onFix={setFix} />
 
       <div class="m-card danger-zone">
         <h5>Сброс игры</h5>
-        <p class="m-note">Удалит состав, явку, привязки игроков, вещи, сделки, алтари и журнал. Коды приглашений выдадутся заново, вы останетесь ведущим.</p>
+        <p class="m-note">Начнёт новую партию: сбросит явку, привязки игроков, вещи, сделки и ритуал. Коды приглашений выдадутся заново, вы останетесь ведущим. После сброса проверьте состав и отметьте присутствующих.</p>
         <Button kind="sec" onClick={() => ask({
           title: 'Сбросить игру полностью?', danger: true, okLabel: 'Сбросить',
-          text: 'Всё состояние вернётся к началу: состав пустой, игроки отвязаны, ссылки старые перестанут работать. Отменить нельзя.',
+          text: 'Игра вернётся к подготовке новой партии: явка сброшена, игроки отвязаны, старые ссылки перестанут работать. Отменить нельзя.',
           onOk: () => { void run({ type: 'session.reset' }).then(r => { if (r.ok) showToast('Игра сброшена'); }); },
         })}>Сбросить игру</Button>
         <Button kind="sec" disabled={!hasOwnToken()} onClick={() => openExternal(exportUrl())}>Скачать журнал</Button>
@@ -246,7 +248,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
   const p = player || state.roster[0] || '';
   const role = content.roles.find(r => r.key === p);
   // сторону ведущий правит только у свободных ролей; варианты — алтари этой игры
-  const free = role?.side === 'free';
+  const free = !state.hidden17 && role?.side === 'free';
   const sides = (Object.keys(state.altars) as AltarSide[]).filter(s => state.altars[s]);
   const sideName = (s: string) => content.factions.find(f => f.id === s)?.name ?? s;
   const chosen = state.players[p]?.side;
@@ -319,7 +321,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
         <>
           <div class="field"><span>Цель</span>
             <Select label="Цель" value={String(goalIndex)} onChange={s => setGoalIndex(s === '1' ? 1 : 0)} options={[0, 1].map(i => ({
-              value: String(i), label: `Цель ${i + 1}`, hint: role?.goals[i],
+              value: String(i), label: `Цель ${i + 1}`, hint: state.hidden17 ? content.hidden17?.roles[p]?.goals[i] : role?.goals[i],
             }))} />
           </div>
           <div class="m-btns" role="group" aria-label="Отметка цели">

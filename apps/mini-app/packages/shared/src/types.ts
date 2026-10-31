@@ -5,7 +5,7 @@ export type Side = 'wake' | 'bind' | 'break' | 'ship' | 'free';
 export type AltarSide = Exclude<Side, 'free'>;
 export type Ingredient = 'ash' | 'moon' | 'dew';
 export type Phase = 'setup' | 'act1' | 'act2' | 'act3' | 'closed' | 'revealed';
-export type ItemKind = 'relic' | 'shard' | 'clue' | 'potion' | 'ward' | 'focus' | 'shape';
+export type ItemKind = 'relic' | 'shard' | 'clue' | 'potion' | 'ward' | 'focus' | 'shape' | 'special';
 export type Owner = { type: 'player'; key: string } | { type: 'altar'; side: AltarSide } | { type: 'lot'; id: string };
 export interface Item { id: string; kind: ItemKind; ref: string; owner: Owner; createdBy?: string; hiddenUntilAct?: 3; reservedFor?: string }
 export type Counts = Record<Ingredient, number>;
@@ -139,6 +139,8 @@ export interface Closing {
 }
 
 export interface GameState {
+  hidden17?: import('./hidden17').HiddenState;
+  story?: import('./story').StoryState;
   phase: Phase; roster: string[]; nPresent: number;
   clock: { actStartedAt: number; pausedAt?: number; pausedTotal: number };
   players: Record<string, Player>; items: Record<string, Item>;

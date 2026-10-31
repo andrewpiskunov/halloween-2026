@@ -27,6 +27,7 @@ export interface Room { id: string; title: string; name: string; people: string;
 export interface Story { public: string; truth: string; truth_read: string }
 
 export interface Content {
+  hidden17?: import('./hidden17').HiddenContent;
   version: string;
   factions: Faction[];
   roles: Role[];

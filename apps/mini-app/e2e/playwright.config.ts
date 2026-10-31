@@ -10,7 +10,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: [
     {
-      command: 'cd ../packages/server && DB_PATH=:memory: ALLOW_DEV_AUTH=1 SESSION_SECRET=test PORT=8091 pnpm exec tsx src/index.ts',
+      command: 'cd ../packages/server && FAIR_RULESET=legacy DB_PATH=:memory: ALLOW_DEV_AUTH=1 SESSION_SECRET=test PORT=8091 pnpm exec tsx src/index.ts',
       url: 'http://localhost:8091/api/health',
       reuseExistingServer: false,
       timeout: 60_000,

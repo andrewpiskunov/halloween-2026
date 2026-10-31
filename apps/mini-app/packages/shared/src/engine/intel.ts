@@ -1,3 +1,4 @@
+import { sideOf } from './closing';
 import type { AbilityUse } from '../commands';
 import type { Content } from '../content';
 import type { GameState, Ingredient, Intel } from '../types';
@@ -19,7 +20,7 @@ function inventory(state: GameState, target: string): Intel {
   const items = Object.values(state.items)
     .filter(i => i.owner.type === 'player' && i.owner.key === target)
     .filter(i => !(hideShard && i.hiddenUntilAct !== undefined))
-    .map(i => ({ kind: i.kind, ref: i.ref }));
+    .map(i => ({ kind: i.kind, ref: state.hidden17?.prepared[i.id] ? ({ salt: 'sealed-powder', sign: 'inscribed-focus', vessel: 'copper-vial' } as const)[state.hidden17.prepared[i.id].method] : i.ref }));
   return { kind: 'inventory', target, gold: p.gold, reservedGold: p.reservedGold, ingredients: { ...p.ingredients }, items };
 }
 
@@ -34,8 +35,7 @@ function sniff(state: GameState, author: string, ingredient: Ingredient): Intel 
 
 /** Исповедь (§2.3 п. 19): сторона роли; свободный — выбранная или 'free'. */
 function side(state: GameState, content: Content, target: string): Intel {
-  const roleSide = content.roleByKey[target].side;
-  const value = roleSide === 'free' ? state.players[target].side ?? 'free' : roleSide;
+  const value = sideOf(state, content, target);
   return { kind: 'side', target, side: value };
 }
 

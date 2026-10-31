@@ -12,6 +12,9 @@ export function available(state: GameState, playerKey: string): { gold: number; 
     if (o.status !== 'pending' || o.from !== playerKey) continue;
     for (const k of INGREDIENTS) ingredients[k] -= o.give.ingredients[k];
   }
+  for (const b of Object.values(state.hidden17?.board ?? {})) {
+    if (b.author === playerKey && (b.status === 'open' || b.status === 'accepted')) for (const k of INGREDIENTS) ingredients[k] -= b.reward.ingredients[k];
+  }
   const items = Object.values(state.items)
     .filter(i => i.owner.type === 'player' && i.owner.key === playerKey && i.reservedFor === undefined)
     .map(i => i.id);

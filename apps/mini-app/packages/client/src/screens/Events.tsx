@@ -1,8 +1,9 @@
+import { PlayerStory } from './Story';
 import { useState } from 'preact/hooks';
 import type { Lot, PlayerView } from '@fair/shared';
 import { itemImageUrl } from '../assets';
 import { Button } from '../components/Button';
-import { FrozenNote } from '../components/Frozen';
+import { Frozen, frozenReason, FrozenNote } from '../components/Frozen';
 import { ItemCard } from '../components/ItemCard';
 import { Stepper } from '../components/Stepper';
 import { goldText, itemLabel, lotTitle, mmss, plural, roleName, roman } from '../labels';
@@ -20,6 +21,7 @@ export function Events({ v }: { v: PlayerView }) {
     <>
       <h2 class="scr-h">События</h2>
       <FrozenNote v={v} />
+      <Frozen.Provider value={frozenReason(v)}><PlayerStory v={v} /></Frozen.Provider>
       <div class="m-card">
         <h5>Сюжет</h5>
         <p class="text">{v.public.story}</p>

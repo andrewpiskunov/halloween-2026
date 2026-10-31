@@ -28,7 +28,7 @@ export function effectiveTab(t: Tab, revealed: boolean): Tab {
  * Нижняя панель вкладок; badges — число на значке вкладки (входящие сделки и просьбы),
  * dots — точка без числа (способность доступна, новая отметка в сумке).
  */
-export function Tabs({ badges = {}, dots = [], revealed = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean }) {
+export function Tabs({ badges = {}, dots = [], revealed = false, hidden17 = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean; hidden17?: boolean }) {
   const current = effectiveTab(tab.value, revealed);
   return (
     <nav class="tabs">
@@ -37,7 +37,7 @@ export function Tabs({ badges = {}, dots = [], revealed = false }: { badges?: Pa
           <button type="button" key={t.key} class={current === t.key ? 'on' : ''} aria-current={current === t.key ? 'page' : undefined}
             onClick={() => { tab.value = t.key; }}>
             <i aria-hidden="true">{t.icon}{badges[t.key] ? <em class="badge">{badges[t.key]}</em> : dots.includes(t.key) ? <em class="badge dot-only" aria-label="есть новое" /> : null}</i>
-            {t.label}
+            {hidden17 && t.key === 'altars' ? 'Ритуал' : hidden17 && t.key === 'events' ? 'Таверна' : t.label}
           </button>
         ))}
       </div>

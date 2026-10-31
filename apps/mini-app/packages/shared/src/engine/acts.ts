@@ -174,7 +174,7 @@ export const actCommands: CommandHandlers = {
       // Смена акта во время паузы — неявный resume.
       pausedMs: state.clock.pausedAt === undefined ? 0 : ctx.now - state.clock.pausedAt,
       newLots, newItems, announcedLots, revealedItems,
-      announcement: { at: ctx.now, title: ev?.title ?? EVENT_WHEN[act], text: ev?.text ?? '' },
+      announcement: { at: ctx.now, title: ev?.title ?? EVENT_WHEN[act], text: state.hidden17 ? content.hidden17!.timing[act - 1].announcement : ev?.text ?? '' },
     });
   },
 

@@ -11,7 +11,8 @@
     "e2e": "playwright test -c e2e",
     "sim": "pnpm --filter @fair/sim sim",
     "sim:load": "pnpm --filter @fair/sim load",
-    "sim:bench": "pnpm --filter @fair/sim bench"
+    "sim:bench": "pnpm --filter @fair/sim bench",
+    "e2e:hidden17": "playwright test -c e2e/hidden17.config.ts"
   },
   "engines": {
     "node": ">=20"

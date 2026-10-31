@@ -15,7 +15,7 @@ export function Roster({ v }: { v: GmView }) {
   const setup = state.phase === 'setup';
   const [n, setN] = useState(String(Math.min(30, Math.max(12, state.roster.length || 12))));
   const [shownLink, setShownLink] = useState<string | null>(null);
-  const roles = [...content.roles].sort((a, b) => a.pos - b.pos);
+  const roles = [...content.roles.filter(r => !state.hidden17 || state.roster.includes(r.key))].sort((a, b) => a.pos - b.pos);
   const inv = new Map(invites.map(i => [i.roleKey, i]));
   const nValue = Number(n);
   const nValid = Number.isInteger(nValue) && nValue >= 12 && nValue <= 30;
@@ -57,9 +57,10 @@ export function Roster({ v }: { v: GmView }) {
   return (
     <>
       <div class="m-card">
-        <h5>Состав</h5>
+        <h5>{state.hidden17 ? 'Основной состав · 17 героев' : 'Состав'}</h5>
+        {!state.hidden17 && setup && content.hidden17 && <><p class="text">Доступна новая редакция: личные намерения, таверна, ремесло и финал у могилы.</p><Button onClick={() => ask({ title: 'Перейти к новым правилам?', text: 'Будет установлен состав из 17 героев. Игра ещё не открыта, стартовая раздача не затронута.', okLabel: 'Включить новые правила', onOk: () => void run({ type: 'hidden17.enable' }) })}>Сценарий для 17 игроков</Button></>}
         <p class="m-note">В составе {state.roster.length} · пришли {presentCount}</p>
-        {setup && (
+        {setup && !state.hidden17 && (
           <>
             <label class="field">
               <span>Число игроков (12–30)</span>
@@ -92,7 +93,7 @@ export function Roster({ v }: { v: GmView }) {
                   <b>{r.name}</b>
                   <span>{r.title}</span>
                   <span>
-                    <span class="m-tag">{content.factions.find(f => f.id === r.side)?.name ?? r.side}</span>
+                    {!state.hidden17 && <span class="m-tag">{content.factions.find(f => f.id === r.side)?.name ?? r.side}</span>}
                     {i?.bound && <span class="m-tag">привязан</span>}
                     {!setup && inRoster && <span class={`m-tag ${i?.present ? '' : 'warn'}`}>{i?.present ? 'пришёл' : 'не пришёл'}</span>}
                   </span>
@@ -100,7 +101,7 @@ export function Roster({ v }: { v: GmView }) {
               </div>
               <div class="gm-toggles">
                 <label class={`check ${inRoster ? 'on' : ''}`}>
-                  <input type="checkbox" checked={inRoster} disabled={!setup}
+                  <input type="checkbox" checked={inRoster} disabled={!setup || !!state.hidden17}
                     onChange={() => { void run({ type: 'session.toggleRole', roleKey: r.key }); }} />
                   в составе
                 </label>

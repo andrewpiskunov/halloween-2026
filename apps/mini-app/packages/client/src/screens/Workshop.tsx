@@ -16,7 +16,7 @@ export interface CraftMod { ashByGold?: true; freeWork?: true; substitute?: { fr
 export function craftPrice(r: Recipe, v: PlayerView, mod: CraftMod = {}): number {
   const p = v.me.player;
   const base = r.gold + (mod.ashByGold ? 1 : 0) - (mod.freeWork ? 1 : 0);
-  return Math.max(0, base + (p.thorns ? 1 : 0) - (p.discount ? 1 : 0));
+  return v.hidden17 ? Math.max(0, base - (p.discount ? 1 : 0)) + (p.thorns ? 1 : 0) : Math.max(0, base + (p.thorns ? 1 : 0) - (p.discount ? 1 : 0));
 }
 
 /** Ингредиенты рецепта со способностью: Пепел за золото или замена одного ингредиента. */
@@ -57,9 +57,9 @@ export function Workshop({ v }: { v: PlayerView }) {
     onOk: () => void run({ type: 'shop.buy', ingredient: ing.key, count: 1 }),
   });
   const craft = (r: Recipe) => ask({
-    title: `Создать «${r.name}»?`,
+    title: `${v.hidden17 ? 'Заказать у мастера' : 'Создать'} «${r.name}»?`,
     text: `Спишется: ${countsText({ gold: craftPrice(r, v), ingredients: r.cost })}.`,
-    okLabel: 'Создать',
+    okLabel: v.hidden17 ? 'Заказать' : 'Создать',
     onOk: () => void run({ type: 'shop.craft', recipeId: r.id }),
   });
   const buyCheap = (ing: Ingredient) => sendAbility({ kind: 'buyCheap', ingredient: ing },
@@ -109,7 +109,7 @@ export function Workshop({ v }: { v: PlayerView }) {
           <div key={r.id} class="item-block">
             <ItemCard emoji={r.emoji} img={itemImageUrl({ kind: 'potion', ref: r.id })} title={r.name} sub={<ResCost parts={costParts(r.cost, price)} />}>
               <Button small kind={lacking.length ? 'sec' : 'main'} disabled={lacking.length > 0} onClick={() => craft(r)}>
-                Создать
+                {v.hidden17 ? 'Заказать' : 'Создать'}
               </Button>
             </ItemCard>
             <p class="m-note">{r.text}</p>

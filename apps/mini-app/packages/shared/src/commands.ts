@@ -1,3 +1,4 @@
+import { HIDDEN_COMMAND_TYPES } from './hidden17';
 import type { CopyableKind } from './abilities';
 import type { AltarSide, Bundle, Ingredient, Owner } from './types';
 
@@ -49,7 +50,7 @@ export type AbilityUse =
   | { kind: 'askSide'; target: string }
   | { kind: 'askYesNo'; target: string; question?: string };
 
-export type Command =
+export type Command = import('./hidden17').HiddenCommand | import('./story').StoryCommand
   | { type: 'session.setN'; n: number }
   | { type: 'session.toggleRole'; roleKey: string }
   | { type: 'player.bind'; code: string; telegramId: number }
@@ -91,6 +92,8 @@ export type CommandType = Command['type'];
  * Сервер принимает по WebSocket только эти типы; симулятор по ним считает покрытие.
  */
 export const COMMAND_TYPES: Record<Command['type'], true> = {
+  ...HIDDEN_COMMAND_TYPES,
+  'story.request': true, 'story.cancel': true, 'story.respond': true, 'story.card.save': true, 'story.message': true, 'story.side': true, 'story.undo': true,
   'session.setN': true, 'session.toggleRole': true, 'player.bind': true, 'player.setPresent': true,
   'session.open': true, 'session.reset': true, 'act.next': true, 'clock.pause': true, 'clock.resume': true, 'clock.extend': true,
   'gm.announce': true, 'gm.correct': true, 'gm.rebind': true, 'gm.reissue': true,

@@ -209,7 +209,7 @@ function GrowForm({ v, send }: { v: PlayerView; send: Send }) {
       <Field label="Отдать"><Select label="Что отдать" value={give} onChange={setGive} placeholder="выберите ингредиент"
         options={ingredientOptions(i => `у вас ${a[i]}`).filter(o => a[o.value as Ingredient] > 0)} /></Field>
       <p class="m-note">В запасе Росы: {v.workshop.dew}. Нужно не меньше двух.</p>
-      <Apply disabled={!give || v.workshop.dew < 2} onClick={() => send({ kind: 'grow', give: give as Ingredient },
+      <Apply disabled={!give || a[give as Ingredient] < 1 || v.workshop.dew < 2} onClick={() => send({ kind: 'grow', give: give as Ingredient },
         { title: `Отдать 1 ${shortOf(give as Ingredient)}, получить 2 Росы?` })} />
     </>
   );
@@ -226,7 +226,7 @@ function SwapForm({ v, send }: { v: PlayerView; send: Send }) {
         options={ingredientOptions(i => `у вас ${a[i]}`).filter(o => a[o.value as Ingredient] > 0)} /></Field>
       <Field label="Взять"><Select label="Что взять" value={take} onChange={setTake} placeholder="выберите ингредиент"
         options={ingredientOptions(i => `в запасе ${v.workshop[i]}`).filter(o => o.value !== give && v.workshop[o.value as Ingredient] > 0)} /></Field>
-      <Apply disabled={!give || !take || give === take} onClick={() => send({ kind: 'swapIngredient', give: give as Ingredient, take: take as Ingredient },
+      <Apply disabled={!give || !take || give === take || a[give as Ingredient] < 1 || v.workshop[take as Ingredient] < 1} onClick={() => send({ kind: 'swapIngredient', give: give as Ingredient, take: take as Ingredient },
         { title: `Отдать 1 ${shortOf(give as Ingredient)}, получить 1 ${shortOf(take as Ingredient)}?` })} />
     </>
   );
@@ -273,11 +273,16 @@ function ItemForm({ v, kind, send }: { v: PlayerView; kind: 'disassemble' | 'ref
       send({ kind, itemId: id }, { title: `Продать ${label} банку за ${goldText(2)}?`, text: 'Вещь исчезнет.' });
     }
   };
-  const ready = !!item && (kind === 'disassemble' ? !!x && !!y : kind === 'reforge' ? !!into : true);
+  const enoughStock = !!x && !!y && (x === y
+    ? v.workshop[x as Ingredient] >= 2
+    : v.workshop[x as Ingredient] >= 1 && v.workshop[y as Ingredient] >= 1);
+  const validInto = REFORGE_INTO.some(r => r.id === into && r.kind !== item?.kind);
+  const ready = !!item && (kind === 'disassemble' ? enoughStock
+    : kind === 'reforge' ? validInto && v.me.available.gold >= 1 : true);
   return (
     <>
       <Field label="Вещь">
-        <Select label="Вещь" value={id} onChange={setId} placeholder="выберите изделие"
+        <Select label="Вещь" value={id} onChange={k => { setId(k); setInto(''); }} placeholder="выберите изделие"
           options={items.map(i => { const l = itemLabel(i, v); return { value: i.id, label: l.name, icon: l.emoji, image: itemImageUrl(i) }; })} />
       </Field>
       {kind === 'disassemble' && (
@@ -292,6 +297,8 @@ function ItemForm({ v, kind, send }: { v: PlayerView; kind: 'disassemble' | 'ref
             options={REFORGE_INTO.filter(r => r.kind !== item?.kind).map(r => ({ value: r.id, label: recipeName(r.id), image: itemImageUrl({ kind: r.kind, ref: r.id }) }))} />
         </Field>
       )}
+      {kind === 'disassemble' && x && y && !enoughStock && <p class="m-note">В запасе не хватает выбранных ингредиентов.</p>}
+      {kind === 'reforge' && v.me.available.gold < 1 && <p class="m-note">Для перековки нужно 1 доступное золото.</p>}
       <Apply disabled={!ready} onClick={apply} />
     </>
   );

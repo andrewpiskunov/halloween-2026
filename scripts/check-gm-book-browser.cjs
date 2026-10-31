@@ -1,0 +1,121 @@
+// Браузерная проверка автономных file:// страниц. Скриншоты вне репозитория.
+const { chromium } = require('../apps/mini-app/node_modules/@playwright/test');
+const fs = require('node:fs');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '..');
+const dir = path.join(root,'docs/prototypes');
+const output = '/tmp/halloween-gm-book';
+fs.mkdirSync(output,{recursive:true});
+(async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({viewport:{width:1440,height:1050}});
+    const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+    const local = p => pathToFileURL(path.join(dir,p)).href;
+    const fit = async () => {
+      await page.waitForLoadState('load');
+      const overflow=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,items:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width,text:e.textContent.slice(0,50)})).filter(e=>e.right>innerWidth+1).slice(0,12)}));
+      assert(overflow.width <= overflow.viewport+1,'Переполнение '+page.url()+' '+JSON.stringify(overflow));
+    };
+    const images = async () => {
+      const broken=await page.evaluate(async()=>{
+        const images=[...document.images];images.forEach(i=>i.loading='eager');
+        await Promise.all(images.map(i=>i.decode().catch(()=>{})));
+        return images.filter(i=>!i.naturalWidth).map(i=>i.src);
+      });assert.deepEqual(broken,[]);
+    };
+    await page.goto(local('magic-fair-v2.html'));
+    await images(); await fit();
+    assert.equal(await page.locator('[data-character]').count(),17);
+    assert.equal(await page.locator('.chapter-illustration').count(),15);
+    const ratio = await page.locator('[data-character] img').first().evaluate(img=>img.getBoundingClientRect().width/img.getBoundingClientRect().height);
+    assert(Math.abs(ratio-1)<0.01, 'Пропорции портрета в каталоге');
+    await page.screenshot({path:path.join(output,'cover-desktop.png')});
+    await page.setViewportSize({width:1440,height:550});
+    const scrollable = await page.locator('.sidebar').evaluate(el=>{el.scrollTop=el.scrollHeight;return el.scrollTop>0;});
+    assert(scrollable,'Боковая панель должна прокручиваться в невысоком окне');
+    assert(await page.locator('.sidebar-bottom a').last().isVisible());
+    await page.setViewportSize({width:1440,height:1050});
+    await page.locator('.sidebar').evaluate(el=>el.scrollTop=0);
+    await page.locator('#character-search').fill('мИРОН');
+    assert.equal(await page.locator('[data-character]:visible').count(),1);
+    assert.equal(await page.locator('[data-character]:visible').getAttribute('data-character'),'o3');
+    await page.locator('#character-search').fill('');
+    await page.goto(local('magic-fair-expansion.html'));
+    await images(); await fit();
+    assert.equal(await page.locator('[data-character]').count(),13);
+    await page.locator('#side-filter').selectOption('ship');
+    assert.equal(await page.locator('[data-character]:visible').count(),4);
+    await page.locator('#character-search').fill('несуществующий персонаж');
+    assert(await page.locator('#no-results').isVisible());
+    await page.locator('#side-filter').selectOption('');
+    await page.goto(local('magic-fair-v2.html'));
+    await page.locator('#character-search').fill('Сив');
+    await page.locator('[data-character="o15"]').click();
+    assert(page.url().endsWith('/characters/o15.html'));
+    await page.setViewportSize({width:320,height:800}); await fit();await images();
+    await page.screenshot({path:path.join(output,'siv-mobile.png'),fullPage:true});
+    await page.screenshot({path:path.join(output,'siv-mobile-top.png')});
+    await page.getByRole('button',{name:'Оглавление',exact:true}).click();
+    assert.equal(await page.locator('[data-menu]').getAttribute('aria-expanded'),'true');
+    await page.locator('#book-nav a[href$="#characters"]').click();
+    assert(page.url().endsWith('magic-fair-v2.html#characters'));
+    await fit();
+    await page.locator('#character-search').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,'catalog-mobile.png')});
+    await page.goto(local('magic-fair-expansion.html'));await fit();await images();
+    await page.locator('#character-search').fill('Магда');
+    assert.equal(await page.locator('[data-character]:visible').count(),1);
+    await page.locator('[data-character="t1"]').click();
+    assert(await page.locator('.breadcrumbs a').getAttribute('href').then(x=>x.includes('magic-fair-expansion.html')));
+    await fit();
+    const game=JSON.parse(fs.readFileSync(path.join(root,'docs/design/gm-book/game-data.json'),'utf8'));
+    for(const r of game.roles){
+      await page.goto(local(`characters/${r.key}.html`));
+      await fit();await images();
+      assert.equal(await page.locator('h1').textContent(),r.name);
+      assert.equal(await page.locator('.act-strip article').count(),3);
+    }
+    const briefs=JSON.parse(fs.readFileSync(path.join(root,'docs/design/gm-book/hidden-17.json'),'utf8'));
+    for(const key of Object.keys(briefs.roles)){
+      await page.goto(local(`players/${key}.html`));await fit();await images();
+      assert.equal(await page.locator('.sidebar').count(),0);
+      assert.equal(await page.locator('script').count(),0);
+    }
+    const portable=path.join(output,'velda-portable.html');
+    fs.copyFileSync(path.join(dir,'players/o5.html'),portable);
+    await page.goto(pathToFileURL(portable).href);await fit();await images();
+    assert.equal(await page.locator('link[rel=stylesheet]').count(),0);
+    await page.screenshot({path:path.join(output,'velda-handout-mobile.png'),fullPage:true});
+    await page.screenshot({path:path.join(output,'velda-handout-mobile-top.png')});
+    await page.goto(local('player-guide.html'));await fit();
+    await page.goto(local('finale-sheet.html'));await fit();await images();
+    assert.equal(await page.locator('.ritual-step').count(),5);
+    assert.equal(await page.locator('.ritual-script').count(),5);
+    assert.equal(await page.locator('.ritual-actions').count(),5);
+    await page.locator('#grave-assembly').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,'ritual-mobile.png')});
+    await page.goto(local('ritual-stone.html'));await fit();await images();
+    await page.setViewportSize({width:1440,height:1050});
+    await page.goto(local('finale-sheet.html'));await images();await fit();
+    await page.locator('#grave-assembly').scrollIntoViewIfNeeded();
+    await page.screenshot({path:path.join(output,'ritual-desktop.png')});
+    await page.emulateMedia({media:'print'});
+    assert(await page.locator('#grave-assembly .ritual-script').isVisible());
+    assert(await page.locator('#grave-assembly .ritual-actions').isVisible());
+    await page.screenshot({path:path.join(output,'ritual-print.png')});
+    await page.emulateMedia({media:'screen'});
+    await page.setViewportSize({width:1440,height:1050});
+    await page.goto(local('characters/o9.html'));await images();
+    await page.screenshot({path:path.join(output,'elmar-desktop.png')});
+    await page.emulateMedia({media:'print'});
+    assert.equal(await page.locator('.sidebar').isVisible(),false);
+    assert(await page.locator('#secrets').isVisible());
+    assert(await page.locator('#role-twists').isVisible());
+    await page.screenshot({path:path.join(output,'elmar-print.png'),fullPage:true});
+    assert.deepEqual(errors,[]);
+    console.log('OK: file://, состав 17+13, оба каталога и 30 досье на 320px, портреты, поиск/фильтр, переходы, мобильное меню, печать; 17 личных вводных и две памятки; ошибок JS нет. Скриншоты: '+output);
+  } finally { await browser.close(); }
+})().catch(e=>{console.error(e);process.exitCode=1;});

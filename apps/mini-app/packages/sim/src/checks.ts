@@ -222,7 +222,8 @@ export function abilityWorked(state: GameState, role: string, kind: AbilityKind)
 export function coverageOf(log: CommandLog[], players: 12 | 30, state: GameState, itemKinds: Record<string, string>) {
   const done = new Set(log.filter(e => e.outcome.ok && e.expectedRefusal === undefined).map(e => e.cmd.type as string));
   const excluded = excludedCommands(players);
-  const missingCommands = Object.keys(COMMAND_TYPES).filter(t => !excluded.has(t) && !done.has(t)).sort();
+  // Этот симулятор проверяет legacy 12/30; hidden17 покрыт отдельными engine и browser сценариями.
+  const missingCommands = Object.keys(COMMAND_TYPES).filter(t => !t.startsWith('hidden17.') && !excluded.has(t) && !done.has(t)).sort();
 
   const notes: string[] = [];
   const present = state.roster.filter(k => state.players[k]?.present);

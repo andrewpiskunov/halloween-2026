@@ -1,0 +1,147 @@
+{
+  "style": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. ",
+  "mode": "Встроенный image_gen; отдельная генерация каждой главы",
+  "chapters": [
+    {
+      "id": "foundation",
+      "caption": "Строители возводят заставу, отделяющую дорогу к межмировому броду от жилой долины.",
+      "alt": "Строители возводят заставу, отделяющую дорогу к межмировому броду от жилой долины.",
+      "file": "foundation.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Founding of the outpost centuries before the murder: stonemasons build gatehouses, timber scaffolds and healers welcome refugee families in the caravan court. Distant interworld seam and mountain valley. No dragon yet.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "dragon",
+      "caption": "Сарн связывает защиту заставы со своим живым сердцем и остаётся хранить брод.",
+      "alt": "Сарн связывает защиту заставы со своим живым сердцем и остаётся хранить брод.",
+      "file": "dragon.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Sarn voluntarily makes a pact with the villagers. Huge ash-grey dragon crouches gently in the outpost's inner courtyard, his chest casting warm light into thin protective channels in the stone floor; human guard captain and healer approach his lowered head with open palms. Small houses and vulnerable families behind them. Show trust and mutual dependence, no chains, no fighting. Low viewpoint, dragon dominates left, humans right.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "hunger",
+      "caption": "В обозе с настоящим продовольствием скрыты оружие и детали для захвата заставы.",
+      "alt": "В обозе с настоящим продовольствием скрыты оружие и детали для захвата заставы.",
+      "file": "hunger.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. A stopped relief caravan at the outpost a month before the murder. A worried guard opens a wooden wagon crate: grain sacks and bread in upper layer, concealed grounding harpoons and chain mechanisms underneath visible to viewer. Hungry families wait at a distance, merchant covers the dangerous compartment with canvas, tension and moral ambiguity. No dragon in foreground. Make the hidden weapons versus genuinely needed food visually unmistakable.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "plot",
+      "caption": "Орвик готовит убийство; Эльмар соглашается открыть ворота, ещё не зная всего замысла.",
+      "alt": "Орвик готовит убийство; Эльмар соглашается открыть ворота, ещё не зная всего замысла.",
+      "file": "plot.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Three conspirators in candlelit storeroom around a table. Orvik an elderly thin scholar with angular beard and dark robes points a copper staff at a drawing of the courtyard; unnamed trader, stocky middle aged man in fur collar, places a chain and purse on table; Elmar solemn knight in worn plate armor with short dark hair holds a gate key and hesitates. Composition clearly three people with different motivations, map unlettered. A sheathed surgical ritual blade hidden partly beneath the mage's sleeve, shadow of gate bars across floor. No dragon here.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "murder",
+      "caption": "Собственный защитный круг Сарна превращён в ловушку: жезл, цепи и открытые ворота действуют вместе.",
+      "alt": "Собственный защитный круг Сарна превращён в ловушку: жезл, цепи и открытые ворота действуют вместе.",
+      "file": "murder.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. The fatal ambush, depicted non-graphically just before the lethal strike. Ash-grey dragon Sarn pinned in the inner courtyard by heavy winch chains around wing bases; protective floor channels twisted into glowing restraints. Foreground left knight Elmar beside open gate mechanism, foreground right stocky merchant strains at a mechanical winch, elderly robed Orvik inserts copper staff into stone socket and holds lowered small ritual blade in free hand. Broken timber gallery and frightened fleeing silhouettes. Dragon alive, furious and tragic, no wounds, no exposed flesh, no gore. Clearly machinery and betrayal defeat dragon, not a heroic sword duel.",
+      "editPrompt": "Change this scene from day to deep NIGHT, because the ambush happened at night. Dark teal sky and moonlight, luminous amber floor protection circuit and torches are the main lights. Preserve clear visibility of the dragon, all three conspirators, chains, winch, gate mechanism and mage staff. Preserve the original engraved illustration style, composition and faces. No other changes.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "morning",
+      "caption": "Сердце увозят на ближний склад; за спиной перевозчиков остаётся разрушенная застава.",
+      "alt": "Сердце увозят на ближний склад; за спиной перевозчиков остаётся разрушенная застава.",
+      "file": "morning.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Cold dawn after disaster. Heavy horse cart leaves a ruined stone outpost for a warehouse visible on the SAME side of the distant sealed interworld seam. A covered chest emits copper heart light through slats. Father drives, young adult son holds lantern beside him, stocky trader accompanies the cart. In background small silhouettes bury a large dragon-shaped shrouded body under stones, smoke and evacuated families, sober aftermath, no gore. The passage beyond mountains is closed, cart travels sideways toward nearby warehouse not into portal.",
+      "editPrompt": "Correct the background only: remove the entire dead dragon body, shroud, and crowd burying it in the upper left. Replace that area with EMPTY rubble and broken stone walls and smoke. The burial is secret and must NOT be shown publicly. Also remove the bright magical lightning opening in the distant valley; show a quiet misty mountain pass because the interworld opening has closed. Preserve foreground cart and glowing covered cargo, driver, son with lantern, accompanying merchant, warehouse, morning light and engraving style unchanged.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "division",
+      "caption": "Орвик разделяет сердце на пять частей, но не получает послушного источника силы.",
+      "alt": "Орвик разделяет сердце на пять частей, но не получает послушного источника силы.",
+      "file": "division.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. In an isolated mage tower laboratory, elderly Orvik with angular beard leans over exactly FIVE large glowing mineral-like amber heart fragments separated on a circular stone workbench. Non-anatomical magical crystal heart, no tissue or blood. Thin light filaments still connect the five pieces, suggesting one resisting consciousness; copper staff leans beside open handwritten sketchbooks with no readable text. Mage frustration not triumph, candlelight, dark teal shadows, five pieces countable.",
+      "editPrompt": "Remove the entire dragon from outside the window. Replace it with distant empty forested mountains and cloudy sky. There is NO dragon alive in this historical scene. Preserve the mage, exactly five glowing shards, staff, laboratory, woodcut style, composition and all other details unchanged.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "shards",
+      "caption": "Пять осколков расходятся по разным рукам; пятый скрыт в двойном дне футляра флейты.",
+      "alt": "Пять осколков расходятся по разным рукам; пятый скрыт в двойном дне футляра флейты.",
+      "file": "shards.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Narrative still life viewed from above: exactly five distinct glowing amber crystal heart fragments, each in its own setting on one antique table. One in merchant velvet pouch, one beside mage notebook, one held in armored gauntlet, one in auction crate with rolled contract, one in open secret double bottom of a long bone flute case with flute above. Spatially clear separate five regions, subtle engraved winding trails connect them. Not a diagram, no letters or numerals, beautiful cinematic antique objects, no additional crystals.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "century",
+      "caption": "Через сто лет ярмарка возвращается во внешний двор; внутреннюю заставу так и не восстановили.",
+      "alt": "Через сто лет ярмарка возвращается во внешний двор; внутреннюю заставу так и не восстановили.",
+      "file": "century.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. A century later the same stone outpost: outer courtyard full of small fair tents and lanterns at twilight, inner defensive courtyard remains visibly roofless and overgrown beyond an arch. An unaged solitary knight Elmar in worn armor stands foreground looking at broken masonry, travelers pass him; distant interworld seam begins to glow again. Contrast bustling temporary market with abandoned inner ruins, no restored fortress, no live dragon.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "evidence-route",
+      "caption": "Договор, обожжённая перчатка и клятва хранят разные части одной истории.",
+      "alt": "Договор, обожжённая перчатка и клятва хранят разные части одной истории.",
+      "file": "evidence-route.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Close cinematic still life of exactly THREE principal pieces of evidence brought together on worn wooden table: a torn merchant contract with abstract unreadable handwriting and two signature flourishes, an ash-stained leather glove with singed fingertips, an old folded oath parchment with wax seal and mechanical grease marks. Different hands approach: healer sleeve, investigator glove, engineer oil-stained fingers. Warm raking light reveals texture and shared ash, soft ruined gate background. No readable writing, no magic glowing detective strings.",
+      "editPrompt": "Remove the entire dragon from the upper left background. Replace it with roofless ruined masonry and empty mountain sky. The dragon is dead in this scene. Preserve the three documents/glove evidence arrangement and all hands in foreground, preserve engraving style. There must be no dragon anywhere.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "inheritance",
+      "caption": "Наследники получают корону, записи и флейту — вместе с чужими тайнами.",
+      "alt": "Наследники получают корону, записи и флейту — вместе с чужими тайнами.",
+      "file": "inheritance.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Three adjacent natural stalls in one coherent antique market scene showing inheritance of objects: a young merchant examines an ash crown beside old account book; a young woman mage studies inherited notebook beside an empty copper staff stand; a traveling woman musician opens bone flute case. Objects dominate, people softly rendered behind, no identifiable modern features, no literal ghosts, no text. Lost owners suggested by empty chairs and faded silhouettes in shadow, not actual resurrected beings.",
+      "editPrompt": "Remove the entire dragon behind the castle battlements in the upper left. Replace it with empty mountain sky and distant clouds. The dragon is dead in this scene. Preserve all three heirs, objects, market, style and composition otherwise unchanged.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "living",
+      "caption": "Участники пробуждения видят в возвращении Сарна разные надежды на новую жизнь.",
+      "alt": "Участники пробуждения видят в возвращении Сарна разные надежды на новую жизнь.",
+      "file": "living.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. Sarn is a majestic enormous ash-grey horned dragon with broad bat wings, amber eyes and copper chest glow, intelligent protective presence. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. A diverse gathering of hopeful fair travelers in ruined garden: weary druid holds a single seed over his palms before burned saplings; a FEMALE wolf-like humanoid in a travel cloak looks into a small polished transformation stone with hope; a tiny translucent ghost LIZARD waits on a low wall; an old stable keeper holds an empty bridle. Warm dawn glow from distant dragon-heart shrine, NO fully resurrected dragon and no confirmed transformations. Tender restrained expressive scene, seed and paws central.",
+      "editPrompt": "Remove the entire enormous dragon from the upper left background, replacing it with ruined ivy-covered garden arches and distant cloudy mountains. The dragon is dead; this is a scene of hopes before resurrection, NOT a successful resurrection. Preserve foreground druid, seed, female wolf humanoid, small ghost lizard and stable keeper. Preserve engraving colors and style.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "power",
+      "caption": "Одни хотят управлять сердцем, другие — закончить его существование и старую вину.",
+      "alt": "Одни хотят управлять сердцем, другие — закончить его существование и старую вину.",
+      "file": "power.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. A tense face-to-face debate across a stone table at the fair. Left a woman mage with notebooks and a merchant with potion bottles reach toward one glowing amber heart fragment inside a loose symbolic ring of chains. Right a weary armored knight and strong woman blacksmith with plain iron hammer hesitate, while a healer stands between them. No blow delivered, no enacted ritual, no magical hammer. Composition shows binding versus destruction as conflicting intentions, thoughtful moral confrontation not battle. Sarn is dead during this scene: absolutely no living dragon anywhere. Any dragon shape mentioned must be faint transparent mist only.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "market",
+      "caption": "Торговля реликвиями меняет союзы: каждый обмен может приблизить другой исход.",
+      "alt": "Торговля реликвиями меняет союзы: каждый обмен может приблизить другой исход.",
+      "file": "market.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. Busy night fair in ruined outpost, foreground hands exchange an ornate ash crown and coins over merchant counter; nearby woman musician guards a bone flute case while a clever craftsperson negotiates with travelers; background wealthy woman trade-house leader supervises a closed transport crate and cart near gates. Multiple separate negotiations readable in layered scene, lanterns and winter cloaks, colorful limited copper/teal print palette. No dragon present, no finalized ritual. Sarn is dead during this scene: absolutely no living dragon anywhere. Any dragon shape mentioned must be faint transparent mist only.",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "id": "decision",
+      "caption": "Перед закрытием последнее решение ещё за игроками: кому доверить сердце и что сделать с правдой.",
+      "alt": "Перед закрытием последнее решение ещё за игроками: кому доверить сердце и что сделать с правдой.",
+      "file": "decision.webp",
+      "prompt": "Use case: illustration-story. Create ONE landscape 3:2 chapter illustration for a Russian dark fantasy game master's book. Consistent art direction: exquisite copperplate engraving and woodcut hatching, warm ivory parchment, charcoal ink, aged copper ochre and muted teal washes, tactile antique storybook print, dramatic clear staging, expressive silhouettes. Medieval border outpost has stone gatehouses, inner courtyard and a road leading to a distant luminous seam between worlds in a mountain valley; gates themselves are not magical portals. No text, no lettering, no labels, no watermark, no border, no modern objects. Never graphic gore. The moment BEFORE the final choice in the ruined outpost. Several distinct hands with healer, knight, merchant and mage sleeves hover over a neutral stone table carrying exactly five separated amber heart shards, two small crafted focusing objects and a few coins, none assigned to a ritual altar. Empty branching paths beyond table suggest open possibilities, distant enormous dragon silhouette formed only by mist, NOT resurrected dragon. Dawn approaching, suspended decision, no victorious faction, no predetermined outcome. Sarn is dead during this scene: absolutely no living dragon anywhere. Any dragon shape mentioned must be faint transparent mist only.",
+      "width": 1536,
+      "height": 1024
+    }
+  ]
+}

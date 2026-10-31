@@ -5,7 +5,7 @@ import {
 } from '@fair/shared';
 import type { EventStore } from './store';
 
-export interface GameOpts { now: () => number; newId: () => string; random: () => number }
+export interface GameOpts { now: () => number; newId: () => string; random: () => number; hidden17?: boolean }
 export type SubmitResult = { ok: true; seq: number } | { ok: false; error: ErrorCode; detail?: string };
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -56,6 +56,12 @@ export class Game {
     if (events.length === 0) {
       const codes = generateCodes(content);
       events = store.append([{ type: 'SessionCreated', at: opts.now(), codes }]);
+      if (opts.hidden17 && content.hidden17) {
+        const base = events.reduce((s, e) => reduce(s, content, e), initialState(content, {}));
+        const enabled = execute(base, content, { type: 'hidden17.enable' }, { now: opts.now(), newId: opts.newId, random: opts.random, actor: { type: 'gm' } });
+        if (!enabled.ok) throw new Error(`Не удалось включить сценарий: ${enabled.detail ?? enabled.error}`);
+        events = [...events, ...store.append(enabled.events)];
+      }
       store.saveMeta('gmCode', codes.gm);
     }
     // Основа без кодов: SessionCreated из журнала сам выставит приглашения и код ведущего.
@@ -92,6 +98,16 @@ export class Game {
       now: this.opts.now(), actor, newId: this.opts.newId, random: this.opts.random,
     });
     if (!r.ok) return r.detail === undefined ? { ok: false, error: r.error } : { ok: false, error: r.error, detail: r.detail };
+
+    // Сброс начинает новую партию по настройке сервера, даже если старая была legacy.
+    // Явное событие сохраняет прежнюю историю и атомарность сброса при повторе команды.
+    if (cmd.type === 'session.reset' && this.opts.hidden17 && this.content.hidden17 && !r.state.hidden17) {
+      const enabled = execute(r.state, this.content, { type: 'hidden17.enable' }, {
+        now: this.opts.now(), actor, newId: this.opts.newId, random: this.opts.random,
+      });
+      if (!enabled.ok) return { ok: false, error: enabled.error, detail: enabled.detail };
+      r.events.push(...enabled.events);
+    }
 
     // События и результат пишутся одной транзакцией: после сбоя повтор cmdId не применит команду дважды.
     const okResult = (stored: Event[]): SubmitResult => ({ ok: true, seq: stored.length ? stored[stored.length - 1].seq! : before.seq });
@@ -135,6 +151,12 @@ export class Game {
       if (r.status === 'pending' && r.expiresAt <= now) {
         this.submit('expire:consent:' + r.id, { type: 'consent.expire', id: r.id }, { type: 'system' })
           .catch(err => console.error('Ошибка истечения запроса согласия', err));
+      }
+    }
+    for (const post of Object.values(this.current.hidden17?.board ?? {})) {
+      if (['open', 'accepted'].includes(post.status) && post.expiresAt <= now) {
+        this.submit('expire:board:' + post.id, { type: 'hidden17.board.expire', id: post.id }, { type: 'system' })
+          .catch(err => console.error('Ошибка срока объявления', err));
       }
     }
     for (const l of Object.values(this.current.lots)) {

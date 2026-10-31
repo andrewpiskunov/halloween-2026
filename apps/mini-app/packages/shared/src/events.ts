@@ -155,7 +155,7 @@ export interface FairClosed extends EventBase {
 export interface Revealed extends EventBase { type: 'Revealed' }
 
 // События следующих задач добавляются в объединение по мере реализации.
-export type Event = SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | PlayerArrived | PlayerLeft | FairOpened
+export type Event = import('./hidden17').HiddenEvent | import('./story').StoryEvent | SessionCreated | SessionReset | RosterSet | RoleToggled | PlayerBound | PresenceSet | PlayerArrived | PlayerLeft | FairOpened
   | ActStarted | ClockPaused | ClockResumed | ClockExtended | Announced | Corrected | InviteRebound | GmReissued
   | OfferCreated | OfferAccepted | OfferClosed | IngredientBought | ItemCrafted | Contributed | ContributionWithdrawn
   | LotBiddingOpened | LotSealedOpened | LotBid | LotClosed | LotBought

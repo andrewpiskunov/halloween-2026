@@ -6,6 +6,7 @@ export const sideCommands: CommandHandlers = {
   'player.chooseSide': (state, content, cmd, ctx) => {
     const key = participant(state, ctx.actor);
     if (!key) return fail('forbidden');
+    if (state.story?.sides[key] !== undefined) return fail('forbidden', 'сторона определена ведущим');
     if (content.roleByKey[key]?.side !== 'free') return fail('forbidden', 'сторону выбирают только свободные');
     if (state.phase !== 'act1' && state.phase !== 'act2') return fail('phase');
     if (state.players[key].side !== undefined) return fail('invalid', 'сторона уже выбрана');

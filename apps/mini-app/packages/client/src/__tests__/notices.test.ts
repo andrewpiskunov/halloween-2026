@@ -64,3 +64,14 @@ test('закрытое предложение выпало из списка (л
   // Список снова без f1 и с f2: тоже тихо.
   expect(collectNotices(r1.seen, pv([], [], { offers: [offer('f2', 'pending')] } as unknown as Partial<PlayerView>)).texts).toEqual([]);
 });
+
+
+test('новое послание ведущего показывается один раз, переподключение не повторяет', () => {
+  const before = pv([], []);
+  const after = pv([], [], { story: { cards: [], requests: [], messages: [{ id: 'm1', title: 'Тень ожила', text: 'Вы слышите её', recipients: ['o2'], at: 1, active: true }] } });
+  const initial = collectNotices(null, before).seen;
+  const result = collectNotices(initial, after);
+  expect(result.texts).toEqual(['Послание ведущего: Тень ожила']);
+  expect(collectNotices(result.seen, after).texts).toEqual([]);
+  expect(collectNotices(null, after).texts).toEqual([]);
+});

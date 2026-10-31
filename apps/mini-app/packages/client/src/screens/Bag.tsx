@@ -1,3 +1,5 @@
+import { SignatureGoods } from './SignatureGoods';
+import { StoryCards } from './Story';
 import { useState } from 'preact/hooks';
 import type { Item, PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
@@ -43,6 +45,7 @@ export function Bag({ v }: { v: PlayerView }) {
 
   return (
     <>
+      <StoryCards v={v} items />
       <h2 class="scr-h">Сумка <small>{items.length ? `${items.length} ${plural(items.length, 'вещь', 'вещи', 'вещей')}` : 'пусто'}</small></h2>
       <FrozenNote v={v} />
       {/* На паузе кнопки «Предложить» нет: подпись одна на всю сумку, как в сделках. */}
@@ -60,7 +63,7 @@ export function Bag({ v }: { v: PlayerView }) {
           </div>
         ))}
       </div>
-      <p class="m-note" style={{ margin: '-4px 6px 0' }}>Обещанное золото лежит в сделках и ставках до ответа.</p>
+      <p class="m-note" style={{ margin: '-4px 6px 0' }}>Обещанные ресурсы зарезервированы до завершения сделки, заказа или игры.</p>
 
       {items.length === 0 && <p class="m-note" style={{ margin: '0 6px' }}>Вещей пока нет.</p>}
       {items.map(item => {
@@ -71,7 +74,7 @@ export function Bag({ v }: { v: PlayerView }) {
           kindLabel(item.kind),
           item.createdBy ? `сделал ${roleName(item.createdBy, v)}` : '',
           reserved || (item.reservedFor ? 'обещано в сделке' : ''),
-          item.kind === 'focus' ? 'кладётся на алтарь' : '',
+          item.kind === 'focus' ? (v.hidden17 ? 'для изготовления и ритуала' : 'кладётся на алтарь') : '',
         ].filter(Boolean).join(', ');
         const hasUse = item.kind === 'potion' || item.kind === 'ward' || item.kind === 'shape';
         return (
@@ -79,8 +82,8 @@ export function Bag({ v }: { v: PlayerView }) {
             <ItemCard emoji={label.emoji} img={itemImageUrl(item)} title={label.name} text={clueText(item, v)} sub={sub} />
             <div class="m-btns">
               {!tradesPaused(v) && <Button small kind="sec" disabled={!canOffer(item, v)} onClick={() => offer(item)}>Предложить</Button>}
-              <Button small kind="sec" disabled={!canPutOnAltar(item, v) || v.altars.length === 0}
-                onClick={() => toggle('altar', item.id)}>На алтарь</Button>
+              {!v.hidden17 && <Button small kind="sec" disabled={!canPutOnAltar(item, v) || v.altars.length === 0}
+                onClick={() => toggle('altar', item.id)}>На алтарь</Button>}
               {hasUse && <Button small kind="sec" disabled={!usable.ok} onClick={() => use(item)}>Использовать</Button>}
             </div>
             {hasUse && !usable.ok && !reserved && <p class="m-note">{usable.why}</p>}
@@ -97,6 +100,7 @@ export function Bag({ v }: { v: PlayerView }) {
         );
       })}
 
+      {v.hidden17 && <SignatureGoods v={v} />}
       {marks.length > 0 && (
         <div class="m-card">
           <h5>На вас действует</h5>

@@ -1,3 +1,4 @@
+import { StoryCards, StoryInvite } from './Story';
 import { useState } from 'preact/hooks';
 import type { ActionRecord, AltarSide, Intel, PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
@@ -28,7 +29,11 @@ export function Role({ v }: { v: PlayerView }) {
           <i aria-hidden="true" /><span>{side.name}. {side.motto}</span>
         </div>
       )}
-      <SideChoice v={v} />
+      {!v.hidden17 && <SideChoice v={v} />}
+      {v.hidden17 && <div class="m-card hidden-intro"><h5>Только ваша история</h5><p class="text">{v.hidden17.briefing.publicFace}</p><p class="m-note">Ваши цели и знания видите только вы. Раскрывайте их в разговорах по своему выбору.</p></div>}
+      {v.hidden17 && <details class="m-card"><summary>Общие правила ярмарки</summary><ul class="list">{v.hidden17.publicRules.map(t => <li key={t}>{t}</li>)}</ul></details>}
+      <StoryInvite />
+      <StoryCards v={v} />
       {r.intro && <p class="lead">{r.intro}</p>}
 
       <div class="m-card">
@@ -59,6 +64,11 @@ export function Role({ v }: { v: PlayerView }) {
         <p class="text">{r.motivation}</p>
       </div>
 
+      {v.hidden17 && <>
+        <div class="m-card"><h5>Что вы знаете</h5><ul class="list">{v.hidden17.briefing.knowledge.map(t => <li key={t}>{t}</li>)}</ul></div>
+        <div class="m-card"><h5>С чего начать</h5><ol class="list">{v.hidden17.briefing.firstSteps.map(t => <li key={t}>{t}</li>)}</ol></div>
+        <details class="m-card"><summary>Ваш выбор в финале</summary><p class="text">{v.hidden17.briefing.finale.prepare}</p><p class="text">{v.hidden17.briefing.finale.action}</p><p class="text"><b>{v.hidden17.briefing.finale.choice}</b></p><p class="m-note">{v.hidden17.briefing.finale.impact}</p></details>
+      </>}
       {gameFrozen(v) ? <ClosedCard v={v} /> : <AbilityCard v={v} />}
       <IntelCard v={v} />
       <UsesCard v={v} />
@@ -155,7 +165,7 @@ function stateLine(v: PlayerView): string {
       const who = waitingFor(req).map(k => roleName(k, v)).join(', ');
       return `Ждёт ответа: ${who}, ${mmss(remainingMs(req.expiresAt, v.clock, now.value))}`;
     }
-    default: return v.phase === 'setup' ? 'Откроется с началом акта' : 'Ярмарка закрыта';
+    default: return v.phase === 'setup' ? 'Откроется с началом акта' : ['act1', 'act2', 'act3'].includes(v.phase) ? 'Заменена сюжетной способностью ведущего' : 'Ярмарка закрыта';
   }
 }
 
@@ -178,6 +188,7 @@ function AbilityCard({ v }: { v: PlayerView }) {
       </h4>
       <p class="text">{ab.text}</p>
       <p class={`ab-state ${ab.state}`}>{stateLine(v)}</p>
+      {v.hidden17?.board.filter(p => p.author === v.me.role.key && p.serviceAbility && ['open', 'accepted'].includes(p.status)).map(p => <p class="m-note" key={p.id}>Применение обещано по заказу «{p.title}». {p.worker ? `Получатель: ${roleName(p.worker, v)}. Примените способность к нему с согласия.` : 'Сначала дождитесь исполнителя.'}</p>)}
       {ab.state === 'pending' && <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить просьбу</Button></div>}
       {ab.state !== 'pending' && (ab.place === 'workshop'
         ? <div class="m-btns"><Button disabled={ab.state !== 'available'} onClick={toWorkshop}>В мастерскую</Button></div>
@@ -209,17 +220,17 @@ function IntelCard({ v }: { v: PlayerView }) {
 function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel }) {
   const head = `Акт ${roman(act)}. `;
   switch (intel.kind) {
-    case 'gold': return <div class="m-row"><span>{head}Золото {roleName(intel.target, v)}</span><b>{goldText(intel.gold)}</b></div>;
+    case 'gold': return <div class="m-row intel-result"><span>{head}Золото {roleName(intel.target, v)}</span><b>{goldText(intel.gold)}</b></div>;
     case 'side': {
       const f = v.public.factions.find(x => x.id === intel.side);
-      return <div class="m-row"><span>{head}Сторона {roleName(intel.target, v)}</span><b>{f?.name ?? 'свободный, без стороны'}</b></div>;
+      return <div class="m-row intel-result"><span>{head}Сторона {roleName(intel.target, v)}</span><b>{f?.name ?? 'свободный, без стороны'}</b></div>;
     }
     case 'sniff': return (
-      <div class="m-row"><span>{head}{ingredientName(intel.ingredient)} есть у</span>
+      <div class="m-row intel-result"><span>{head}{ingredientName(intel.ingredient)} есть у</span>
         <b>{intel.holders.length ? intel.holders.map(k => roleName(k, v)).join(', ') : 'ни у кого'}</b></div>
     );
     case 'question': return (
-      <div class="m-row"><span>{head}Вопрос {roleName(intel.target, v)}{intel.question ? `: «${intel.question}»` : ''}</span><b>голосом</b></div>
+      <div class="m-row intel-result"><span>{head}Вопрос {roleName(intel.target, v)}{intel.question ? `: «${intel.question}»` : ''}</span><b>голосом</b></div>
     );
     case 'inventory': return (
       <div class="intel-bag">

@@ -1,3 +1,5 @@
+import { hiddenServiceGuard } from './hidden17';
+import { storyReplacesAbility } from '../story';
 import { ABILITY_BY_ROLE, COPY_SOURCES, type AbilityKind, type CopyableKind } from '../abilities';
 import type { AbilityUse, Ctx } from '../commands';
 import type { Content } from '../content';
@@ -63,6 +65,7 @@ export function checkCommon(state: GameState, ctx: Ctx, use: AbilityUse): { auth
   if (use.kind === 'copyAbility' && !(typeof use.copy === 'object' && use.copy !== null && Object.hasOwn(COPY_SOURCES, use.copy.kind))) {
     return fail('forbidden', 'этот вид нельзя скопировать');
   }
+  if (storyReplacesAbility(state.story, author, state.phase)) return fail('forbidden', 'основная способность заменена сюжетной карточкой');
   const p = state.players[author];
   if (p.abilityUsedInAct) return fail('limit', 'способность в этом акте уже применена');
   if (p.abilityPending !== undefined) return fail('limit', 'способность ждёт ответа');
@@ -101,7 +104,7 @@ function craftWith(
   const { recipe, kind: itemKind } = found;
   const q = craftQuote(state, author, recipe, mod);
   if ('error' in q) return fail(q.error, q.detail);
-  const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, createdBy: author };
+  const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, ...(!state.hidden17 || content.hidden17?.crafting.makers[author]?.includes(recipeId) ? { createdBy: author } : {}) };
   return ok(
     used(author, kind, [], ctx, requestId, item),
     { type: 'ItemCrafted', at: ctx.now, player: author, item, ...q, viaAbility: kind },
@@ -179,6 +182,7 @@ function observe(
 export function performAbility(
   state: GameState, content: Content, author: string, use: AbilityUse, ctx: Ctx, requestId?: string,
 ): Result {
+  const reservedService = hiddenServiceGuard(state, author, use); if (reservedService) return reservedService;
   const a = available(state, author);
   const done = (effects: Effect[], ...rest: Event[]) => ok(used(author, use.kind, effects, ctx, requestId), ...rest);
   /** То же с вещью в записи журнала (спек этапа 7, §5.2). */

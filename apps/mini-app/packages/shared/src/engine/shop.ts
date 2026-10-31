@@ -46,8 +46,8 @@ export function craftQuote(state: GameState, key: string, recipe: Recipe, mod: C
   if (lacking) return { error: 'insufficient', detail: `не хватает ингредиента: ${lacking}` };
   const p = state.players[key];
   const base = recipe.gold + (mod.ashByGold ? 1 : 0) - (mod.freeWork ? 1 : 0);
-  const beforeDiscount = base + (p.thorns ? 1 : 0);
-  const paidGold = Math.max(0, beforeDiscount - (p.discount ? 1 : 0));
+  const beforeDiscount = state.hidden17 ? Math.max(0, base) : base + (p.thorns ? 1 : 0);
+  const paidGold = Math.max(0, beforeDiscount - (p.discount ? 1 : 0)) + (state.hidden17 && p.thorns ? 1 : 0);
   if (a.gold < paidGold) return { error: 'insufficient', detail: 'не хватает золота' };
   return { paidGold, paidIngredients: cost, clearedThorns: p.thorns, clearedDiscount: p.discount && beforeDiscount > 0 };
 }
@@ -75,7 +75,7 @@ export const shopCommands: CommandHandlers = {
     const { recipe, kind } = found;
     const q = craftQuote(state, key, recipe);
     if ('error' in q) return fail(q.error, q.detail);
-    const item: Item = { id: ctx.newId(), kind, ref: cmd.recipeId, owner: { type: 'player', key }, createdBy: key };
+    const item: Item = { id: ctx.newId(), kind, ref: cmd.recipeId, owner: { type: 'player', key }, ...(state.hidden17 ? {} : { createdBy: key }) };
     return ok({ type: 'ItemCrafted', at: ctx.now, player: key, item, ...q });
   },
 };
@@ -106,7 +106,7 @@ export const shopReducers: EventReducers = {
     };
     return {
       ...state, items: { ...state.items, [e.item.id]: e.item }, players: { ...state.players, [e.player]: player },
-      crafts: [...state.crafts, { at: e.at, player: e.player, kind: e.item.kind, itemId: e.item.id }],
+      crafts: state.hidden17 && !e.item.createdBy ? state.crafts : [...state.crafts, { at: e.at, player: e.item.createdBy ?? e.player, kind: e.item.kind, itemId: e.item.id }],
     };
   },
 };

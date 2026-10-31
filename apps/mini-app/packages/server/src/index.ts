@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { loadContent } from '@fair/shared';
 import { loadConfig } from './config';
+import { attachHiddenScenario } from './scenario';
 import { EventStore } from './store';
 import { Game } from './game';
 import { buildApp } from './http';
@@ -14,10 +15,10 @@ const config = loadConfig();
 if (config.dbPath !== ':memory:') mkdirSync(dirname(config.dbPath), { recursive: true });
 // Поправки содержимого на вечер (имена и тексты ролей): файл по CONTENT_PATCH_PATH, см. README.
 const patch = config.contentPatchPath ? JSON.parse(readFileSync(config.contentPatchPath, 'utf8')) : undefined;
-const content = loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')), patch);
+const content = attachHiddenScenario(loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')), patch), process.env.HIDDEN_SCENARIO_PATH || undefined);
 if (patch) console.log(`Поправки содержимого: ${config.contentPatchPath}`);
 const store = new EventStore(config.dbPath);
-const game = Game.open(store, content, { now: Date.now, newId: () => randomUUID(), random: Math.random });
+const game = Game.open(store, content, { now: Date.now, newId: () => randomUUID(), random: Math.random, hidden17: process.env.FAIR_RULESET !== 'legacy' });
 const ticker = setInterval(() => game.tick(), 1000);
 
 // Автозапись выгрузки рядом с базой; при базе в памяти не пишется.

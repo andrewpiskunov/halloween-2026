@@ -2,7 +2,7 @@ import type { PlayerView } from '@fair/shared';
 import { actionText, nameCase, offerClosedText, plainName, requestOutcomeText } from './labels';
 
 /** Что клиент уже видел: id записей журнала, статусы просьб и сделок, число объявлений. Живёт в памяти, не в хранилище. */
-export interface Seen { actions: Set<string>; requests: Map<string, string>; offers: Map<string, string>; announcements: number }
+export interface Seen { actions: Set<string>; requests: Map<string, string>; offers: Map<string, string>; announcements: number; story?: Map<string, string> }
 
 /**
  * Уведомления по новой проекции (§7.5). Первая проекция (seen = null) только запоминается:
@@ -15,9 +15,17 @@ export function collectNotices(seen: Seen | null, v: PlayerView): { texts: strin
     requests: new Map(v.requests.map(r => [r.id, r.status])),
     offers: new Map(v.offers.map(o => [o.id, o.status])),
     announcements: v.announcements.length,
+    story: new Map([
+      ...(v.story?.messages ?? []).map(m => [`m:${m.id}`, '1'] as [string, string]),
+      ...(v.story?.cards ?? []).map(c => [`c:${c.id}`, String(c.revision)] as [string, string]),
+      ...(v.story?.requests ?? []).map(q => [`q:${q.id}`, String(q.revision)] as [string, string]),
+    ]),
   };
   if (!seen) return { texts: [], seen: next };
   const texts: string[] = [];
+  for (const m of v.story?.messages ?? []) if (!seen.story?.has(`m:${m.id}`)) texts.push(`Послание ведущего: ${m.title}`);
+  for (const c of v.story?.cards ?? []) if (seen.story?.get(`c:${c.id}`) !== String(c.revision)) texts.push(`Сюжетная карточка: ${c.title}`);
+  for (const q of v.story?.requests ?? []) if (q.reply && seen.story?.get(`q:${q.id}`) !== String(q.revision)) texts.push(`Ответ ведущего: ${q.title}`);
   for (const a of v.actions) {
     if (seen.actions.has(a.id)) continue;
     // Своё: только отражённая попытка, остальное автор видит сам.

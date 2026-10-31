@@ -1,3 +1,5 @@
+import { hiddenDecide, hiddenGuard, enableHidden, hiddenGoals, hiddenAfterEvent } from './hidden17';
+import { storyCommands, storyReducers } from './story';
 import type { Content } from '../content';
 import type { Command, Ctx } from '../commands';
 import type { Event } from '../events';
@@ -25,8 +27,8 @@ export { freeze } from './close';
 export { CLOSED_OFFERS_KEPT, compactOffers, newestFirst } from './offers';
 
 // Новые группы команд подключаются добавлением в эти списки.
-const commandHandlers: CommandHandlers = { ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands, ...closeCommands };
-const eventReducers: EventReducers = { ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers, ...sideReducers, ...closeReducers };
+const commandHandlers: CommandHandlers = { ...storyCommands, ...sessionCommands, ...actCommands, ...offerCommands, ...shopCommands, ...altarCommands, ...lotCommands, ...abilityCommands, ...itemCommands, ...consentCommands, ...sideCommands, ...closeCommands };
+const eventReducers: EventReducers = { ...storyReducers, ...sessionReducers, ...actReducers, ...offerReducers, ...shopReducers, ...altarReducers, ...lotReducers, ...abilityReducers, ...itemReducers, ...consentReducers, ...sideReducers, ...closeReducers };
 
 type AnyHandler = (state: GameState, content: Content, cmd: Command, ctx: Ctx) => Result;
 type AnyReducer = (state: GameState, content: Content, event: Event) => GameState;
@@ -38,18 +40,26 @@ export function initialState(content: Content, codes: Record<string, string>): G
 
 /** Проверяет команду и возвращает события; состояние не меняет. */
 export function decide(state: GameState, content: Content, cmd: Command, ctx: Ctx): Result {
+  const guarded = hiddenGuard(state, cmd); if (guarded) return guarded;
+  const hidden = hiddenDecide(state, content, cmd, ctx); if (hidden) return hidden;
   const handler = lookup(commandHandlers, cmd.type) as AnyHandler | undefined;
   if (!handler) return fail('invalid', `команда не поддерживается: ${cmd.type}`);
   const left = leftPlayer(state, ctx.actor);
   if (left) return left;
-  return handler(state, content, cmd, ctx);
+  const result = handler(state, content, cmd, ctx);
+  if (!result.ok || !state.hidden17) return result;
+  if (cmd.type === 'session.reset') return { ok: true, events: [...result.events, enableHidden({ ...state, players: {}, bindings: {} }, content, ctx.now)] };
+  return result;
 }
 
 /** Применяет одно событие и возвращает новое состояние; seq берётся из события или растёт на 1. */
 export function reduce(state: GameState, content: Content, event: Event): GameState {
+  if (event.type === 'Hidden17Enabled' || event.type === 'Hidden17Changed') return hiddenAfterEvent(state, { ...state, ...event.patch, seq: event.seq ?? state.seq + 1 });
   const reducer = eventReducers[event.type] as AnyReducer | undefined;
   if (!reducer) throw new Error(`Нет редьюсера для события ${event.type}`);
-  return { ...reducer(state, content, event), seq: event.seq ?? state.seq + 1 };
+  let next = reducer(state, content, event);
+  if (next.hidden17?.ritual.outcome && event.type === 'Corrected') { next = structuredClone(next); next.hidden17!.ritual.outcome!.goals = hiddenGoals(next, content); }
+  return hiddenAfterEvent(state, { ...next, seq: event.seq ?? state.seq + 1 });
 }
 
 export function execute(state: GameState, content: Content, cmd: Command, ctx: Ctx):

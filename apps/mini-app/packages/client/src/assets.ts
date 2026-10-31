@@ -1,3 +1,4 @@
+declare const __PORTRAIT_REVISIONS__: Record<string, string>;
 import type { Ingredient, Item } from '@fair/shared';
 import { BASE } from './base';
 
@@ -30,7 +31,8 @@ const RECIPE_KINDS = new Set<Item['kind']>(['potion', 'ward', 'focus', 'shape'])
 
 /** Портрет роли: /assets/portraits/<key>.jpg. */
 export function portraitUrl(roleKey: string): string {
-  return `${BASE}assets/portraits/${roleKey}.jpg`;
+  const version = __PORTRAIT_REVISIONS__[roleKey];
+  return `${BASE}assets/portraits/${roleKey}.jpg${version ? `?v=${version}` : ''}`;
 }
 
 /** Картинка предмета или undefined, если для него нет арта. Для изделий ref — id рецепта. */

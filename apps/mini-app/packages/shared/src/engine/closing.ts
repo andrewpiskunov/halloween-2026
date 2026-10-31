@@ -1,3 +1,4 @@
+import { hiddenGoals } from './hidden17';
 // Итоги закрытия ярмарки (спецификация этапа 5, §3–4): чистые функции без времени и случайности.
 import { ABILITY_BY_ROLE } from '../abilities';
 import type { Content } from '../content';
@@ -183,6 +184,7 @@ export function goalDone(state: GameState, _content: Content, roleKey: string, c
 
 /** Сторона, по которой считается исход: у свободных — выбранная, иначе 'free'. */
 export function sideOf(state: GameState, content: Content, key: string): Side {
+  if (state.story?.sides[key]) return state.story.sides[key];
   const side = content.roleByKey[key]?.side ?? 'free';
   return side === 'free' ? state.players[key].side ?? 'free' : side;
 }
@@ -192,6 +194,10 @@ export function sideOf(state: GameState, content: Content, key: string): Side {
  * Ручные отметки ведущего (goalOverrides) заменяют расчёт цели.
  */
 export function computeClosing(state: GameState, content: Content, closedAt: number): Closing {
+  if (state.hidden17) {
+    const goals = hiddenGoals(state, content);
+    return { closedAt, altars: [], outcome: 'sleep', warnings: [], players: Object.fromEntries(state.roster.filter(k => state.players[k]?.present).map(k => [k, { goals: goals[k], outcome: false, truth: state.hidden17!.facts.truth, side: 'free' as const }])) };
+  }
   const altars = altarResults(state);
   const ready = altars.filter(a => a.ready).map(a => a.side);
   const outcome: Closing['outcome'] = ready.length === 1 ? ready[0] : 'sleep';

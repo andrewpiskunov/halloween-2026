@@ -473,6 +473,9 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .ab-state.pending { color: var(--acc); }
 .ab-form { margin-top: 10px; }
 .ab-form .choice .m-btn { text-align: left; }
+/* Результат наблюдения бывает длинным: список Сив, сторона или вопрос Весты. */
+.intel-result { flex-direction: column; align-items: stretch; gap: 4px; }
+.intel-result > b { min-width: 0; overflow-wrap: anywhere; }
 .ab-craft { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0; }
 .ab-craft .m-note { margin: 0; flex: 1 1 160px; }
 .sec-h { margin: 4px 6px -6px; color: var(--dim); }
@@ -520,3 +523,59 @@ button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: po
 .gm-altar .altar-need { padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
 .gm-altar:last-of-type .altar-need { border-bottom: 0; }
 .gm-summary { min-height: 36px; font-size: 15px; }
+
+/* Сюжетные карточки и заявки: те же бумага и чернила, длинный текст переносится. */
+.story-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.story-form { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.story-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+.story-reply { border-left: 3px solid var(--acc); padding: 6px 0 6px 12px; margin: 12px 0; }
+.story-readers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 240px; overflow-y: auto; margin: 12px 0; }
+.story-readers .check { overflow-wrap: anywhere; min-width: 0; }
+.story-editor .field, .story-form .field { margin: 12px 0; }
+.story-editor details { margin: 12px 0; }
+
+/* Новая редакция: мастерская, доска и финал у могилы. */
+.hidden-switch { display:flex; gap:4px; padding:4px; margin-bottom:18px; border:1px solid var(--line, #5d5545); border-radius:8px; }
+.hidden-switch button { flex:1; min-width:0; padding:11px 7px; color:inherit; background:transparent; border:0; border-radius:5px; font:inherit; font-size:12px; cursor:pointer; }
+.hidden-switch button.on { background:#d8c598; color:#27231d; }
+.hidden-switch button:focus-visible, details summary:focus-visible { outline:2px solid #d8c598; outline-offset:3px; }
+.hidden-item { display:inline-flex; align-items:center; gap:8px; line-height:1.35; }
+.hidden-check { display:flex; align-items:center; gap:10px; margin:12px 0; line-height:1.5; }
+.hidden-check input { flex:0 0 auto; }
+.reward { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px; margin:12px 0; border-top:1px solid #6d614545; border-bottom:1px solid #6d614545; }
+.reward > b { flex-basis:100%; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; }
+.board-post { position:relative; border-top:3px solid #96815a; }
+.board-post .item-text b { font-size:18px; }
+.board-post .m-btn, .board-form .m-btn { margin-top:10px; }
+.dice-result { font-size:44px; text-align:center; letter-spacing:8px; }
+.dice-result small { display:block; font-size:13px; letter-spacing:0; margin-top:8px; }
+.ritual-stone { background:linear-gradient(135deg,#38392f,#252821); border-color:#a69770; }
+.ritual-stone h5 { color:#d7c9a5; }
+.ritual-stone .list li { margin-bottom:12px; }
+.ritual-slots { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+.ritual-slot { min-width:0; border:1px dashed #827759; min-height:108px; border-radius:40px 40px 8px 8px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 2px 8px; }
+.ritual-slot.filled { border:1px solid #ccb680; background:#ad91441a; }
+.ritual-slot.broken { opacity:.65; filter:grayscale(1); }
+.ritual-slot img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
+.ritual-slot small { font-size:9px; text-align:center; line-height:1.3; }
+.ritual-slot > span { font-family:Georgia,serif; }
+.ritual-attempt { padding:16px 0; border-top:1px solid #82775955; }
+.ritual-progress { display:flex; justify-content:space-between; margin:12px 0 24px; gap:4px; }
+.ritual-progress > span { text-align:center; border-bottom:2px solid #5f5a4c; padding:8px 2px; flex:1; color:#a6a18d; }
+.ritual-progress > span.on { color:#ebd6a1; border-color:#e1c68a; }
+.ritual-progress small { display:block; font-size:10px; margin-top:4px; }
+.ritual-props, .ritual-cast { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; }
+.ritual-props > span, .ritual-cast > span { display:flex; align-items:center; gap:8px; font-size:12px; }
+.ritual-props img { width:40px; height:40px; border-radius:7px; object-fit:cover; }
+.hidden-outcome dl { display:grid; grid-template-columns:64px 1fr; gap:14px; line-height:1.5; }
+.hidden-outcome dt { font-size:11px; text-transform:uppercase; letter-spacing:1px; padding-top:3px; opacity:.7; }
+.hidden-outcome dd { margin:0; }
+.gm-hidden-goals, .gm-board { padding:16px 0; border-top:1px solid #82775955; }
+.gm-hidden-goals .text { font-size:13px; }
+.goal-done { color:#acc48b; }
+.m-card blockquote { margin:16px 0; padding-left:16px; border-left:2px solid #c2a873; font:italic 18px/1.6 Georgia,serif; }
+.m-card summary { cursor:pointer; line-height:1.6; font-weight:600; }
+@media (min-width:780px) { .ritual-scene { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .ritual-scene > :last-child { grid-column:1/-1; } }
+.ritual-stone { color:#eee1bd; }
+.ritual-stone .m-note { color:#c4baa0; }
+@media (max-width:360px) { .tabs button { font-size:10px; letter-spacing:0; } }

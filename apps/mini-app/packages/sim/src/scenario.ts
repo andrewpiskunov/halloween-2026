@@ -486,9 +486,33 @@ async function closing(ctx: Ctx): Promise<void> {
   await ctx.gmTurn([{ type: 'gm.announce', text: 'Итоги показаны. Спасибо за вечер!' }]);
 }
 
+/** Свободная заявка и ручное вмешательство, не меняющие баланс основного сценария. */
+async function freePlay(ctx: Ctx): Promise<void> {
+  const owner = ctx.present()[0];
+  await ctx.send(owner, { type: 'story.request', title: 'Услышать тень', text: 'Предлагаю спросить имя у тени', stake: 'Обещание' });
+  await ctx.waitAll();
+  let q = Object.values(ctx.gmState().story!.requests).at(-1)!;
+  await ctx.send(owner, { type: 'story.cancel', id: q.id, revision: q.revision });
+  await ctx.gmTurn([{ type: 'story.card.save', card: {
+    kind: 'ability', owner, title: 'Голос тени', text: 'Ответ подтверждает ведущий', price: '',
+    visibility: 'private', readers: [], uses: 1, duration: 'act', replacesAbility: false, active: true, completed: false,
+  } }]);
+  const card = Object.values(ctx.gmState().story!.cards).at(-1)!;
+  await ctx.send(owner, { type: 'story.request', title: 'Применить голос', text: 'Спросить имя', stake: '', cardId: card.id });
+  await ctx.waitAll();
+  q = Object.values(ctx.gmState().story!.requests).at(-1)!;
+  await ctx.gmTurn([
+    { type: 'story.respond', id: q.id, revision: q.revision, status: 'done', reply: 'Тень назвала имя' },
+    { type: 'story.message', title: 'Шёпот', text: 'Ответ известен только тебе', recipients: [owner] },
+    { type: 'story.side', player: owner, side: 'free', reason: 'Временная клятва' },
+  ]);
+  await ctx.gmTurn([{ type: 'story.undo', id: ctx.gmState().story!.history.at(-1)!.id }]);
+}
+
 /** Весь вечер по §2.3. */
 export async function playEvening(ctx: Ctx): Promise<void> {
   await prepare(ctx);
+  await freePlay(ctx);
   await act1(ctx);
   await act2(ctx);
   await act3(ctx);

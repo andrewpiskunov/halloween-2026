@@ -10,13 +10,14 @@ export const SHOP_PRICE = 2;
 
 const KIND_LABEL: Record<Item['kind'], string> = {
   relic: 'реликвия', shard: 'осколок сердца Сарна', clue: 'улика',
-  potion: 'зелье', ward: 'оберег', focus: 'фокус', shape: 'форма',
+  special: 'особое изделие', potion: 'зелье', ward: 'оберег', focus: 'фокус', shape: 'форма',
 };
 export const kindLabel = (kind: Item['kind']) => KIND_LABEL[kind];
 
 /** Название и эмодзи вещи по её виду и ref. */
 export function itemLabel(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): { name: string; emoji: string } {
   switch (item.kind) {
+    case 'special': return { name: ({ 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд', 'shape-fixative': 'Закрепитель облика', 'inspection-lens': 'Осмотровая линза', 'herbal-incense': 'Травяной ладан' } as Record<string, string>)[item.ref] ?? item.ref, emoji: '✦' };
     case 'relic': return { name: item.ref, emoji: '🏺' };
     case 'shard': return { name: `Осколок ${item.ref}`, emoji: '💠' };
     case 'clue': return { name: v.public.clues.find(c => c.id === item.ref)?.name ?? 'Улика', emoji: '🔍' };

@@ -1,3 +1,4 @@
+import { storyReplacesAbility } from './story';
 // Проекции этапа 3: карточка способности, запросы согласия, журнал применений (§6.6).
 import { ABILITY_BY_ROLE, ABILITY_SPECS, COPY_SOURCES, type CopyableKind } from './abilities';
 import type { Content } from './content';
@@ -12,7 +13,7 @@ export function abilityView(state: GameState, content: Content, key: string): Ab
   const role = content.roleByKey[key];
   const spec = ABILITY_SPECS[ABILITY_BY_ROLE[key]];
   const p = state.players[key];
-  const st: AbilityView['state'] = !isActPhase(state) ? 'closed'
+  const st: AbilityView['state'] = !isActPhase(state) || storyReplacesAbility(state.story, key, state.phase) ? 'closed'
     : p.abilityPending !== undefined ? 'pending'
       : p.abilityUsedInAct ? 'used' : 'available';
   const copy = spec.kind === 'copyAbility'

@@ -31,7 +31,7 @@ export function actNextPreview(v: GmView): { act: 'II' | 'III'; lines: string[] 
   const act = phase === 'act1' ? 2 : 3;
   const lines = [`Склад пополнится: по ${Math.ceil(nPresent / 6)} каждого ингредиента.`];
   if (act === 2) lines.push('Выйдет лот: осколок IV и улика A.');
-  else lines.push(players.o14?.present ? 'Осколок V откроется у Лиры.' : 'Выйдет лот: осколок V.');
+  else if (!v.state.hidden17) lines.push(players.o14?.present ? 'Осколок V откроется у Лиры.' : 'Выйдет лот: осколок V.');
   const queued = Object.values(lots).filter(l => l.status === 'queued' && l.act === act).length;
   if (queued > 0) lines.push(`Отложенных лотов выйдет: ${queued}.`);
   return { act: act === 2 ? 'II' : 'III', lines };

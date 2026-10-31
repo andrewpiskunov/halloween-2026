@@ -28,7 +28,7 @@ export const tab = signal<Tab>('role');
  * Переподключение его не сбрасывает; сбрасывается вне revealed (после сброса игры).
  */
 export const resultsShownFor = signal<number | null>(null);
-export type GmTab = 'roster' | 'console' | 'results';
+export type GmTab = 'roster' | 'console' | 'results' | 'story' | 'ritual';
 export const gmTab = signal<GmTab>('roster');
 /** Имя бота для ссылок-приглашений; приходит из /api/auth. */
 export const botName = signal('');

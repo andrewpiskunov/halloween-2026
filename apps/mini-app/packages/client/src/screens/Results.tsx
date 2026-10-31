@@ -1,3 +1,6 @@
+import { Outcome } from './Ritual';
+import { roleName } from '../labels';
+import { PlayerStory } from './Story';
 import type { PlayerView } from '@fair/shared';
 
 /**
@@ -6,6 +9,7 @@ import type { PlayerView } from '@fair/shared';
  * Вкладки «События» в revealed нет, поэтому три последних объявления ведущего видны здесь.
  */
 export function Results({ v }: { v: PlayerView }) {
+  if (v.hidden17) return <><h2 class="scr-h">Ваш эпилог</h2>{v.hidden17.ritual.outcome ? <Outcome outcome={v.hidden17.ritual.outcome} name={k => roleName(k, v)} /> : <p class="m-note">Итоги ещё не объявлены.</p>}<div class="m-card"><h5>Личные достижения</h5>{v.me.goals.map((g, i) => <Row key={i} ok={g.done} text={g.text} />)}</div><PlayerStory v={v} /></>;
   const c = v.closing;
   if (!c) return <div class="m-card"><p class="m-note">Итоги ещё не объявлены.</p></div>;
   const recent = [...v.announcements].slice(-3).reverse();
@@ -44,6 +48,8 @@ export function Results({ v }: { v: PlayerView }) {
           : <p class="m-note">Сторона не выбрана</p>}
       </div>
 
+      {(v.story?.cards ?? []).filter(c => c.kind === 'goal' && c.owner === v.me.role.key).map(c => <div class="m-card" key={c.id}><h5>Сюжетная цель</h5><Row ok={c.completed} text={c.title} /><p class="text">{c.text}</p></div>)}
+      <PlayerStory v={v} />
       {c.truthTold && (
         <div class="secret">
           <span class="seal" aria-hidden="true">☽</span>
