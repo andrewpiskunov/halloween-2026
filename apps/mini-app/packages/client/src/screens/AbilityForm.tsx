@@ -1,3 +1,4 @@
+import { AbilityArt } from '../components/AbilityIdentity';
 import { navigateTab } from '../narrative-navigation';
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
@@ -26,6 +27,8 @@ const REFORGE_INTO: { id: 'cleanse' | 'ward' | 'focus'; kind: Item['kind'] }[] =
 ];
 /** Цель копируемых видов: копия ABILITY_SPECS[...].target из abilities.ts. */
 const COPY_TARGET: Record<CopyableKind, TargetMode> = { grow: 'none', substituteIngredient: 'none', discountOther: 'any' };
+/** Только иллюстрации оригиналов: локальное соответствие не тянет серверный shared в браузер. */
+const COPY_ART_ROLES: Record<CopyableKind, string> = { grow: 'o2', substituteIngredient: 'o6', discountOther: 'o14' };
 
 /** Виды мастерской, у которых кнопка прямо в карточке рецепта или запаса, а не отдельная форма. */
 export const INLINE_WORKSHOP: AbilityKind[] = ['payAshWithGold', 'focusFree', 'substituteIngredient', 'buyCheap', 'buyFromBank'];
@@ -316,7 +319,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
         <span class="m-note">Какой эффект взять?</span>
         {copies.map(c => (
           <Button key={c.kind} small kind={pick === c.kind ? 'main' : 'sec'} onClick={() => setPick(c.kind)}>
-            {c.name} · {c.owner ? name(c.owner, v) : 'владелец не на ярмарке, согласие не нужно'}
+            <span class="ability-inline"><AbilityArt roleKey={COPY_ART_ROLES[c.kind]} small/><span>{c.name} · {c.owner ? name(c.owner, v) : 'владелец не на ярмарке, согласие не нужно'}</span></span>
           </Button>
         ))}
       </div>

@@ -1,3 +1,4 @@
+import { AbilityArt } from '../components/AbilityIdentity';
 import { useState } from 'preact/hooks';
 import type { Bundle, PlayerView } from '@fair/shared';
 import { Button } from '../components/Button';
@@ -56,7 +57,7 @@ function BoardForm({ v, done }: { v: PlayerView; done: () => void }) {
     {INGREDIENTS.map(i => <div class="m-row" key={i.key}><span>{i.name}</span><Stepper label={`Награда: ${i.name}`} value={reward.ingredients[i.key]} min={0} max={free.ingredients[i.key]} onChange={n => setReward({ ...reward, ingredients: { ...reward.ingredients, [i.key]: n } })} /></div>)}
     {v.me.items.filter(i => free.items.includes(i.id)).map(i => <label class="check hidden-check" key={i.id}><input type="checkbox" checked={reward.items.includes(i.id)} onChange={e => setReward({ ...reward, items: e.currentTarget.checked ? [...reward.items, i.id] : reward.items.filter(id => id !== i.id) })} /><HiddenItem item={i} v={v} /></label>)}
     <StoryText label="Ваша услуга в награду (необязательно)" value={service} onChange={setService} max={500} />
-    {['cleanseOther', 'discountOther', 'protectOther'].includes(v.me.ability.kind) && <label class="check hidden-check"><input type="checkbox" checked={serviceAbility} onChange={e => setServiceAbility(e.currentTarget.checked)} />Награда — моя обычная способность «{v.me.ability.name}»</label>}
+    {['cleanseOther', 'discountOther', 'protectOther'].includes(v.me.ability.kind) && <label class="check hidden-check"><input type="checkbox" checked={serviceAbility} onChange={e => setServiceAbility(e.currentTarget.checked)} /><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small/><span>Награда — моя обычная способность «{v.me.ability.name}»</span></span></label>}
     {serviceAbility && <p class="m-note">Применение будет обещано исполнителю. Использовать его для другого человека до завершения или отмены заказа нельзя. Перед выдачей награды примените способность к исполнителю с его согласия.</p>}
     <p class="m-note">Укажите действие, срок и ограничения. Обещать действие другого героя нельзя. Услугу подтверждает ведущий; она требует согласия участников.</p>
     <div class="m-row"><span>Срок, минут</span><Stepper label="Срок заказа" value={minutes} min={1} max={180} onChange={setMinutes} /></div>

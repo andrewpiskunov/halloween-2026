@@ -1,3 +1,4 @@
+import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Counts, Ingredient, PlayerView, Recipe } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
@@ -74,8 +75,8 @@ export function Workshop({ v }: { v: PlayerView }) {
       {ab.place === 'workshop' && (
         <div class="m-card" ref={block}>
           <h5>Способность</h5>
-          <h4>{ab.name}</h4>
-          <p class="text">{ab.text}</p>
+          <AbilityIdentity roleKey={v.me.role.key} name={ab.name}/>
+          <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
           {!live && <p class="ab-state">{ab.state === 'used' ? 'Уже применена в этом акте' : 'Сейчас недоступна'}</p>}
           {live && INLINE_WORKSHOP.includes(kind) && <p class="m-note">Кнопка способности — рядом с {kind === 'buyCheap' || kind === 'buyFromBank' ? '«Купить» в запасе' : 'рецептом'}.</p>}
           {standalone && <div class="ab-form"><AbilityForm v={v} /></div>}
@@ -91,10 +92,10 @@ export function Workshop({ v }: { v: PlayerView }) {
             sub={`осталось ${v.workshop[ing.key]}, у вас ${a.ingredients[ing.key]}`}>
             <Button small kind="sec" disabled={v.workshop[ing.key] < 1} onClick={() => buy(ing)}>Купить</Button>
             {live && kind === 'buyCheap' && (
-              <Button small disabled={v.workshop[ing.key] < 1 || a.gold < CHEAP_PRICE} onClick={() => buyCheap(ing.key)}>За 1 · {ab.name}</Button>
+              <Button small disabled={v.workshop[ing.key] < 1 || a.gold < CHEAP_PRICE} onClick={() => buyCheap(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small/>За 1 · {ab.name}</span></Button>
             )}
             {live && kind === 'buyFromBank' && (
-              <Button small disabled={a.gold < BANK_PRICE} onClick={() => buyBank(ing.key)}>Из банка за 2</Button>
+              <Button small disabled={a.gold < BANK_PRICE} onClick={() => buyBank(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small/>Из банка за 2</span></Button>
             )}
           </ItemCard>
         ))}
@@ -145,6 +146,7 @@ function AbilityCraft({ v, r, mod, note, onCraft }: { v: PlayerView; r: Recipe; 
   const lacking = lackingParts(cost, price, v);
   return (
     <div class="ab-craft">
+      <AbilityArt roleKey={v.me.role.key} small/>
       <span class="m-note">{note}. Итого: <ResCost parts={costParts(cost, price)} /></span>
       <Button small disabled={lacking.length > 0} onClick={onCraft}>Создать со способностью</Button>
     </div>
@@ -158,7 +160,7 @@ function SubstituteCraft({ v, r }: { v: PlayerView; r: Recipe }) {
   const [to, setTo] = useState<Ingredient | null>(null);
   const copy = v.me.ability.kind === 'copyAbility';
   if (!open) {
-    return <div class="ab-craft"><span class="m-note">Замена ингредиента</span><Button small kind="sec" onClick={() => setOpen(true)}>Создать со способностью</Button></div>;
+    return <div class="ab-craft"><AbilityArt roleKey={v.me.role.key} small/><span class="m-note">Замена ингредиента</span><Button small kind="sec" onClick={() => setOpen(true)}>Создать со способностью</Button></div>;
   }
   const mod: CraftMod | undefined = from && to ? { substitute: { from, to } } : undefined;
   const craft = () => {

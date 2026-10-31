@@ -21,7 +21,7 @@ export function NarrativeRole({ v }: { v: PlayerView }) {
   <article class="m-card narrative-story"><h5>Ваша история</h5>{n.role.story.map((p,i)=><p class="text" key={i}>{p}</p>)}</article>
   <NarrativeGoals v={v}/>
   {n.documents.length>0 && <section class="narrative-documents"><h2 class="scr-h">Письма и свидетельства</h2>{n.documents.map(d=><button class="narrative-document-link" key={d.id} onClick={()=>openPage({kind:'document',id:d.id})}><span aria-hidden="true">✉</span><span><b>{d.title}</b><small>{d.source}</small></span><span aria-hidden="true">›</span></button>)}</section>}
-  <section class="narrative-gift"><p class="narrative-origin">{n.role.abilityOrigin}</p><AbilityCard v={v}/></section>
+  <AbilityCard v={v}/>
   <StoryCards v={v}/><IntelCard v={v}/><UsesCard v={v}/>
   <section class="m-card"><h5>Рекомендации по отыгрышу</h5>{r.acting.vibe&&<p class="text">{r.acting.vibe}</p>}{r.acting.voice&&<p class="text">{r.acting.voice}</p>}{r.acting.actions.length>0&&<ul class="list">{r.acting.actions.map(a=><li key={a}>{a}</li>)}</ul>}{r.acting.lines.length>0&&<p class="m-note">«{r.acting.lines[0]}»</p>}</section>
   <StoryInvite/>

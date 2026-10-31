@@ -1,3 +1,4 @@
+import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { navigateTab } from '../narrative-navigation';
 import { StoryCards, StoryInvite } from './Story';
 import { useState } from 'preact/hooks';
@@ -193,12 +194,11 @@ export function AbilityCard({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>Способность</h5>
-      <h4>
-        {ab.name}
+      <AbilityIdentity roleKey={v.me.role.key} name={ab.name}>
         {ab.hostile && <span class="m-tag warn">враждебная</span>}
         {ab.verbal && <span class="m-tag">словесная</span>}
-      </h4>
-      <p class="text">{ab.text}</p>
+      </AbilityIdentity>
+      <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
       <p class={`ab-state ${ab.state}`}>{stateLine(v)}</p>
       {v.hidden17?.board.filter(p => p.author === v.me.role.key && p.serviceAbility && ['open', 'accepted'].includes(p.status)).map(p => <p class="m-note" key={p.id}>Применение обещано по заказу «{p.title}». {p.worker ? `Получатель: ${roleName(p.worker, v)}. Примените способность к нему с согласия.` : 'Сначала дождитесь исполнителя.'}</p>)}
       {ab.state === 'pending' && <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить просьбу</Button></div>}
@@ -271,7 +271,7 @@ export function UsesCard({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>Ваши применения</h5>
-      <ul class="list">{list.map(a => <li key={a.id}>{ownActionText(a, v)}</li>)}</ul>
+      <ul class="list">{list.map(a => <li key={a.id}><span class="ability-log"><AbilityArt roleKey={a.author} small/><span>{ownActionText(a, v)}</span></span></li>)}</ul>
     </div>
   );
 }

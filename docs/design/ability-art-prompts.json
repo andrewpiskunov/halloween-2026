@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-31",
+  "tool": "image_gen",
+  "directory": "apps/mini-app/packages/client/public/assets/abilities",
+  "style": "Square fantasy RPG ability illustration; elegant hand-painted flat graphic fantasy with clean outlines, painterly highlights, amber gold, burgundy and midnight indigo; single central symbolic composition, no character portrait, dark navy background, readable at 64px, no border/text/UI/watermark.",
+  "subjects": {
+    "o1": "Two human palms cupping a small gold and crimson flame, one golden coin melting into the flame. Bloodline fire magic.",
+    "o2": "A fresh living green leaf releasing three luminous turquoise dew drops into a small glass vial, gentle druidic magic.",
+    "o3": "A pale careful hand sifting useful silver ash from dark powder over a tiny brass pan, a single gold coin beside it. Recognizing valuable ingredients.",
+    "o4": "A translucent blue mist dragon silhouette dissolving around an incoming dark arrow, ghostly magical protection, no human face.",
+    "o5": "A brilliant white crystal focus suspended between two balanced amber magical threads, meticulous stabilization magic.",
+    "o6": "Two little alchemy bottles pouring different colorful powders into one crucible, precise substitution of ingredients, swirling violet and teal.",
+    "o7": "Two tied parcels of magical ingredients and two gold coins beneath a wax merchant seal, the talent of a wholesale bargain.",
+    "o8": "A dexterous gloved hand slipping one golden coin between two leather purses behind a curl of violet illusion smoke.",
+    "o9": "An old knight's dented steel shield intercepting a bright hostile spark, warm protective light, stout brave guardian.",
+    "o10": "A small spectral dark knot unravelling into pale gold threads above open caring hands, cleansing another person's curse.",
+    "o11": "A jeweler's magnifying lens revealing the silhouette of a little relic inside a leather belt pouch, perceptive investigator magic.",
+    "o12": "Dark green thorny brambles coiling around a blacksmith hammer and tongs, a tiny red magical glow, stubborn tools under a fairy curse.",
+    "o13": "A craftsman's small hammer carefully separating a simple enchanted trinket into reusable crystal chips and metal, dismantling craft.",
+    "o14": "Golden flowing music ribbons from a singer's breath drifting around a craftsman's moving hands, inspiring song, no flute, no text.",
+    "o15": "Three aromatic magical trails turquoise silver and ember-orange rising from small ingredient sacks toward a small brass compass, supernatural scent for a seller.",
+    "o16": "Copper conducting plates and wires guiding a luminous blue protective shield from one small standing charm to another, redirecting existing protection.",
+    "o17": "Two mirrored graceful hands repeating the same delicate golden spell gesture across an ornate little mirror, learning by observation, consent and mimicry."
+  },
+  "trade_scene": {
+    "file": "apps/mini-app/packages/client/public/assets/scenes/trades.webp",
+    "prompt": "Wide landscape illustration for a dark fantasy masquerade roleplaying game trading screen. An intimate candlelit night market bargaining table in an old ruined stone outpost: two anonymous cloaked traders facing each other at opposite sides, open palms exchanging a small coin pouch and a wrapped magical trinket above a heavy worn wooden table. Amber lanterns, indigo midnight, deep burgundy textiles, warm gold glints. Stylish hand-painted flat graphic fantasy illustration with clean confident contours, matching illustrated RPG character portraits, rich but restrained colors. Wide 3:2 composition with table center and readable silhouettes, no text, no letters, no UI, no watermark. Environment illustration, no recognizable named characters."
+  }
+}

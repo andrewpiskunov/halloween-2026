@@ -1,3 +1,4 @@
+import { AbilityArt } from '../../components/AbilityIdentity';
 import { useState } from 'preact/hooks';
 import type { GmView, Player } from '@fair/shared';
 import { Button } from '../../components/Button';
@@ -71,7 +72,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         : (
           <div class="gm-journal">
             {shown.map(a => (
-              <div key={a.id} class={`gm-act ${a.outcome === 'blocked' ? 'blocked' : ''} ${a.hostile ? 'hostile' : ''}`}>{actionLine(a, v, content)}</div>
+              <div key={a.id} class={`gm-act ${a.outcome === 'blocked' ? 'blocked' : ''} ${a.hostile ? 'hostile' : ''}`}>{a.source.type === 'ability' ? <span class="ability-log"><AbilityArt roleKey={a.author} small/><span>{actionLine(a, v, content)}</span></span> : actionLine(a, v, content)}</div>
             ))}
           </div>
         )}
@@ -85,7 +86,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         const waiting = r.approvers.filter(k => !r.approved.includes(k));
         return (
           <div class="gm-req" key={r.id}>
-            <div class="m-row"><span>{text}</span><b>{mmss(Math.max(0, remainingMs(r.expiresAt, clock, now.value)))}</b></div>
+            <div class="m-row"><span class="ability-log">{r.action.type === 'ability' && <AbilityArt roleKey={r.author} small/>}<span>{text}</span></span><b>{mmss(Math.max(0, remainingMs(r.expiresAt, clock, now.value)))}</b></div>
             <p class="m-note">
               Ждём: {waiting.map(name).join(', ') || 'никого'}
               {r.approved.length > 0 && `; согласились: ${r.approved.map(name).join(', ')}`}

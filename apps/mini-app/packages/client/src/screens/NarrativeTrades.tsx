@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Bundle, NarrativeTrade, PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
+import { BASE } from '../base';
+import '../trade-table.css';
 import { Button } from '../components/Button';
 import { FrozenNote, PauseNote } from '../components/Frozen';
 import { Portrait } from '../components/Portrait';
@@ -31,15 +33,24 @@ export function tradeGoodsRows(b: Bundle, v: PlayerView, trade?: NarrativeTrade)
   }
   return rows;
 }
-function Goods({ b, v, trade }: { b: Bundle; v: PlayerView; trade?: NarrativeTrade }) {
-  const rows = tradeGoodsRows(b, v, trade);
-  return rows.length ? <ul class="nc-goods">{rows.map(r => <li key={r.id}><Thumb src={r.image} emoji={r.emoji} /><span>{r.name}</span><b>×{r.count}</b></li>)}</ul> : <p class="text">Ничего — подарок</p>;
+function TableGoods({b,v,trade,emptyText}:{b:Bundle;v:PlayerView;trade?:NarrativeTrade;emptyText:string}) {
+  const rows=tradeGoodsRows(b,v,trade);
+  return rows.length ? <ul class="trade-table-goods">{rows.map(r=><li key={r.id}><Thumb src={r.image} emoji={r.emoji}/><b>×{r.count}</b><span>{r.name}</span></li>)}</ul> : <p class="trade-table-empty">{emptyText}</p>;
+}
+function ExchangeTable({v,from,to,give,reply,trade,draft=false}:{v:PlayerView;from:string;to:string;give:Bundle;reply?:Bundle;trade?:NarrativeTrade;draft?:boolean}) {
+  return <div class="trade-table" aria-label="Стороны обмена">
+    <div class="trade-table-person"><Portrait roleKey={from} emoji={roleEmoji(from,v)} size="card"/><strong>{roleName(from,v)}</strong><small>{from===v.me.role.key?'Вы предлагаете':'Предлагает вам'}</small></div>
+    <span class="trade-table-arrow" aria-hidden="true">⇄</span>
+    <div class="trade-table-person">{to?<Portrait roleKey={to} emoji={roleEmoji(to,v)} size="card"/>:<div class="trade-table-unknown" aria-hidden="true">?</div>}<strong>{to?roleName(to,v):'Ваш собеседник'}</strong><small>{to?'Встречное предложение':'Выберите героя выше'}</small></div>
+    <section class="trade-table-offer" aria-label="Предложение автора"><TableGoods b={give} v={v} trade={trade} emptyText={draft?'Положите сюда вещи из сумки':'Без передачи вещей'}/></section>
+    <section class="trade-table-offer" aria-label="Предложение адресата">{reply?<TableGoods b={reply} v={v} trade={trade} emptyText="Без встречных вещей"/>:<p class="trade-table-empty">{draft?'Здесь появится его ответ':'Ответ пока не получен'}</p>}</section>
+  </div>;
 }
 function OwnGoods({ value, onChange, v }: { value: Bundle; onChange: (b: Bundle) => void; v: PlayerView }) {
   const resources = [{key:'gold' as const, name:'Золото', emoji:'◉'}, ...INGREDIENTS];
   return <div class="nc-own-goods">
-    {resources.map(i => <div class="nc-resource-edit" key={i.key}><span><Thumb src={resourceImageUrl(i.key)} emoji={i.emoji} size="sm" />{i.name}<small>Свободно: {i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]}</small></span><Stepper label={`Предложить: ${i.name}`} value={i.key === 'gold' ? value.gold : value.ingredients[i.key]} max={i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]} onChange={n => onChange(i.key === 'gold' ? {...value,gold:n} : {...value,ingredients:{...value.ingredients,[i.key]:n}})} /></div>)}
-    {v.me.items.filter(i => canOffer(i,v)).map(i => <label class="nc-item-choice" key={i.id}><input type="checkbox" checked={value.items.includes(i.id)} onChange={e => onChange({...value,items:e.currentTarget.checked ? [...value.items,i.id] : value.items.filter(id => id !== i.id)})} /><Thumb src={itemImageUrl(i)} emoji={itemLabel(i,v).emoji} /><span>{specialLabel(i,v)}</span></label>)}
+    {resources.map(i => <div class={`nc-resource-edit ${(i.key==='gold'?value.gold:value.ingredients[i.key])>0?'selected':''}`} key={i.key}><span><Thumb src={resourceImageUrl(i.key)} emoji={i.emoji} size="sm" />{i.name}<small>Свободно: {i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]}</small></span><Stepper label={`Предложить: ${i.name}`} value={i.key === 'gold' ? value.gold : value.ingredients[i.key]} max={i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]} onChange={n => onChange(i.key === 'gold' ? {...value,gold:n} : {...value,ingredients:{...value.ingredients,[i.key]:n}})} /></div>)}
+    {v.me.items.filter(i => canOffer(i,v)).map(i => <label class={`nc-item-choice ${value.items.includes(i.id)?'selected':''}`} key={i.id}><input type="checkbox" checked={value.items.includes(i.id)} onChange={e => onChange({...value,items:e.currentTarget.checked ? [...value.items,i.id] : value.items.filter(id => id !== i.id)})} /><Thumb src={itemImageUrl(i)} emoji={itemLabel(i,v).emoji} /><span>{specialLabel(i,v)}</span></label>)}
     {!validOwnGoods(value,v) && <p class="m-note warn">Часть выбранного уже недоступна. Обновите предложение.</p>}
   </div>;
 }
@@ -51,7 +62,7 @@ export function NarrativeTrades({v}: {v:PlayerView}) {
   const trade = selected ? trades.find(t => t.id === page.id) : undefined;
   return <div class="narrative-commerce">
     <div hidden={selected}>
-      <h2 class="scr-h">Сделки</h2><p class="nc-intro">Предложите своё. Собеседник ответит, а последнее слово останется за вами.</p><FrozenNote v={v} />
+      <div class="nc-place trade-place"><img src={`${BASE}assets/scenes/trades.webp`} alt="Обмен за столом ночной ярмарки"/><div><span>Слово за слово, вещь за вещь</span><h2>Сделки</h2><p>Предложите своё. Собеседник ответит, а последнее слово останется за вами.</p></div></div><FrozenNote v={v} />
       <ConsentRequests v={v} />
       <h3>На столе переговоров</h3>
       {!trades.some(t => ['offered','replied'].includes(t.status)) && <p class="text">Открытых предложений пока нет.</p>}
@@ -73,16 +84,16 @@ function NewTrade({v}:{v:PlayerView}) {
   const draft = tradeDraft.value;
   useEffect(() => { if (!draft) return; setGive(b => b.items.includes(draft.itemId) ? b : {...b,items:[...b.items,draft.itemId]}); tradeDraft.value = null; },[draft]);
   const submit = async () => { setSending(true); const result = await run({type:'narrative.trade.create',to,give,wish:wish.trim()}); setSending(false); if(result.ok){setGive(emptyBundle());setWish('');setTo('');} };
-  return <section class="m-card nc-new-trade"><h3>Новое предложение</h3><label class="field"><span>Кому</span><Select label="Адресат сделки" value={to} onChange={setTo} placeholder="Выберите героя" options={people(v,false)} /></label><h4>Вы предлагаете</h4><OwnGoods value={give} onChange={setGive} v={v} /><label class="field"><span>Что хотите получить</span><textarea value={wish} maxLength={500} rows={3} placeholder="Напишите пожелание или оставьте пустым для подарка" onInput={e => setWish(e.currentTarget.value)} /></label><p class="m-note">Выбранное будет зарезервировано. Текст — пожелание, а не гарантия услуги. Обмен пройдёт после вашего подтверждения ответного предложения.</p>{tradesPaused(v) ? <PauseNote /> : <Button disabled={!to || !v.others.some(o=>o.roleKey===to) || empty(give) || !validOwnGoods(give,v) || sending} onClick={() => ask({title:'Отправить предложение?',text:'Ваши вещи и ресурсы останутся обещанными до завершения или отмены сделки.',okLabel:'Отправить',onOk:()=>void submit()})}>Предложить обмен или подарок</Button>}</section>;
+  return <section class="m-card nc-new-trade"><h3>Новое предложение</h3><label class="field"><span>Кому</span><Select label="Адресат сделки" value={to} onChange={setTo} placeholder="Выберите героя" options={people(v,false)} /></label><ExchangeTable v={v} from={v.me.role.key} to={to} give={give} draft/><h4 class="trade-packing-title">Добавьте на стол</h4><p class="m-note">Выберите вещи и количество из своей сумки.</p><OwnGoods value={give} onChange={setGive} v={v} /><label class="field"><span>Что хотите получить</span><textarea value={wish} maxLength={500} rows={3} placeholder="Напишите пожелание или оставьте пустым для подарка" onInput={e => setWish(e.currentTarget.value)} /></label><p class="m-note">Выбранное будет зарезервировано. Текст — пожелание, а не гарантия услуги. Обмен пройдёт после вашего подтверждения ответного предложения.</p>{tradesPaused(v) ? <PauseNote /> : <Button disabled={!to || !v.others.some(o=>o.roleKey===to) || empty(give) || !validOwnGoods(give,v) || sending} onClick={() => ask({title:'Отправить предложение?',text:'Ваши вещи и ресурсы останутся обещанными до завершения или отмены сделки.',okLabel:'Отправить',onOk:()=>void submit()})}>Предложить обмен или подарок</Button>}</section>;
 }
 function TradePage({trade:t,v}:{trade:NarrativeTrade;v:PlayerView}) {
   const [reply,setReply] = useState<Bundle>(emptyBundle); const [sending,setSending] = useState(false);
   const author = t.from === v.me.role.key; const active = t.status === 'offered' || t.status === 'replied'; const paused = tradesPaused(v);
   const replyNow = async () => { setSending(true); await run({type:'narrative.trade.reply',id:t.id,give:reply});setSending(false); };
   return <article class="m-card nc-trade-page"><h2>{roleName(t.from,v)} → {roleName(t.to,v)}</h2><p class="nc-status">{STATUS[t.status]}{active && ` · осталось ${mmss(Math.max(0,remainingMs(t.expiresAt,v.clock,now.value)))}`}</p><FrozenNote v={v}/>{paused && <PauseNote />}
-    <section><h3>Предложение {author ? 'от вас' : 'вам'}</h3><Goods b={t.give} v={v} trade={t} />{active && <p class="m-note">Зарезервировано у автора.</p>}</section>
+    <ExchangeTable v={v} from={t.from} to={t.to} give={t.give} reply={t.reply??(!author&&t.status==='offered'?reply:undefined)} trade={t}/>{active&&<p class="m-note">Вещи остаются обещанными до окончательного подтверждения автора.</p>}
     <section><h3>Пожелание автора</h3><p class="text nc-prewrap">{t.wish || 'Подарок — встречное предложение не требуется.'}</p><p class="m-note">Договорённость об услуге выполняется лично. Приложение передаёт только перечисленные вещи и ресурсы.</p></section>
-    {t.reply && <section><h3>Ответное предложение</h3><Goods b={t.reply} v={v} trade={t}/>{active && <p class="m-note">Зарезервировано у адресата. Изменить отправленный ответ нельзя.</p>}</section>}
+    {t.reply&&active&&<p class="m-note">Ответ отправлен. Изменить его уже нельзя.</p>}
     {!author && t.status === 'offered' && <section><h3>Ваш ответ</h3><OwnGoods value={reply} onChange={setReply} v={v}/><p class="m-note">После ответа автор проверит обе стороны и подтвердит передачу.</p><Button disabled={paused || !validOwnGoods(reply,v) || sending} onClick={() => ask({title:empty(reply)?'Получить в подарок?':'Предложить это в ответ?',text:'Ответ нельзя изменить. Выбранное будет обещано до решения автора.',okLabel:empty(reply)?'Получить в подарок':'Предложить в ответ',onOk:()=>void replyNow()})}>{empty(reply)?'Получить в подарок':'Предложить в ответ'}</Button></section>}
     {author && t.status === 'replied' && <Button disabled={paused} onClick={() => ask({title:'Подтвердить обмен?',text:'Обе стороны перейдут одновременно. Проверьте перечисленные предметы и количества.',okLabel:'Подтвердить обмен',onOk:()=>void run({type:'narrative.trade.confirm',id:t.id})})}>Подтвердить обмен</Button>}
     {author && t.status === 'offered' && <p class="text">Ждём ответа собеседника.</p>}
