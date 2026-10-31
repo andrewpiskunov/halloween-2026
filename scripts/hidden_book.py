@@ -137,7 +137,7 @@ def build(c):
         return ''.join(article(rule['title'],item_picture(rule['image'],rule['title'],prefix)+p(rule['text'])) for rule in narrative['rules'])
     def personal_documents(key):
         return ''.join(article(documents[id]['title'],labelled('Источник',documents[id]['source'])+p(documents[id]['text'])) for id in narrative['roles'][key]['documents'])
-    public=section('welcome','01','На одну ночь у брода','',p(h['publicIntro']))
+    public=section('welcome','01','На одну ночь у брода','',''.join(p(part) for part in h['publicIntro'].split('\n\n')))
     public+=section('rules','02','Что можно делать','',short_rules()+p(h['consentPolicy']))
     public+=section('workshop','03','Обычные изделия',h['venues']['workshop']['intro'],recipes()+p('Базовый ингредиент можно купить у ярмарки за 2 золота, если он есть в запасе. Торговля между игроками — по взаимной договорённости.'))
     public+=section('requests','04','Ваша идея может изменить историю','',p('Скажите ведущему: что хотите сделать, чем готовы заплатить и какого изменения ждёте. Вместе запишите условия успеха, заметный след, срок и возможный ответ других. Затем можно искать помощь и выполнять условия.')+p('Например: вырастить дерево из необычного семени, перенести проклятие в предмет, придумать временную способность или добровольную клятву. Это заявка на обсуждение, а не готовое право на эффект.'))
@@ -174,7 +174,7 @@ def build(c):
     (OUT/'finale-sheet.html').write_text(sheet_html)
     # Главное издание: история сохранена отдельным снимком, без старых финальных счётчиков.
     hero=f'''<section class="chapter hero"><span class="eyebrow">17 игроков + ведущий · скрытые намерения</span><div class="hero-grid"><div><h1>Семнадцать<br>желаний.<br><em>Одно сердце.</em></h1>{p('На ярмарку приходят за своим. Общая история складывается из того, что люди решат рассказать — и сделать.','lead')}{p(h['status'],'hero-note')}<div class="quick-links"><a class="button" href="#characters">Персонажи и вводные ↗</a><a class="button light" href="#venues">Три места и заказы</a></div></div><div class="hero-art"><img class="large" src="{portrait('o9')}" alt="Эльмар"><img class="small" src="{portrait('o14')}" alt="Лира"></div></div></section>'''
-    body=hero+section('legend','01','Кто что знает','Ведущий видит целое. Игроки получают только собственные вводные.',labelled('Можно прочитать всем',h['publicIntro'])+ul(h['gmOverview'])+'<p><a href="player-guide.html">Общая памятка для игроков →</a></p>'+f'<div class="truth">{labelled("Граница этой редакции",h["appBoundary"])}</div>')
+    body=hero+section('legend','01','Кто что знает','Ведущий видит целое. Игроки получают только собственные вводные.','<span class="label">Можно прочитать всем</span>'+''.join(p(part) for part in h['publicIntro'].split('\n\n'))+ul(h['gmOverview'])+'<p><a href="player-guide.html">Общая памятка для игроков →</a></p>'+f'<div class="truth">{labelled("Граница этой редакции",h["appBoundary"])}</div>')
     chapters=''
     for ch in h['chapters']:
         chapters+=f'<article class="story-chapter" id="chapter-{esc(ch["id"])}"><h3>{esc(ch["title"])}</h3>'+illustration(ch['id'])
