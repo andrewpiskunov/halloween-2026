@@ -12,6 +12,7 @@ game=json.loads((ROOT/'docs/design/gm-book/game-data.json').read_text())
 edition=json.loads((ROOT/'docs/design/gm-book/edition-17.json').read_text())
 hidden=json.loads((ROOT/'docs/design/gm-book/hidden-17.json').read_text())
 narrative=json.loads((ROOT/'docs/design/gm-book/narrative-17.json').read_text())
+archive_effects=json.loads((ROOT/'docs/design/gm-book/archive-ability-texts.json').read_text())['effects']
 core=set(edition['roleKeys']); extra={r['key'] for r in game['roles']}-core
 assert len(core)==17 and len(extra)==13 and not core & extra
 class Page(HTMLParser):
@@ -44,7 +45,7 @@ for r in game['roles']:
         values=[current['name'],current['effect'],*brief['story'],*brief['goals'],*brief['gmGoals'],brief['abilityOrigin']]
     for value in values:assert value in text,(r['key'],'утрачены сведения редакции')
     original=' '.join(parsed[OUT/f'characters-30-archive/{r["key"]}.html'].text)
-    for value in [r['name'],r['backstory'],r['secret'],r['rumor'],r['effect'],*r['goals']]:assert value in original,(r['key'],'утрачены исходные сведения в архиве')
+    for value in [r['name'],r['backstory'],r['secret'],r['rumor'],archive_effects[r['key']],*r['goals']]:assert value in original,(r['key'],'утрачены исходные сведения в архиве')
     for id in ['background','secrets','mechanics','relations','role-acts','role-twists','acting','gm']:assert id in parsed[OUT/f'characters/{r["key"]}.html'].ids
 assert len(list((OUT/'characters').glob('*.html')))==30
 for r in game['roles']:

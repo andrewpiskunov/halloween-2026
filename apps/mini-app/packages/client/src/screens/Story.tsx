@@ -47,7 +47,7 @@ function RequestForm({ card, onDone }: { card?: StoryCard; onDone: () => void })
     <StoryText label="Название заявки" value={title} onChange={setTitle} max={120} small />
     <StoryText label="Чего хотите добиться и как будете действовать" value={text} onChange={setText} />
     <StoryText label="Что предлагаете потратить или чем рискуете (необязательно)" value={stake} onChange={setStake} max={500} />
-    <p class="m-note"><ItemText>Заявка и ответ видны только вам и ведущему. Сначала дождитесь решения: сама отправка не тратит ресурсы.</ItemText></p>
+    <p class="m-note"><ItemText>Заявку и ответ увидите только вы и ведущий. Отправка ничего не расходует; дождитесь решения, прежде чем действовать.</ItemText></p>
     <div class="m-btns"><Button disabled={busy || !title.trim() || !text.trim()} onClick={() => void send()}>Отправить заявку</Button><Button kind="sec" onClick={onDone}>Закрыть форму</Button></div>
   </div>;
 }
@@ -97,5 +97,5 @@ export function PlayerStory({ v }: { v: PlayerView }) {
 }
 
 export function StoryInvite() {
-  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text"><ItemText>Есть необычная идея? Предложите её ведущему: он может назначить обряд, выдать новую вещь или изменить вашу историю.</ItemText></p><Button kind="sec" onClick={() => navigateTab('events')}>Заявки и послания</Button></div>;
+  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text"><ItemText>С необычной идеей обратитесь к ведущему. Он может назначить обряд, выдать новую вещь или изменить вашу историю.</ItemText></p><Button kind="sec" onClick={() => navigateTab('events')}>Заявки и послания</Button></div>;
 }
