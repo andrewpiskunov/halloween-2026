@@ -1,4 +1,3 @@
-import { shardNumber } from './shard-label';
 import type { AbilityKind, ActionRecord, Bundle, ConsentRequestView, CopyableKind, Ingredient, Item, Offer, PlayerView, Want } from '@fair/shared';
 
 export const INGREDIENTS: { key: Ingredient; name: string; short: string; emoji: string }[] = [
@@ -20,7 +19,7 @@ export function itemLabel(item: Pick<Item, 'kind' | 'ref'>, v: PlayerView): { na
   switch (item.kind) {
     case 'special': return { name: ({ 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд', 'shape-fixative': 'Закрепитель облика', 'inspection-lens': 'Осмотровая линза', 'herbal-incense': 'Травяной ладан' } as Record<string, string>)[item.ref] ?? item.ref, emoji: '✦' };
     case 'relic': return { name: item.ref, emoji: '🏺' };
-    case 'shard': return { name: `Осколок ${shardNumber(item.ref)}`, emoji: '💠' };
+    case 'shard': return { name: `Осколок ${item.ref}`, emoji: '💠' };
     case 'clue': return { name: v.public.clues.find(c => c.id === item.ref)?.name ?? 'Улика', emoji: '🔍' };
     default: {
       const r = v.recipes.find(x => x.id === item.ref);
@@ -76,7 +75,7 @@ export function countsText(c: { gold?: number; ingredients?: Partial<Record<Ingr
   return parts.join(', ');
 }
 
-/** Состав набора словами: «2 золотых, 1 пепел, Осколок 2, слух: «…»». Невидимые вещи показываются как «вещь». */
+/** Состав набора словами: «2 золотых, 1 пепел, Осколок II, слух: «…»». Невидимые вещи показываются как «вещь». */
 export function bundleText(b: Bundle, v: PlayerView): string {
   const parts: string[] = [];
   const counts = countsText(b);
@@ -137,13 +136,13 @@ const KIND_BY_RECIPE: Record<string, Item['kind']> = { cleanse: 'potion', ward: 
 export function wantCatalog(v: PlayerView): (Want & { name: string; emoji: string; group: string })[] {
   const out: (Want & { name: string; emoji: string; group: string })[] = [];
   for (const r of v.public.relics) out.push({ kind: 'relic', ref: r.name, name: r.name, emoji: r.emoji, group: 'Реликвии' });
-  for (const s of v.public.shards) out.push({ kind: 'shard', ref: s.id, name: `Осколок ${shardNumber(s.id)}`, emoji: '💠', group: 'Осколки' });
+  for (const s of v.public.shards) out.push({ kind: 'shard', ref: s.id, name: `Осколок ${s.id}`, emoji: '💠', group: 'Осколки' });
   for (const c of v.public.clues) out.push({ kind: 'clue', ref: c.id, name: c.name, emoji: c.emoji, group: 'Улики' });
   for (const r of v.recipes) out.push({ kind: KIND_BY_RECIPE[r.id] ?? 'potion', ref: r.id, name: r.name, emoji: r.emoji, group: 'Изделия' });
   return out;
 }
 
-/** Название лота: вещи через « + », например «Осколок 4 + Обрывок договора». */
+/** Название лота: вещи через « + », например «Осколок IV + Обрывок договора». */
 export const lotTitle = (items: Pick<Item, 'kind' | 'ref'>[], v: PlayerView) => items.map(i => itemLabel(i, v).name).join(' + ');
 
 // ——— Этап 3: способности, вещи, просьбы, уведомления ———

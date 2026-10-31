@@ -18,8 +18,8 @@ test('длинное имя не дробится; обычные слова и 
 });
 
 test('номер входит в выделенное название осколка во всех падежах', () => {
-  const text = 'Вы привезли осколок 2. Тайник для осколка 5; с осколком 3. Акт II.';
+  const text = 'Вы привезли осколок II. Тайник для осколка V; с осколком III. Акт II.';
   const parts = itemMentions(text);
   expect(parts.map(p => p.text).join('')).toBe(text);
-  expect(parts.filter(p => p.src).map(p => p.text)).toEqual(['осколок 2', 'осколка 5', 'осколком 3']);
+  expect(parts.filter(p => p.src).map(p => p.text)).toEqual(['осколок II', 'осколка V', 'осколком III']);
 });

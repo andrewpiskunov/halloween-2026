@@ -67,7 +67,7 @@ def build(c):
         rev=hashlib.sha256((ASSETS/'book.css').read_bytes()).hexdigest()[:10]
         return f'''<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>{esc(title)} · Ярмарка</title><link rel="stylesheet" href="{prefix}assets/gm-book/book.css?v={rev}"></head><body class="handout"><main class="book" id="main"><header class="masthead"><span>Ярмарка украденной магии</span><span>{'Личные вводные' if private else 'Общая памятка'}</span></header>{body}<footer class="endnote">Сценарная редакция · 17 игроков · печать через меню браузера.<br>{'<a href="#common">Общие правила ↓</a>' if private else 'Каждый знает собственную историю. Остальное выясняется на ярмарке.'}</footer></main></body></html>'''
     resources={'ash':'Пепел феникса','moon':'Лунная пыль','dew':'Роса междумирья'}
-    shard_owners={'o1':'1','o5':'2','o9':'3','o14':'5'}
+    shard_owners={'o1':'I','o5':'II','o9':'III','o14':'V'}
     def gear(r):
         k=r['key']; xs=['6 золотых']+[f'{resources[x]}: {n}' for x,n in r['bundle'].items() if n]
         xs += [it['name'] for it in game['relics'] if it['owner']==k]
@@ -147,7 +147,7 @@ def build(c):
     public+=section('crafting','06','Мастер и герои-ремесленники','Кто изготовил вещь, кому она принадлежит и кто получает деньги.',craft_rules())
     (OUT/'player-guide.html').write_text(standalone('Общие правила',public))
     def ritual_map():
-        slots=''.join(f'<div class="grave-slot"><span>{n}</span><img src="assets/gm-book/items/{manifest["shard"]}" alt="Гнездо {n}" width="72" height="72"></div>' for n in ['1','2','3','4','5'])
+        slots=''.join(f'<div class="grave-slot"><span>{n}</span><img src="assets/gm-book/items/{manifest["shard"]}" alt="Гнездо {n}" width="72" height="72"></div>' for n in ['I','II','III','IV','V'])
         return '<div class="grave-map"><span class="eyebrow">Внутренний двор · у обвалившейся стены</span><h3>Плита над останками Сарна</h3><div class="grave-slots">'+slots+'</div><p>Только ведущему: любые 3 целые части · пыль из 2 Фокусов · формула из личной записи</p></div>'
     def ritual_steps():
         result=''
@@ -202,7 +202,7 @@ def build(c):
     twists+=article('Новая заявка: смерть, превращение, клятва',p(h['consentPolicy'])+p('Сначала договориться о конкретном событии и цене, затем провести сцену с наблюдаемым признаком. Смерть не выводит из игры: роль продолжается призраком. Для временного подчинения записать допустимые приказы, срок и способ освобождения; отказ от дискомфортной сцены всегда прекращает её без наказания.')+p('Пример клятвы: добровольно обещать одну доставку в обмен на защиту до конца акта. Нарушение прекращает защиту, но не отнимает управление персонажем. Пример превращения: Камень меняет образ, отдельная заявка о постоянной природе требует заранее оговорённого поступка. Зомби-состояние можно добавить только по такой согласованной заявке, а не за чужую тайную отметку.'))
     body+=section('twists','05','Что нужно для сюжетного поворота','Подготовка → наблюдаемый поступок → возможность ответа → конкретное последствие.',twists)
     evidence='<h3>Карта знаний — только ведущему</h3>'+''.join(article(k['topic'],labelled('Кто начинает со знанием',', '.join(name(x) for x in k['sources']))+p(k['fact'])+labelled('Если носителей нет',k['fallback'])) for k in h['knowledgeRoutes'])
-    evidence+='<h3>Пять осколков</h3>'+item_picture(manifest['shard'],'Осколок сердца')+p('Осколок 1 — Серафина; осколок 2 — Вельда; осколок 3 — Эльмар; осколок 4 — лот II акта вместе с уликой A; осколок 5 — Лира с начала вечера. Они не расходуются при сборке и остаются у владельцев. Погашенная часть больше не считается целой.')
+    evidence+='<h3>Пять осколков</h3>'+item_picture(manifest['shard'],'Осколок сердца')+p('Осколок I — Серафина; осколок II — Вельда; осколок III — Эльмар; осколок IV — лот II акта вместе с уликой A; осколок V — Лира с начала вечера. Они не расходуются при сборке и остаются у владельцев. Погашенная часть больше не считается целой.')
     evidence+='<h3>Три улики</h3>'+''.join(article(x['id']+' · '+x['name'],item_picture(manifest['clues'][x['id']],x['name'])+p(x['where'])+p(x['text'])) for x in game['clues'])
     evidence+=p('Для правды: публично сопоставить A+B+C и объяснить — Эльмар открыл ворота, дед Грима вывез сердце, Орвик извлёк и разделил его. Предметы могут принадлежать разным людям. Это не обязывает всех согласиться о будущем.')
     evidence+='<h3>Восемь реликвий</h3>'+''.join(article(x['name'],item_picture(manifest['relics'][x['name']],x['name'])+labelled('Стартовый владелец',name(x['owner']))+labelled('Кому нужна',', '.join(name(k) for k in x['wants']))+p('Обычный предмет торга: название не добавляет тайного обязательного эффекта.')) for x in game['relics'])

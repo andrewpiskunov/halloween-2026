@@ -1,4 +1,3 @@
-import { shardNumber } from '../shard-label';
 import { ItemText } from '../components/ItemText';
 import { useState } from 'preact/hooks';
 import type { PlayerView } from '@fair/shared';
@@ -30,7 +29,7 @@ export function Altars({ v }: { v: PlayerView }) {
         <div class="item-block">
           <h5>Осколки, которых никто не видел</h5>
           {unknown.map(s => (
-            <ItemCard key={s.id} emoji="💠" img={itemImageUrl({ kind: 'shard', ref: s.id })} title={`Осколок ${shardNumber(s.id)}`} sub="Где он, пока неизвестно." />
+            <ItemCard key={s.id} emoji="💠" img={itemImageUrl({ kind: 'shard', ref: s.id })} title={`Осколок ${s.id}`} sub="Где он, пока неизвестно." />
           ))}
         </div>
       )}
