@@ -1,4 +1,4 @@
-import { GmNarrativePanel, GmNarrativeGoals } from './Narrative';
+import { GmNarrativeGoals } from './Narrative';
 import { useState } from 'preact/hooks';
 import type { GmView, HiddenDice, HiddenMethod, HiddenUse } from '@fair/shared';
 import { itemImageUrl } from '../../assets';
@@ -42,7 +42,6 @@ export function GmRitual({ v }: { v: GmView }) {
     </div>
     {r.step !== 'preparation' && <div class="m-card"><h5>Журнал обряда · только ведущему</h5>{Object.values(r.choices).map(c => <p class="text" key={c.player}>{who(c.player)}: {SPECIAL_NAMES[c.kind] ?? (c.kind === 'pass' ? 'поддержка' : 'отзыв')} {c.targetId && `→ ${at(c.targetId)}`} {c.controller && ` · ${who(c.controller)} · ${ORDERS.find(o => o.value === c.order)?.label}`} <small>({c.status})</small></p>)}{r.observed.map((s, i) => <p class="m-note" key={i}>{s}</p>)}</div>}
     <Knowledge v={v} />
-    {h.narrative && <GmNarrativePanel v={v}/>}
   </>;
 }
 function Knowledge({ v }: { v: GmView }) {
@@ -58,7 +57,6 @@ export function GmHiddenResults({ v }: { v: GmView }) {
   if (!o) return <><GmNarrativeGoals v={v}/><div class="m-card"><h5>Финал ещё не завершён</h5><p class="text">Итог определяется у могилы: сначала части, пыль, формула, затем раскрытие вмешательств и последний выбор.</p><Button onClick={() => { gmTab.value = 'ritual'; }}>Перейти к финалу</Button><Knowledge v={v} /></div></>;
   return <><h2 class="scr-h">Эпилог</h2><Outcome outcome={o} name={who} /><div class="m-card"><h5>Сарн говорит после возвращения</h5><p class="text">{o.life === 'awake' ? 'Теперь сыграйте ответ Сарна. Учитывайте действующее распоряжение. Он может принять конечную, добровольную услугу и совершить одно большое добровольное чудо за вечер. Просители согласуют одну просьбу за две минуты; без согласия чуда нет.' : 'Сарн не вернулся и не может отвечать. Расскажите, что осталось у могилы, затем дайте каждому короткий личный эпилог.'}</p><p class="m-note">Решения и новые последствия можно записать на вкладке «Сюжет». Чудо не даёт вечного подчинения, чужого имущества или контроля над игроками.</p></div>
     <Knowledge v={v} />
-    {h.narrative && <GmNarrativePanel v={v}/>}
     <div class="m-card"><h5>Личные достижения</h5>{h.narrative ? <GmNarrativeGoals v={v}/> : v.state.roster.map(k => <div class="gm-hidden-goals" key={k}><div class="item"><Portrait roleKey={k} emoji="☉" size="sm" /><b>{who(k)}</b></div>{loadedContent().hidden17!.roles[k]?.goals.map((t, i) => <p class={o.goals[k]?.[i] ? 'text goal-done' : 'text'} key={i}>{o.goals[k]?.[i] ? '✓' : '○'} {t}</p>)}</div>)}</div>
     {v.state.phase === 'act3' && <Button onClick={() => ask({ title: 'Зафиксировать итоги ярмарки?', text: 'Достижения будут сохранены. Затем их можно показать игрокам.', okLabel: 'Закрыть ярмарку', onOk: () => void run({ type: 'session.close' }) })}>Зафиксировать итоги</Button>}
     {v.state.phase === 'closed' && <Button onClick={() => void run({ type: 'session.reveal' })}>Показать игрокам их итоги</Button>}

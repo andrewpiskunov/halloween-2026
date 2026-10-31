@@ -4,7 +4,7 @@ import { NarrativeBag } from './screens/NarrativeBag';
 import { NarrativeTavern } from './screens/NarrativeTavern';
 import { NarrativeTrades } from './screens/NarrativeTrades';
 import { NarrativeWorkshop } from './screens/NarrativeWorkshop';
-import { GmNarrativePanel } from './screens/gm/Narrative';
+import { GmNarrativeMigration } from './screens/gm/Narrative';
 import { activateNarrativeNavigation } from './narrative-navigation';
 import { GmRitual, GmHiddenResults } from './screens/gm/Hidden';
 import { HiddenWorkshop } from './screens/HiddenWorkshop';
@@ -169,7 +169,7 @@ function GmApp({ v }: { v: GmView }) {
     <>
       <TopBar v={v} />
       <LinkBar />
-      <main class="cnt">{v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <><GmNarrativePanel v={v} /><Roster v={v} /></>}</main>
+      <main class="cnt">{v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <><GmNarrativeMigration v={v} /><Roster v={v} /></>}</main>
       <GmTabs hidden17={!!v.state.hidden17} />
     </>
   );

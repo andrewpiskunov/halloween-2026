@@ -8,16 +8,15 @@ const STATUS: Record<GoalStatus | 'unassessed', string> = {
   unassessed: 'Ещё не оценена', achieved: 'Достигнута', partial: 'Частичный результат', 'not-achieved': 'Не достигнута',
 };
 const KNOWLEDGE: {value: RitualKnowledge; label: string; text: string}[] = [
-  {value:'place',label:'Устройство старой заставы',text:'Герой обнаружил устройство места. Способ соединения и чужие вмешательства этим не раскрываются.'},
-  {value:'joining',label:'Способ соединения частей',text:'Герой узнал способ соединения. Соль, управляющий знак и отвод силы остаются отдельными знаниями.'},
+  {value:'place',label:'Узнал, где похоронен Сарн',text:'Герой узнает в руинах могилу Сарна. Это не открывает ему способ возвращения дракона.'},
+  {value:'joining',label:'Узнал, как соединить сердце',text:'Герой сможет прочитать способ соединения частей сердца. Тайные способы вмешаться в обряд этим не раскрываются.'},
 ];
 const who = (key: string) => loadedContent().roles.find(r=>r.key===key)?.name??key;
 const roleOptions = (v: GmView) => v.state.roster.map(key=>({value:key,label:who(key),avatar:key}));
 
-/** Явный переход старой партии и адресная передача сюжетных сведений. */
-export function GmNarrativePanel({v}:{v:GmView}) {
+/** Явный переход старой партии; остаётся в управлении составом. */
+export function GmNarrativeMigration({v}:{v:GmView}) {
   const h=v.state.hidden17;const data=loadedContent().hidden17?.narrative;
-  const [player,setPlayer]=useState('');const [knowledge,setKnowledge]=useState<RitualKnowledge>('place');const [documentId,setDocumentId]=useState('');
   if(!h||!data)return null;
   if(!h.narrative){
     const offers=Object.values(v.state.offers).filter(o=>o.status==='pending').length;
@@ -34,18 +33,27 @@ export function GmNarrativePanel({v}:{v:GmView}) {
       <Button disabled={finale||started.length>0} onClick={()=>ask({title:'Перевести эту партию в сюжетную редакцию?',text:`Будут отменены сделки (${offers}), объявления с резервом (${board}), заказы (${production}) и приглашения в кости (${dice}). Их резервы вернутся. Новые стремления потребуют оценки ведущим.`,okLabel:'Перевести партию',onOk:()=>void run({type:'narrative.enable'})})}>Включить сюжетную редакцию</Button>
     </section>;
   }
+  return null;
+}
+
+/** Адресная передача сведений после живой сцены. */
+export function GmNarrativePanel({v}:{v:GmView}) {
+  const h=v.state.hidden17;const data=loadedContent().hidden17?.narrative;
+  const [player,setPlayer]=useState('');const [knowledge,setKnowledge]=useState<RitualKnowledge>('place');const [documentId,setDocumentId]=useState('');
+  if(!h?.narrative||!data)return null;
   const n=h.narrative; const known=player?n.knowledge[player]??[]:[];const chosen=KNOWLEDGE.find(k=>k.value===knowledge)!;
   const doc=data.documents.find(d=>d.id===documentId);const holder=!!doc&&doc.holders.includes(player);const shared=!!doc&&(n.documentAccess[player]??[]).includes(doc.id);
   const docsOpen=['act1','act2','act3'].includes(v.state.phase)&&h.ritual.step==='preparation'&&v.state.clock.pausedAt===undefined;
-  return <section class="m-card"><h3>Сюжетные знания и документы</h3><p class="m-note">Отмечайте сведения после состоявшейся сцены. Доступ к документу, знание способа и владение вещью учитываются отдельно.</p>
-    <div class="field"><span>Герой</span><Select label="Герой для сюжетных знаний" value={player} onChange={setPlayer} placeholder="Выберите героя" options={roleOptions(v)}/></div>
-    {player&&<p class="text">Известно: {KNOWLEDGE.filter(k=>known.includes(k.value)).map(k=>k.label).join('; ')||'эти сведения ещё не открыты'}.</p>}
+  return <details class="m-card"><summary>Передать герою сведения</summary><p class="m-note">После разговора или находки откройте герою то, что он узнал. Если игрок показал ему документ через приложение, сведения откроются автоматически.</p>
+    <div class="field"><span>Герой</span><Select label="Герой для сюжетных знаний" value={player} onChange={value=>{setPlayer(value);setDocumentId('');setKnowledge('place');}} placeholder="Выберите героя" options={roleOptions(v)}/></div>
+    {player&&<><p class="text">Известно: {KNOWLEDGE.filter(k=>known.includes(k.value)).map(k=>k.label).join('; ')||'эти сведения ещё не открыты'}.</p>
     <div class="field"><span>Знание</span><Select label="Сюжетное знание" value={knowledge} onChange={x=>setKnowledge(x as RitualKnowledge)} options={KNOWLEDGE.map(k=>({value:k.value,label:k.label}))}/></div><p class="text">{chosen.text}</p>
     <Button disabled={!player||known.includes(knowledge)} onClick={()=>ask({title:`Подтвердить знание: ${who(player)}?`,text:chosen.text+' Запись останется в журнале.',okLabel:'Подтвердить знание',onOk:()=>void run({type:'narrative.knowledge',player,knowledge})})}>{known.includes(knowledge)?'Знание уже подтверждено':'Подтвердить знание'}</Button>
     <h4>Показать источник</h4><div class="field"><span>Документ</span><Select label="Сюжетный документ" value={documentId} onChange={setDocumentId} placeholder="Выберите источник" options={data.documents.map(d=>({value:d.id,label:d.title,hint:d.source}))}/></div>
     {doc&&<><p class="m-note">{doc.source}</p><details><summary>Текст, который увидит герой</summary><p class="text" style={{whiteSpace:'pre-wrap'}}>{doc.text}</p></details><p class="m-note">Показ не передаёт документ во владение. Герой узнает описанные в нём способы. Отзыв убирает доступ к тексту, но не стирает уже полученное знание.</p>{holder?<p class="text">Это личный источник героя. Его исходный доступ сохраняется.</p>:<Button disabled={!player||!docsOpen} kind={shared?'sec':'main'} onClick={()=>ask({title:shared?`Прекратить показ для ${who(player)}?`:`Показать «${doc.title}» герою ${who(player)}?`,text:shared?'Герой потеряет доступ к тексту. Уже подтверждённое знание сохранится.':`Герой увидит полный текст выбранного документа. Источник: ${doc.source}.`,okLabel:shared?'Прекратить показ':'Показать документ',onOk:()=>void run({type:'narrative.document.show',documentId:doc.id,player,allow:!shared})})}>{shared?'Прекратить показ документа':'Показать документ'}</Button>}</>}
     {!docsOpen&&<p class="m-note">Показ документов доступен во время активного акта до начала финала.</p>}
-  </section>;
+    </>}
+  </details>;
 }
 
 /** Четыре состояния оценки сохраняются без преобразования к прежним boolean-целям. */

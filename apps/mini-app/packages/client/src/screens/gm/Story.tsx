@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { GmNarrativePanel } from './Narrative';
 import type { GmView, Side, StoryCard, StoryCardInput, StoryKind, StoryRequest } from '@fair/shared';
 import { storyAct } from '../../story-rules';
 import { Button } from '../../components/Button';
@@ -119,6 +120,7 @@ export function GmStory({ v }: { v: GmView }) {
     <h2 class="scr-h">Сюжет <small>{pending} новых заявок</small></h2>
     {!live(v) && <p class="m-note">Вмешательства доступны во время актов. История сохранена для просмотра.</p>}
     <div class="m-btns">{([['requests', 'Заявки'], ['cards', 'Карточки'], ['messages', 'Послания'], ['history', 'История']] as const).map(([key, label]) => <Button small key={key} kind={section === key ? 'main' : 'sec'} onClick={() => setSection(key)}>{label}</Button>)}</div>
+    <GmNarrativePanel v={v} />
     {section === 'requests' && <>
       <p class="m-note">На заявку можно ответить условиями, подтвердить результат или предложить другой путь. Для нового эффекта выдайте карточку. Цена и последствия проводятся отдельно.</p>
       <label class="check"><input type="checkbox" checked={closed} onChange={e => setClosed(e.currentTarget.checked)} />Показать завершённые заявки</label>
