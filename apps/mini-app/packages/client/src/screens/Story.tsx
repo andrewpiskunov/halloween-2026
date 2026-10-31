@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { navigateTab } from '../narrative-navigation';
 import { useState } from 'preact/hooks';
 import type { PlayerView, StoryCard, StoryKind, StoryRequest } from '@fair/shared';
@@ -19,13 +20,13 @@ export function StoryCardBody({ c, phase }: { c: StoryCard; phase: PlayerView['p
   const active = storyCardActive(c, phase);
   return <>
     <h5>{STORY_KIND[c.kind]}{!c.active ? ' · снято' : !active ? ' · срок истёк' : ''}{c.kind === 'goal' && c.completed ? ' · выполнено' : ''}</h5>
-    <h4>{c.title}</h4><p class="text story-prose">{c.text}</p>
-    {c.price && <p class="text story-prose"><b>Цена и условия:</b> {c.price}</p>}
-    <p class="m-note">{c.expiresAct === null ? 'До конца игры или отмены ведущим' : `До конца акта ${c.expiresAct}`}.
+    <h4>{c.title}</h4><p class="text story-prose"><ItemText>{c.text}</ItemText></p>
+    {c.price && <p class="text story-prose"><ItemText><b>Цена и условия:</b> {c.price}</ItemText></p>}
+    <p class="m-note"><ItemText>{c.expiresAct === null ? 'До конца игры или отмены ведущим' : `До конца акта ${c.expiresAct}`}.
       {['ability', 'item'].includes(c.kind) && ` Применений: ${c.uses === null ? 'без ограничения' : c.uses}. Результат подтверждает ведущий.`}
       {c.replacesAbility && ' Основная способность заменена, пока действует эта карточка.'}
       {c.kind === 'state' && ' Следуйте описанию состояния; вы продолжаете участвовать в игре.'}
-    </p>
+    </ItemText></p>
   </>;
 }
 
@@ -46,7 +47,7 @@ function RequestForm({ card, onDone }: { card?: StoryCard; onDone: () => void })
     <StoryText label="Название заявки" value={title} onChange={setTitle} max={120} small />
     <StoryText label="Чего хотите добиться и как будете действовать" value={text} onChange={setText} />
     <StoryText label="Что предлагаете потратить или чем рискуете (необязательно)" value={stake} onChange={setStake} max={500} />
-    <p class="m-note">Заявка и ответ видны только вам и ведущему. Сначала дождитесь решения: сама отправка не тратит ресурсы.</p>
+    <p class="m-note"><ItemText>Заявка и ответ видны только вам и ведущему. Сначала дождитесь решения: сама отправка не тратит ресурсы.</ItemText></p>
     <div class="m-btns"><Button disabled={busy || !title.trim() || !text.trim()} onClick={() => void send()}>Отправить заявку</Button><Button kind="sec" onClick={onDone}>Закрыть форму</Button></div>
   </div>;
 }
@@ -58,11 +59,11 @@ function PlayerCard({ c, v }: { c: StoryCard; v: PlayerView }) {
   const usable = mine && storyAct(v.phase) > 0 && storyCardActive(c, v.phase) && c.uses !== 0 && ['ability', 'item'].includes(c.kind);
   return <div class="m-card story-card">
     <StoryCardBody c={c} phase={v.phase} />
-    {!mine && <p class="m-note">Владелец: {plainName(c.owner, v)}</p>}
-    {pending && <p class="ab-state">Применение ждёт решения ведущего. Ответ — в «Событиях».</p>}
+    {!mine && <p class="m-note"><ItemText>Владелец: {plainName(c.owner, v)}</ItemText></p>}
+    {pending && <p class="ab-state"><ItemText>Применение ждёт решения ведущего. Ответ — в «Событиях».</ItemText></p>}
     {usable && !pending && <Button kind="sec" onClick={() => setUsing(!using)}>Попросить применить</Button>}
     {using && usable && !pending && <RequestForm card={c} onDone={() => setUsing(false)} />}
-    {c.kind === 'item' && mine && <p class="m-note">Для передачи этого предмета договоритесь с игроком и обратитесь к ведущему.</p>}
+    {c.kind === 'item' && mine && <p class="m-note"><ItemText>Для передачи этого предмета договоритесь с игроком и обратитесь к ведущему.</ItemText></p>}
   </div>;
 }
 
@@ -79,22 +80,22 @@ export function PlayerStory({ v }: { v: PlayerView }) {
   return <section class="story-stack">
     <div class="m-card">
       <h5>Свободная заявка ведущему</h5>
-      <p class="text">Придумайте обряд, сделку с магией или необычный поступок. Расскажите, чего хотите добиться, как и чем готовы рискнуть. Ведущий предложит условия и последствия.</p>
-      {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note">Заявки доступны во время актов.</p>}
+      <p class="text"><ItemText>Придумайте обряд, сделку с магией или необычный поступок. Расскажите, чего хотите добиться, как и чем готовы рискнуть. Ведущий предложит условия и последствия.</ItemText></p>
+      {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note"><ItemText>Заявки доступны во время актов.</ItemText></p>}
       {compose && live && <RequestForm onDone={() => setCompose(false)} />}
     </div>
-    {[...(v.story?.messages ?? [])].reverse().map(m => <div class="m-card hot" key={m.id}><h5>Послание ведущего{m.recipients.length ? ' · личное' : ' · всем'}</h5><h4>{m.title}</h4><p class="text story-prose">{m.text}</p></div>)}
+    {[...(v.story?.messages ?? [])].reverse().map(m => <div class="m-card hot" key={m.id}><h5>Послание ведущего{m.recipients.length ? ' · личное' : ' · всем'}</h5><h4>{m.title}</h4><p class="text story-prose"><ItemText>{m.text}</ItemText></p></div>)}
     {requests.map(q => <div class="m-card" key={q.id}>
-      <h5>Ваша заявка · {STORY_STATUS[q.status]}</h5><h4>{q.title}</h4><p class="text story-prose">{q.text}</p>
-      {q.stake && <p class="text">Предложенная цена: {q.stake}</p>}
-      {q.reply && <div class="story-reply"><b>Ответ ведущего</b><p class="text story-prose">{q.reply}</p></div>}
+      <h5>Ваша заявка · {STORY_STATUS[q.status]}</h5><h4>{q.title}</h4><p class="text story-prose"><ItemText>{q.text}</ItemText></p>
+      {q.stake && <p class="text"><ItemText>Предложенная цена: {q.stake}</ItemText></p>}
+      {q.reply && <div class="story-reply"><b>Ответ ведущего</b><p class="text story-prose"><ItemText>{q.reply}</ItemText></p></div>}
       {live && ['pending', 'conditions'].includes(q.status) && <Button small kind="sec" onClick={() => ask({ title: 'Отозвать заявку?', onOk: () => void run({ type: 'story.cancel', id: q.id, revision: q.revision }) })}>Отозвать заявку</Button>}
-      {q.status === 'conditions' && <p class="m-note">Выполните условия и сообщите ведущему. Он подтвердит результат этой заявки.</p>}
+      {q.status === 'conditions' && <p class="m-note"><ItemText>Выполните условия и сообщите ведущему. Он подтвердит результат этой заявки.</ItemText></p>}
     </div>)}
     {(v.story?.cards ?? []).map(c => <PlayerCard key={c.id} c={c} v={v} />)}
   </section>;
 }
 
 export function StoryInvite() {
-  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text">Есть необычная идея? Предложите её ведущему: он может назначить обряд, выдать новую вещь или изменить вашу историю.</p><Button kind="sec" onClick={() => navigateTab('events')}>Заявки и послания</Button></div>;
+  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text"><ItemText>Есть необычная идея? Предложите её ведущему: он может назначить обряд, выдать новую вещь или изменить вашу историю.</ItemText></p><Button kind="sec" onClick={() => navigateTab('events')}>Заявки и послания</Button></div>;
 }

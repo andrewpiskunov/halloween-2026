@@ -1,3 +1,4 @@
+import { ItemText } from './ItemText';
 import { confirmRequest } from '../store';
 import { Button } from './Button';
 
@@ -10,7 +11,7 @@ export function Confirm() {
     <div class="modal-back" onClick={close}>
       <div class="modal" role="dialog" aria-modal="true" aria-label={req.title} onClick={e => e.stopPropagation()}>
         <h4>{req.title}</h4>
-        {req.text && <p class="m-note">{req.text}</p>}
+        {req.text && <p class="m-note"><ItemText>{req.text}</ItemText></p>}
         <div class="m-btns two">
           <Button kind="sec" onClick={close}>Отмена</Button>
           <Button kind={req.danger ? 'red' : 'main'} onClick={() => { close(); req.onOk(); }}>

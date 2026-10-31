@@ -22,6 +22,7 @@
 .narrative-letter h2 { flex: 1; min-width: 0; margin: 0; font-size: 27px; line-height: 1.2; }
 .narrative-letter-seal { flex: none; color: #883d2a; font-size: 24px; line-height: 1.35; }
 .narrative-letter-text { white-space: pre-line; line-height: 1.7; margin-top: 22px; }
+.narrative-letter-art { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; margin: 16px 0; border: 1px solid var(--rule); }
 .narrative-satchel { background-size: 100% 100%; padding: 75px 34px 65px; min-height: 375px; border-radius: 18px; box-shadow: inset 0 0 22px #0009; }
 .narrative-inventory { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
 .narrative-slot { display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center; min-width: 0; min-height: 111px; border: 1px solid #a1855466; border-radius: 7px; background: #100c08bb; color: #f0dfb9; padding: 10px 5px; box-shadow: inset 0 0 12px #0008; font: inherit; cursor: pointer; }
@@ -58,3 +59,11 @@
 @media(max-width:360px) { .narrative-person { grid-template-columns:90px 1fr; gap:12px;} .narrative-person .portrait.card {width:90px;height:125px;} .narrative-person h2 {font-size:26px;} .narrative-satchel { padding-left:25px; padding-right:25px;} .narrative-slot span:not(.thumb) {font-size:11px;} }
 
 .narrative-empty-bag { grid-column: 1 / -1; margin: 22px 0 0; padding: 20px 15px; border: 1px solid #a1855466; border-radius: 7px; background: #100c08dd; color: #f0dfb9; text-align: center; font-size: 16px; line-height: 1.5; }
+
+.ritual-orders { border: 0; padding: 0; margin: 18px 0; min-width: 0; }
+.ritual-orders legend { font-weight: 700; margin-bottom: 10px; }
+.ritual-orders label { display: flex; align-items: center; gap: 10px; padding: 12px; margin: 6px 0; border: 1px solid var(--rule); cursor: pointer; }
+.ritual-orders label:has(input:checked) { background: #b9924826; border-color: var(--acc); }
+.ritual-orders input { flex: none; width: 18px; height: 18px; accent-color: var(--acc); }
+.ritual-other-name { margin: 14px 0; }
+.ritual-other-name summary { font-size: 15px; font-weight: 400; color: var(--note); }

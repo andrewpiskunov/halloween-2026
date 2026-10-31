@@ -1,3 +1,4 @@
+import { ItemText } from '../../components/ItemText';
 import { useState } from 'preact/hooks';
 import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
@@ -58,8 +59,8 @@ export function Roster({ v }: { v: GmView }) {
     <>
       <div class="m-card">
         <h5>{state.hidden17 ? 'Основной состав · 17 героев' : 'Состав'}</h5>
-        {!state.hidden17 && setup && content.hidden17 && <><p class="text">Доступна новая редакция: личные намерения, таверна, ремесло и финал у могилы.</p><Button onClick={() => ask({ title: 'Перейти к новым правилам?', text: 'Будет установлен состав из 17 героев. Игра ещё не открыта, стартовая раздача не затронута.', okLabel: 'Включить новые правила', onOk: () => void run({ type: 'hidden17.enable' }) })}>Сценарий для 17 игроков</Button></>}
-        <p class="m-note">В составе {state.roster.length} · пришли {presentCount}</p>
+        {!state.hidden17 && setup && content.hidden17 && <><p class="text"><ItemText>Доступна новая редакция: личные намерения, таверна, ремесло и финал у могилы.</ItemText></p><Button onClick={() => ask({ title: 'Перейти к новым правилам?', text: 'Будет установлен состав из 17 героев. Игра ещё не открыта, стартовая раздача не затронута.', okLabel: 'Включить новые правила', onOk: () => void run({ type: 'hidden17.enable' }) })}>Сценарий для 17 игроков</Button></>}
+        <p class="m-note"><ItemText>В составе {state.roster.length} · пришли {presentCount}</ItemText></p>
         {setup && !state.hidden17 && (
           <>
             <label class="field">
@@ -73,7 +74,7 @@ export function Roster({ v }: { v: GmView }) {
           </>
         )}
         <Button kind="red" disabled={!setup || state.roster.length === 0} onClick={open}>Открыть ярмарку</Button>
-        {!setup && <p class="m-note">Ярмарка открыта, состав зафиксирован.</p>}
+        {!setup && <p class="m-note"><ItemText>Ярмарка открыта, состав зафиксирован.</ItemText></p>}
       </div>
 
       {shownLink && (

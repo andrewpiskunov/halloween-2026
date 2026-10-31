@@ -1,3 +1,4 @@
+import { ItemText } from '../../components/ItemText';
 import { GmTavern } from './Hidden';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { AltarSide, ContentData, Correction as CorrectionChange, GmView, Ingredient } from '@fair/shared';
@@ -62,7 +63,7 @@ export function Console({ v }: { v: GmView }) {
       <div class="m-card clock">
         <div class="act">{head}</div>
         <div class={`big ${running ? '' : 'idle'} ${plan?.over ? 'over' : ''}`} role="timer">{plan ? `${plan.over ? '−' : ''}${mmss(remaining)}` : '00:00'}</div>
-        <p>{note}</p>
+        <p><ItemText>{note}</ItemText></p>
         <div class="acts" aria-hidden="true">
           {setup && [<span key="pin0" class="pin" />, <i key="seg0" class="seg" />]}
           {marks.map((m, idx) => [
@@ -76,8 +77,8 @@ export function Console({ v }: { v: GmView }) {
       {plan?.due && (
         <div class="m-card hot act-due">
           <h5>{plan.act === 3 ? 'Пора закрывать ярмарку' : `Пора объявлять акт ${roman(plan.act + 1)}`}</h5>
-          <ol>{plan.todo.map(t => <li key={t}>{t}</li>)}</ol>
-          <p class="m-note">Если игра идёт хорошо, «+5 минут» сдвинет срок; все акты сдвинутся вместе с ним.</p>
+          <ol>{plan.todo.map(t => <li key={t}><ItemText>{t}</ItemText></li>)}</ol>
+          <p class="m-note"><ItemText>Если игра идёт хорошо, «+5 минут» сдвинет срок; все акты сдвинутся вместе с ним.</ItemText></p>
         </div>
       )}
 
@@ -110,14 +111,14 @@ export function Console({ v }: { v: GmView }) {
 
       <div class="m-card danger-zone">
         <h5>Сброс игры</h5>
-        <p class="m-note">Начнёт новую партию: сбросит явку, привязки игроков, вещи, сделки и ритуал. Коды приглашений выдадутся заново, вы останетесь ведущим. После сброса проверьте состав и отметьте присутствующих.</p>
+        <p class="m-note"><ItemText>Начнёт новую партию: сбросит явку, привязки игроков, вещи, сделки и ритуал. Коды приглашений выдадутся заново, вы останетесь ведущим. После сброса проверьте состав и отметьте присутствующих.</ItemText></p>
         <Button kind="sec" onClick={() => ask({
           title: 'Сбросить игру полностью?', danger: true, okLabel: 'Сбросить',
           text: 'Игра вернётся к подготовке новой партии: явка сброшена, игроки отвязаны, старые ссылки перестанут работать. Отменить нельзя.',
           onOk: () => { void run({ type: 'session.reset' }).then(r => { if (r.ok) showToast('Игра сброшена'); }); },
         })}>Сбросить игру</Button>
         <Button kind="sec" disabled={!hasOwnToken()} onClick={() => openExternal(exportUrl())}>Скачать журнал</Button>
-        <p class="m-note">Файл также сохраняется на сервере при закрытии ярмарки</p>
+        <p class="m-note"><ItemText>Файл также сохраняется на сервере при закрытии ярмарки</ItemText></p>
       </div>
 
       <div class="m-card">
@@ -130,7 +131,7 @@ export function Console({ v }: { v: GmView }) {
         {state.announcements.length > 0 && (
           <div class="ann-log">
             {state.announcements.slice(-5).reverse().map((a, i) => (
-              <div class="m-row" key={i}><b>{a.title}</b><p class="hand" style={{ margin: 0 }}>{a.text}</p></div>
+              <div class="m-row" key={i}><b>{a.title}</b><p class="hand" style={{ margin: 0 }}><ItemText>{a.text}</ItemText></p></div>
             ))}
           </div>
         )}
@@ -178,13 +179,13 @@ function Lots({ v }: { v: GmView }) {
             )}
             {l.status === 'openBidding' && (
               <>
-                <p class="m-note">Две минуты торга голосом. Когда зал готов, откройте закрытые ставки.</p>
+                <p class="m-note"><ItemText>Две минуты торга голосом. Когда зал готов, откройте закрытые ставки.</ItemText></p>
                 <div class="m-btns"><Button onClick={() => cmd('lot.sealedBids', l.id)}>Закрытые ставки</Button></div>
               </>
             )}
             {l.status === 'sealedBidding' && (
               <>
-                <p class="m-note">{l.bids.length ? `${l.bids.length} ${plural(l.bids.length, 'ставка', 'ставки', 'ставок')}` : 'ставок пока нет'}. Окно закроется само; можно завершить раньше.</p>
+                <p class="m-note"><ItemText>{l.bids.length ? `${l.bids.length} ${plural(l.bids.length, 'ставка', 'ставки', 'ставок')}` : 'ставок пока нет'}. Окно закроется само; можно завершить раньше.</ItemText></p>
                 <div class="m-btns">
                   <Button kind="sec" onClick={() => ask({
                     title: 'Завершить торг сейчас?', okLabel: 'Завершить',
@@ -194,7 +195,7 @@ function Lots({ v }: { v: GmView }) {
                 </div>
               </>
             )}
-            {l.status === 'fixedPrice' && <p class="m-note">Ставок не было: выкуп за {goldText(l.fixedPrice ?? 4)}, кто первый нажмёт.</p>}
+            {l.status === 'fixedPrice' && <p class="m-note"><ItemText>Ставок не было: выкуп за {goldText(l.fixedPrice ?? 4)}, кто первый нажмёт.</ItemText></p>}
             {l.status === 'sold' && l.winner !== undefined && (
               <div class="m-row"><span>Ушёл</span><b>{name(l.winner)} за {goldText(l.price ?? 0)}</b></div>
             )}
@@ -314,9 +315,9 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
                 { value: 'none', label: 'Снять выбор', icon: '✗' },
               ]} />
             </div>
-            <p class="m-note">Сейчас: {chosen && chosen !== 'free' ? sideName(chosen) : 'не выбрана'}. После закрытия итоги пересчитаются.</p>
+            <p class="m-note"><ItemText>Сейчас: {chosen && chosen !== 'free' ? sideName(chosen) : 'не выбрана'}. После закрытия итоги пересчитаются.</ItemText></p>
           </>
-        ) : <p class="m-note">Сторону выбирают только свободные роли.</p>
+        ) : <p class="m-note"><ItemText>Сторону выбирают только свободные роли.</ItemText></p>
       ) : field === 'goal' ? (
         <>
           <div class="field"><span>Цель</span>
@@ -329,7 +330,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
               <Button key={m} kind={goalMark === m ? 'main' : 'sec'} small onClick={() => setGoalMark(m)}>{GOAL_MARK[m]}</Button>
             ))}
           </div>
-          <p class="m-note">Отметка ведущего важнее расчёта; «снять отметку» вернёт расчёт по журналу. На «Итогах» такая цель помечена «отмечено ведущим».</p>
+          <p class="m-note"><ItemText>Отметка ведущего важнее расчёта; «снять отметку» вернёт расчёт по журналу. На «Итогах» такая цель помечена «отмечено ведущим».</ItemText></p>
         </>
       ) : isMark(field) ? (
         <>
@@ -342,7 +343,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
               <input type="text" value={guise} maxLength={40} placeholder="Например: Странник в сером" onInput={e => setGuise((e.currentTarget as HTMLInputElement).value)} />
             </label>
           )}
-          <p class="m-note">Отметки правятся только у игрока на ярмарке. {field === 'abilityUsed' ? 'Снять — вернуть применение в этом акте; если просьба ждёт ответа, сначала отмените её.' : field === 'protection' ? 'Защита одна: поставить можно только тому, у кого её нет.' : ''}</p>
+          <p class="m-note"><ItemText>Отметки правятся только у игрока на ярмарке. {field === 'abilityUsed' ? 'Снять — вернуть применение в этом акте; если просьба ждёт ответа, сначала отмените её.' : field === 'protection' ? 'Защита одна: поставить можно только тому, у кого её нет.' : ''}</ItemText></p>
         </>
       ) : field !== 'itemOwner' ? (
         <div class="m-row"><span>Изменить на</span><Stepper value={delta} onChange={setDelta} min={-10} max={10} label="Изменение" /></div>

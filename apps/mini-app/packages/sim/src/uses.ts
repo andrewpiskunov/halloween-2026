@@ -94,7 +94,7 @@ export function useFor(kind: AbilityKind, view: PlayerView, rng: Rng): AbilityUs
     case 'buyCheap': return { kind, ingredient: prefer(rng, inStock(view), INGREDIENTS) };
     case 'buyBulk': return { kind, take: stockPair(view, rng) };
     case 'buyFromBank': return { kind, ingredient: rng.pick(INGREDIENTS) };
-    case 'grow': return { kind, give: prefer(rng, has(view), INGREDIENTS) };
+    case 'grow': return { kind, give: prefer(rng, has(view).filter(i => i !== 'dew'), ['ash', 'moon']) };
     case 'swapIngredient': {
       const give = prefer(rng, has(view), INGREDIENTS);
       const others = INGREDIENTS.filter(k => k !== give);
@@ -126,7 +126,7 @@ export function useFor(kind: AbilityKind, view: PlayerView, rng: Rng): AbilityUs
     case 'cleanseOther': return target(t => ({ kind, target: t }));
     case 'discountOther': return target(t => ({ kind, target: t }));
     case 'copyAbility': {
-      const own = has(view);
+      const own = has(view).filter(i => i !== 'dew');
       return own.length === 0 ? null : { kind, copy: { kind: 'grow', give: rng.pick(own) } };
     }
 

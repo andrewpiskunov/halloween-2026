@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { useState } from 'preact/hooks';
 import type { PlayerView } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
@@ -14,13 +15,13 @@ type Altar = PlayerView['altars'][number];
 /** Алтари: бумажные карты с вкладами по именам, «Вложить» вещь или золото, «Забрать своё». */
 export function Altars({ v }: { v: PlayerView }) {
   const [open, setOpen] = useState<string | null>(null);
-  if (v.altars.length === 0) return <div class="m-card"><p class="m-note">Алтари появятся, когда ярмарка откроется.</p></div>;
+  if (v.altars.length === 0) return <div class="m-card"><p class="m-note"><ItemText>Алтари появятся, когда ярмарка откроется.</ItemText></p></div>;
   const unknown = v.public.shards.filter(s => s.status === 'unknown');
   return (
     <>
       <h2 class="scr-h">Алтари</h2>
       <FrozenNote v={v} />
-      <p class="m-note altar-rule">Ритуал готов, когда на алтаре три разных осколка, два Фокуса силы и не меньше шести золота от трёх разных игроков. Готов может быть только один алтарь.</p>
+      <p class="m-note altar-rule"><ItemText>Ритуал готов, когда на алтаре три разных осколка, два Фокуса силы и не меньше шести золота от трёх разных игроков. Готов может быть только один алтарь.</ItemText></p>
       {v.altars.map(a => (
         <AltarCard key={a.side} v={v} a={a} open={open === a.side} toggle={() => setOpen(open === a.side ? null : a.side)} />
       ))}
@@ -61,10 +62,10 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
     <div class="m-card alt" style={{ '--accent': color }}>
       <div class="altar-h"><i aria-hidden="true" /><h4>{a.name}</h4></div>
       <ul class="altar-need" aria-label="Чего не хватает">
-        {need.map(n => <li key={n.label} class={n.done ? 'ok' : ''}>{n.label} {n.have}/{n.goal}</li>)}
+        {need.map(n => <li key={n.label} class={n.done ? 'ok' : ''}><ItemText>{n.label} {n.have}/{n.goal}</ItemText></li>)}
       </ul>
       <h5>Вклады</h5>
-      {a.contributions.length === 0 && <p class="m-note">Пока пусто.</p>}
+      {a.contributions.length === 0 && <p class="m-note"><ItemText>Пока пусто.</ItemText></p>}
       {a.contributions.map(c => {
         const label = c.gold !== undefined ? { emoji: GOLD.emoji, name: goldText(c.gold) }
           : c.itemRef ? refLabel(c.itemRef, v) : { emoji: '📦', name: 'вещь' };
@@ -82,7 +83,7 @@ function AltarCard({ v, a, open, toggle }: { v: PlayerView; a: Altar; open: bool
       <div class="m-btns"><Button kind={open ? 'sec' : 'main'} onClick={toggle}>{open ? 'Скрыть' : 'Вложить'}</Button></div>
       {open && (
         <div class="choice">
-          {altarItems.length === 0 && <p class="m-note">Свободных осколков и Фокусов нет.</p>}
+          {altarItems.length === 0 && <p class="m-note"><ItemText>Свободных осколков и Фокусов нет.</ItemText></p>}
           {altarItems.map(i => {
             const l = itemLabel(i, v);
             return (

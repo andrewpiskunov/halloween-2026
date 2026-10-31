@@ -50,3 +50,11 @@ export function itemImageUrl(item: Pick<Item, 'kind' | 'ref'>): string | undefin
 export function resourceImageUrl(key: 'gold' | Ingredient): string {
   return `${BASE}assets/items/${key}.jpg`;
 }
+
+/** Иллюстрация носителя документа; содержание и тайны остаются только в его тексте. */
+export function documentImageUrl(id: string): string {
+  const file = id === 'family-book' ? 'family-book'
+    : ['grove-memory', 'yard-memory', 'greta-vessel', 'nix-sale', 'elmar-gates', 'corvin-notebook', 'grim-ledger', 'ruf-contract', 'iva-memory', 'siv-road'].includes(id) || id.startsWith('memory:') ? 'notebook'
+    : 'letter';
+  return `${BASE}assets/documents/${file}.webp`;
+}

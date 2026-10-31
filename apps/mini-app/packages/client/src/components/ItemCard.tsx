@@ -1,3 +1,4 @@
+import { ItemText } from './ItemText';
 import type { ComponentChildren } from 'preact';
 import { Thumb } from './Thumb';
 
@@ -10,7 +11,7 @@ export function ItemCard({ emoji, img, title, text, sub, children }: Props) {
       <Thumb src={img} emoji={emoji} />
       <div class="item-text">
         <b>{title}</b>
-        {text && <p class="item-desc">{text}</p>}
+        {text && <p class="item-desc"><ItemText>{text}</ItemText></p>}
         {sub && <span>{sub}</span>}
       </div>
       {children && <div class="item-actions">{children}</div>}

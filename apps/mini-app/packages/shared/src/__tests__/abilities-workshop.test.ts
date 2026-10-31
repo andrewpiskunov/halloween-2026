@@ -140,18 +140,17 @@ describe('способности покупки', () => {
 });
 
 describe('обмен с запасом', () => {
-  test('grow (o2): отдал Росу, получил две; другой ингредиент уходит в запас; Рос в запасе < 2 → insufficient', () => {
-    const s = addIngredients(makeGame(30), 'o2', { dew: 1, moon: 1 });
-    const r = done(s, 'o2', { kind: 'grow', give: 'dew' });
-    expect(r.events).toHaveLength(1);
-    expect(r.state.players.o2.ingredients.dew).toBe(s.players.o2.ingredients.dew + 1);
-    expect(r.state.workshop.dew).toBe(s.workshop.dew - 1);
-
-    const m = done(s, 'o2', { kind: 'grow', give: 'moon' });
-    expect(m.state.players.o2.ingredients).toMatchObject({ moon: s.players.o2.ingredients.moon - 1, dew: s.players.o2.ingredients.dew + 2 });
-    expect(m.state.workshop).toMatchObject({ moon: s.workshop.moon + 1, dew: s.workshop.dew - 2 });
-
-    refused(withWorkshop(s, { dew: 1 }), 'o2', { kind: 'grow', give: 'dew' }, 'insufficient');
+  test('grow (o2): роса не подходит для оплаты; пепел и пыль дают две Росы', () => {
+    const s = addIngredients(makeGame(30), 'o2', { ash: 1, dew: 1, moon: 1 });
+    refused(s, 'o2', { kind: 'grow', give: 'dew' }, 'invalid');
+    for (const give of ['ash', 'moon'] as const) {
+      const m = done(s, 'o2', { kind: 'grow', give });
+      expect(m.state.players.o2.ingredients[give]).toBe(s.players.o2.ingredients[give] - 1);
+      expect(m.state.workshop[give]).toBe(s.workshop[give] + 1);
+      expect(m.state.players.o2.ingredients.dew).toBe(s.players.o2.ingredients.dew + 2);
+      expect(m.state.workshop.dew).toBe(s.workshop.dew - 2);
+    }
+    refused(withWorkshop(s, { dew: 1 }), 'o2', { kind: 'grow', give: 'moon' }, 'insufficient');
   });
 
   test('swapIngredient (n18): свой на любой из запаса; take === give → invalid', () => {

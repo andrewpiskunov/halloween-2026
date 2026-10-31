@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { SignatureGoods } from './SignatureGoods';
 import { StoryCards } from './Story';
 import { useState } from 'preact/hooks';
@@ -58,14 +59,14 @@ export function Bag({ v }: { v: PlayerView }) {
             <Thumb src={resourceImageUrl(ing.key)} emoji={ing.emoji} size="md" />
             <b>{available.ingredients[ing.key]}</b><span>{ing.short}</span>
             {player.ingredients[ing.key] !== available.ingredients[ing.key] && (
-              <em class="m-note">из {player.ingredients[ing.key]}</em>
+              <em class="m-note"><ItemText>из {player.ingredients[ing.key]}</ItemText></em>
             )}
           </div>
         ))}
       </div>
-      <p class="m-note" style={{ margin: '-4px 6px 0' }}>Обещанные ресурсы зарезервированы до завершения сделки, заказа или игры.</p>
+      <p class="m-note" style={{ margin: '-4px 6px 0' }}><ItemText>Обещанные ресурсы зарезервированы до завершения сделки, заказа или игры.</ItemText></p>
 
-      {items.length === 0 && <p class="m-note" style={{ margin: '0 6px' }}>Вещей пока нет.</p>}
+      {items.length === 0 && <p class="m-note" style={{ margin: '0 6px' }}><ItemText>Вещей пока нет.</ItemText></p>}
       {items.map(item => {
         const label = itemLabel(item, v);
         const usable = canUseItem(item, v);
@@ -86,11 +87,11 @@ export function Bag({ v }: { v: PlayerView }) {
                 onClick={() => toggle('altar', item.id)}>На алтарь</Button>}
               {hasUse && <Button small kind="sec" disabled={!usable.ok} onClick={() => use(item)}>Использовать</Button>}
             </div>
-            {hasUse && !usable.ok && !reserved && <p class="m-note">{usable.why}</p>}
+            {hasUse && !usable.ok && !reserved && <p class="m-note"><ItemText>{usable.why}</ItemText></p>}
             {useFor === item.id && usable.ok && <UseChoice v={v} item={item} onDone={() => setUseFor(null)} />}
             {altarFor === item.id && (
               <div class="choice">
-                <span class="m-note">Какой алтарь?</span>
+                <span class="m-note"><ItemText>Какой алтарь?</ItemText></span>
                 {v.altars.map(a => (
                   <Button key={a.side} small onClick={() => toAltar(item, a)}>{a.name}</Button>
                 ))}
@@ -140,10 +141,10 @@ export function UseChoice({ v, item, onDone }: { v: PlayerView; item: Item; onDo
           <span>Новый облик</span>
           <input type="text" maxLength={GUISE_MAX} value={guise} placeholder="например, Странствующий лекарь"
             onInput={e => setGuise((e.currentTarget as HTMLInputElement).value)} />
-          <em class="m-note">Скажите вслух, кем вы теперь выглядите.</em>
+          <em class="m-note"><ItemText>Скажите вслух, кем вы теперь выглядите.</ItemText></em>
         </label>
       )}
-      <span class="m-note">На кого?</span>
+      <span class="m-note"><ItemText>На кого?</ItemText></span>
       <Button small disabled={!ready} onClick={self}>На себя</Button>
       <Select label="Другому участнику" value="" onChange={other} placeholder="другому участнику…" disabled={!ready}
         options={v.others.map(o => ({ value: o.roleKey, label: roleName(o.roleKey, v), avatar: o.roleKey, icon: roleEmoji(o.roleKey, v) }))} />

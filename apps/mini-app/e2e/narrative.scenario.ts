@@ -56,6 +56,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
       expect(v.public.relics).toEqual([]);
       if (!v.hidden17.narrative.knowledge.includes('joining')) expect(JSON.stringify(v)).not.toContain(source.ritual.formula);
       await expect(p.getByRole('heading', { name: 'Таверна', exact: true })).toBeVisible();
+      await expect(p.getByRole('heading',{name:'История ярмарки',exact:true})).toBeVisible();
       for (const name of ['Персонаж', 'Сумка', 'Сделки', 'Мастерская', 'Застава']) {
         await nav(p, name); await screen(p, `${key}: ${name}`);
       }
@@ -63,7 +64,60 @@ test('сюжетная редакция: 17 закрытых историй, с�
       await expect(p.getByRole('combobox', { name: 'Вещь по названию' })).toHaveCount(0);
       await expect(p.getByLabel('Слух', { exact: true })).toHaveCount(0);
     }
+    const signMage=players.o5;
+    await nav(signMage,'Застава');
+    await expect(signMage.getByRole('heading',{name:'Из записей Орвика: знак на Фокусе'})).toBeVisible();
+    await expect(signMage.getByRole('combobox',{name:'Способ подготовки'})).toHaveCount(0);
+    await expect(signMage.getByRole('combobox',{name:'Управляющий знаком'})).toHaveCount(0);
+    await expect(signMage.getByRole('radio')).toHaveCount(0);
+    await signMage.getByRole('button',{name:'Заказать Фокус в мастерской',exact:true}).click();
+    await expect(signMage.locator('.nc-detail:visible').getByRole('heading',{name:'Фокус силы',exact:true})).toBeVisible();
+    await nav(signMage,'Застава');
+    for(const ingredient of ['ash','moon'])await cmd(gm,{type:'gm.correct',playerKey:'o5',change:{field:'ingredient',ingredient,delta:2},reason:'Тест подготовки знака'});
+    await cmd(signMage,{type:'shop.craft',recipeId:'focus'});
+    await expect(signMage.getByRole('radio')).toHaveCount(3);
+    await signMage.getByRole('radio',{name:'Остаться до рассвета',exact:true}).check();
+    await screen(signMage,'понятная подготовка знака');
+    await signMage.screenshot({path:info.outputPath('sign-preparation.png'),fullPage:true});
+    await signMage.getByRole('button',{name:'Начертить знак на Фокусе',exact:true}).click();
+    await confirm(signMage,'Начертить знак');
+    await expect(signMage.getByRole('status')).toContainText('Управляющий знак готов');
+    await expect.poll(async()=>Object.values((await state(signMage)).hidden17.prepared).some((p:any)=>p.method==='sign'&&p.controller==='o5'&&p.order==='stay')).toBe(true);
     const a = players.o1, b = players.o2, maker = players.o6;
+    // Показ вещи подтверждается владельцу, выбор сбрасывается; отзыв тоже виден.
+    await nav(b,'Мастерская');
+    await b.getByRole('combobox',{name:'Что отдать',exact:true}).click();
+    await expect(b.getByRole('option').filter({hasText:'Роса'})).toHaveCount(0);
+    await b.getByRole('option').first().click();
+    await nav(b,'Сделки');
+    await nav(a,'Персонаж');
+    await a.locator('.narrative-document-link').filter({hasText:'Лист семейной книги'}).click();
+    await expect(a.locator('.narrative-letter-art')).toHaveAttribute('src', /family-book\.webp$/);
+    await expect(a.locator('.narrative-letter-text .item-mention').filter({hasText:'Корона пепла'})).toBeVisible();
+    await expect(a.locator('.narrative-letter-text .item-mention img').first()).toHaveAttribute('src', /\/assets\/items\//);
+    await screen(a,'семейная книга с иллюстрацией');
+    await a.screenshot({path:info.outputPath('family-book.png'),fullPage:true});
+    await a.getByRole('button',{name:'← Назад',exact:true}).click();
+    const shownItem=(await state(a)).me.items[0], recipient=(await state(b)).me.role.name;
+    await nav(a,'Сумка');
+    await a.evaluate(async id=>{
+      // @ts-ignore Модуль Vite во время браузерного прогона.
+      (await import('/src/narrative-navigation.ts')).openPage({kind:'item',id});
+    },shownItem.id);
+    await pick(a,'Кому показать вещь',recipient);
+    await a.getByRole('button',{name:'Показать',exact:true}).click();
+    await expect.poll(async () => (await state(b)).hidden17.knownItems[shownItem.id]?.owner).toBe('o1');
+    await expect(a.getByRole('status')).toContainText(`Вещь показана: ${recipient}`);
+    await expect(a.getByRole('alert')).toContainText(`Вещь показана: ${recipient}`);
+    await expect(a.getByRole('combobox',{name:'Кому показать вещь'})).toContainText('Выберите');
+    await expect(a.getByRole('button',{name:'Показать',exact:true})).toBeDisabled();
+    await a.screenshot({path:info.outputPath('item-shown.png'),fullPage:true});
+    await pick(a,'Кому показать вещь',recipient);
+    await a.getByRole('button',{name:'Убрать вещь',exact:true}).click();
+    await expect(a.getByRole('status')).toContainText(`Показ завершён: ${recipient}`);
+    await expect(a.getByRole('combobox',{name:'Кому показать вещь'})).toContainText('Выберите');
+    await expect.poll(async () => Boolean((await state(b)).hidden17.knownItems[shownItem.id])).toBe(false);
+    await nav(a,'Сделки');
     const aBefore = (await state(a)).me.available.gold, bBefore = (await state(b)).me.available.gold;
     await pick(a, 'Адресат сделки', (await state(b)).me.role.name);
     await a.getByLabel('Предложить: Золото', {exact:true}).getByRole('button',{name:'+',exact:true}).click();
@@ -127,11 +181,15 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await expect(sourceOwner.getByRole('heading',{name:joiningDoc.title,exact:true})).toBeVisible();
     await pick(sourceOwner,'Кому показать документ',(await state(b)).me.role.name);
     await sourceOwner.getByRole('button',{name:'Показать',exact:true}).click();await confirm(sourceOwner,'Показать');
+    await expect(sourceOwner.getByRole('status')).toContainText('Документ показан');
+    await expect(sourceOwner.getByRole('combobox',{name:'Кому показать документ',exact:true})).toContainText('Выберите');
     await expect.poll(async () => (await state(b)).hidden17.narrative.knowledge).toContain('joining');
     await nav(b,'Сумка');await b.locator('.narrative-document-link').filter({hasText:joiningDoc.title}).click();
     await expect(b.locator('.narrative-letter-text')).toHaveText(joiningDoc.text);
     await expect(b.getByRole('combobox',{name:'Кому показать документ',exact:true})).toHaveCount(0);
+    await pick(sourceOwner,'Кому показать документ',(await state(b)).me.role.name);
     await sourceOwner.getByRole('button',{name:'Забрать документ',exact:true}).click();
+    await expect(sourceOwner.getByRole('status')).toContainText('Документ забран');
     await expect.poll(async () => (await state(b)).hidden17.narrative.documents.some((d:any)=>d.id===joiningDoc.id)).toBe(false);
     await expect(b.getByText('Эта страница недоступна',{exact:true})).toBeVisible();
     expect((await state(b)).hidden17.narrative.knowledge).toContain('joining');

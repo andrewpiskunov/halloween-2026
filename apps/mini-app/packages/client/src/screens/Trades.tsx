@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { useEffect, useState } from 'preact/hooks';
 import type { Bundle, ConsentRequestView, Ingredient, Offer, PlayerView, Want } from '@fair/shared';
 import { itemImageUrl, resourceImageUrl } from '../assets';
@@ -75,9 +76,9 @@ export function Trades({ v }: { v: PlayerView }) {
               <div><small>Вы отдаёте</small><BundleList b={o.get} v={v} /></div>
               <div><small>Вы получаете</small><BundleList b={o.give} v={v} /></div>
             </div>
-            {o.service && <p class="m-note">Включает услугу: договоритесь о ней лично.</p>}
+            {o.service && <p class="m-note"><ItemText>Включает услугу: договоритесь о ней лично.</ItemText></p>}
             {missing.length > 0 && (
-              <p class="m-note warn">У вас нет: {missing.map(w => itemLabel(w, v).name).join(', ')}. Принять нельзя.</p>
+              <p class="m-note warn"><ItemText>У вас нет: {missing.map(w => itemLabel(w, v).name).join(', ')}. Принять нельзя.</ItemText></p>
             )}
             <div class={`m-btns ${paused ? '' : 'two'}`}>
               {!paused && <Button disabled={missing.length > 0} onClick={() => accept(o)}>Принять</Button>}
@@ -103,7 +104,7 @@ export function Trades({ v }: { v: PlayerView }) {
 
       <div class="m-card">
         <h5>История</h5>
-        {history.length === 0 && reqDone.length === 0 && <p class="m-note">Закрытых сделок пока нет.</p>}
+        {history.length === 0 && reqDone.length === 0 && <p class="m-note"><ItemText>Закрытых сделок пока нет.</ItemText></p>}
         {reqDone.map(r => (
           <div class="m-row" key={r.id}>
             <span>
@@ -147,12 +148,12 @@ function RequestIn({ v, r }: { v: PlayerView; r: ConsentRequestView }) {
   return (
     <div class={`m-card ${mine ? '' : 'hot'}`}>
       <Head v={v} expiresAt={r.expiresAt} ttl={CONSENT_TTL_MS} roleKey={r.author} label="Просьба от" />
-      <p class="text">{requestText(r, v)}</p>
+      <p class="text"><ItemText>{requestText(r, v)}</ItemText></p>
       {mine
-        ? <p class="m-note">Вы согласились. Ждём: {waitingFor(r).map(k => roleName(k, v)).join(', ')}.</p>
+        ? <p class="m-note"><ItemText>Вы согласились. Ждём: {waitingFor(r).map(k => roleName(k, v)).join(', ')}.</ItemText></p>
         : (
           <>
-            <p class="m-note">Сначала договоритесь голосом, потом нажимайте.</p>
+            <p class="m-note"><ItemText>Сначала договоритесь голосом, потом нажимайте.</ItemText></p>
             <div class="m-btns two">
               <Button onClick={accept}>Согласен</Button>
               <Button kind="sec" onClick={decline}>Нет</Button>
@@ -173,8 +174,8 @@ function RequestOut({ v, r }: { v: PlayerView; r: ConsentRequestView }) {
   return (
     <div class="m-card">
       <Head v={v} expiresAt={r.expiresAt} ttl={CONSENT_TTL_MS} roleKey={wait[0] ?? r.approvers[0]} label="Ваша просьба к" />
-      <p class="text">{requestText(r, v)}</p>
-      <p class="m-note">Ещё не ответили: {wait.map(k => roleName(k, v)).join(', ')}.</p>
+      <p class="text"><ItemText>{requestText(r, v)}</ItemText></p>
+      <p class="m-note"><ItemText>Ещё не ответили: {wait.map(k => roleName(k, v)).join(', ')}.</ItemText></p>
       <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить</Button></div>
     </div>
   );
@@ -223,8 +224,8 @@ function BundleList({ b, v }: { b: Bundle; v: PlayerView }) {
   return (
     <ul class="bl">
       {rows.map(r => <li key={r.key}><Thumb src={r.img} emoji={r.emoji} size="sm" /><span>{r.text}</span></li>)}
-      {b.rumor && <li class="rumor">слух: «{b.rumor}»</li>}
-      {rows.length === 0 && !b.rumor && <li class="none">ничего</li>}
+      {b.rumor && <li class="rumor"><ItemText>слух: «{b.rumor}»</ItemText></li>}
+      {rows.length === 0 && !b.rumor && <li class="none"><ItemText>ничего</ItemText></li>}
     </ul>
   );
 }
@@ -322,9 +323,9 @@ function OfferForm({ v }: { v: PlayerView }) {
             value: wantKey(c), label: c.name, hint: c.group, icon: c.emoji, image: itemImageUrl(c),
           }))} />
       </div>
-      <p class="m-note">Сумку собеседника приложение не показывает. Если просимой вещи у него нет, принять сделку он не сможет.</p>
+      <p class="m-note"><ItemText>Сумку собеседника приложение не показывает. Если просимой вещи у него нет, принять сделку он не сможет.</ItemText></p>
 
-      <p class="m-note">Отданное будет обещано до ответа. Отменить можно, пока не приняли.</p>
+      <p class="m-note"><ItemText>Отданное будет обещано до ответа. Отменить можно, пока не приняли.</ItemText></p>
       {tradesPaused(v)
         ? <PauseNote />
         : <Button kind="red" disabled={!canSend} onClick={() => void submit()}>Запечатать и отправить</Button>}

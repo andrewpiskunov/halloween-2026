@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Counts, Ingredient, PlayerView, Recipe } from '@fair/shared';
@@ -77,8 +78,8 @@ export function Workshop({ v }: { v: PlayerView }) {
           <h5>Способность</h5>
           <AbilityIdentity roleKey={v.me.role.key} name={ab.name}/>
           <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
-          {!live && <p class="ab-state">{ab.state === 'used' ? 'Уже применена в этом акте' : 'Сейчас недоступна'}</p>}
-          {live && INLINE_WORKSHOP.includes(kind) && <p class="m-note">Кнопка способности — рядом с {kind === 'buyCheap' || kind === 'buyFromBank' ? '«Купить» в запасе' : 'рецептом'}.</p>}
+          {!live && <p class="ab-state"><ItemText>{ab.state === 'used' ? 'Уже применена в этом акте' : 'Сейчас недоступна'}</ItemText></p>}
+          {live && INLINE_WORKSHOP.includes(kind) && <p class="m-note"><ItemText>Кнопка способности — рядом с {kind === 'buyCheap' || kind === 'buyFromBank' ? '«Купить» в запасе' : 'рецептом'}.</ItemText></p>}
           {standalone && <div class="ab-form"><AbilityForm v={v} /></div>}
         </div>
       )}
@@ -99,7 +100,7 @@ export function Workshop({ v }: { v: PlayerView }) {
             )}
           </ItemCard>
         ))}
-        <p class="m-note">У вас {goldText(a.gold)} доступно.</p>
+        <p class="m-note"><ItemText>У вас {goldText(a.gold)} доступно.</ItemText></p>
       </div>
 
       <h2 class="scr-h">Рецепты</h2>
@@ -113,8 +114,8 @@ export function Workshop({ v }: { v: PlayerView }) {
                 {v.hidden17 ? 'Заказать' : 'Создать'}
               </Button>
             </ItemCard>
-            <p class="m-note">{r.text}</p>
-            {lacking.length > 0 && <p class="m-note m-no">Не хватает: <ResCost parts={lacking} sep=", " /></p>}
+            <p class="m-note"><ItemText>{r.text}</ItemText></p>
+            {lacking.length > 0 && <p class="m-note m-no"><ItemText>Не хватает: <ResCost parts={lacking} sep=", " /></ItemText></p>}
             {live && kind === 'payAshWithGold' && r.cost.ash ? (
               <AbilityCraft v={v} r={r} mod={{ ashByGold: true }} note="1 Пепел заменён: −1 Пепел, +1 золото"
                 onCraft={() => sendAbility({ kind: 'payAshWithGold', recipeId: r.id }, craftConf(r, v, { ashByGold: true }))} />
@@ -147,7 +148,7 @@ function AbilityCraft({ v, r, mod, note, onCraft }: { v: PlayerView; r: Recipe; 
   return (
     <div class="ab-craft">
       <AbilityArt roleKey={v.me.role.key} small/>
-      <span class="m-note">{note}. Итого: <ResCost parts={costParts(cost, price)} /></span>
+      <span class="m-note"><ItemText>{note}. Итого: <ResCost parts={costParts(cost, price)} /></ItemText></span>
       <Button small disabled={lacking.length > 0} onClick={onCraft}>Создать со способностью</Button>
     </div>
   );
@@ -160,7 +161,7 @@ function SubstituteCraft({ v, r }: { v: PlayerView; r: Recipe }) {
   const [to, setTo] = useState<Ingredient | null>(null);
   const copy = v.me.ability.kind === 'copyAbility';
   if (!open) {
-    return <div class="ab-craft"><AbilityArt roleKey={v.me.role.key} small/><span class="m-note">Замена ингредиента</span><Button small kind="sec" onClick={() => setOpen(true)}>Создать со способностью</Button></div>;
+    return <div class="ab-craft"><AbilityArt roleKey={v.me.role.key} small/><span class="m-note"><ItemText>Замена ингредиента</ItemText></span><Button small kind="sec" onClick={() => setOpen(true)}>Создать со способностью</Button></div>;
   }
   const mod: CraftMod | undefined = from && to ? { substitute: { from, to } } : undefined;
   const craft = () => {
@@ -172,13 +173,13 @@ function SubstituteCraft({ v, r }: { v: PlayerView; r: Recipe }) {
   };
   return (
     <div class="choice">
-      <span class="m-note">Что заменить?</span>
+      <span class="m-note"><ItemText>Что заменить?</ItemText></span>
       <div class="m-btns">
         {INGREDIENTS.filter(i => r.cost[i.key]).map(i => (
           <Button key={i.key} small kind={from === i.key ? 'main' : 'sec'} onClick={() => { setFrom(i.key); if (to === i.key) setTo(null); }}>{i.emoji} {i.short}</Button>
         ))}
       </div>
-      <span class="m-note">Чем?</span>
+      <span class="m-note"><ItemText>Чем?</ItemText></span>
       <div class="m-btns">
         {INGREDIENTS.filter(i => i.key !== from).map(i => (
           <Button key={i.key} small kind={to === i.key ? 'main' : 'sec'} onClick={() => setTo(i.key)}>{i.emoji} {i.short}</Button>

@@ -1,3 +1,4 @@
+import { ItemText } from '../../components/ItemText';
 import { AbilityArt } from '../../components/AbilityIdentity';
 import { useState } from 'preact/hooks';
 import type { GmView, Player } from '@fair/shared';
@@ -68,7 +69,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         <span>только враждебные</span>
       </label>
       {journal.length === 0
-        ? <p class="m-note">Применений пока нет.</p>
+        ? <p class="m-note"><ItemText>Применений пока нет.</ItemText></p>
         : (
           <div class="gm-journal">
             {shown.map(a => (
@@ -81,23 +82,23 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
       )}
 
       <h6>Открытые просьбы</h6>
-      {requests.length === 0 ? <p class="m-note">Открытых просьб нет.</p> : requests.map(r => {
+      {requests.length === 0 ? <p class="m-note"><ItemText>Открытых просьб нет.</ItemText></p> : requests.map(r => {
         const text = requestLine(r, v, content);
         const waiting = r.approvers.filter(k => !r.approved.includes(k));
         return (
           <div class="gm-req" key={r.id}>
             <div class="m-row"><span class="ability-log">{r.action.type === 'ability' && <AbilityArt roleKey={r.author} small/>}<span>{text}</span></span><b>{mmss(Math.max(0, remainingMs(r.expiresAt, clock, now.value)))}</b></div>
-            <p class="m-note">
+            <p class="m-note"><ItemText>
               Ждём: {waiting.map(name).join(', ') || 'никого'}
               {r.approved.length > 0 && `; согласились: ${r.approved.map(name).join(', ')}`}
-            </p>
+            </ItemText></p>
             <Button kind="sec" small onClick={() => cancel(r.id, text)}>Отменить</Button>
           </div>
         );
       })}
 
       <h6>Отметки игроков</h6>
-      {present.length === 0 ? <p class="m-note">На ярмарке пока никого.</p> : (
+      {present.length === 0 ? <p class="m-note"><ItemText>На ярмарке пока никого.</ItemText></p> : (
         <div class="gm-marks">
           {present.map(k => {
             const list = marks(state.players[k]);
@@ -105,7 +106,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
               <div class="gm-mark-row" key={k}>
                 <b>{name(k)}</b>
                 <span>
-                  {list.length === 0 ? <i class="m-note">нет отметок</i> : list.map(m => m.field
+                  {list.length === 0 ? <i class="m-note"><ItemText>нет отметок</ItemText></i> : list.map(m => m.field
                     ? <button type="button" key={m.label} class="m-tag gm-mark" title="Снять через исправление"
                       onClick={() => onFix({ player: k, field: m.field!, on: false })}>{m.label} ×</button>
                     : <span key={m.label} class="m-tag warn">{m.label}</span>)}
@@ -115,7 +116,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
           })}
         </div>
       )}
-      <p class="m-note">Нажмите отметку, чтобы снять её: откроется исправление с причиной.</p>
+      <p class="m-note"><ItemText>Нажмите отметку, чтобы снять её: откроется исправление с причиной.</ItemText></p>
     </div>
   );
 }

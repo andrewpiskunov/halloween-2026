@@ -220,8 +220,8 @@ export function performAbility(
       return done([], bought(use.ingredient, 1, BANK_PRICE, true));
 
     case 'grow':
+      if (use.give === 'dew') return fail('invalid', 'для роста отдайте Пепел феникса или Лунную пыль; Роса не подходит');
       if (a.ingredients[use.give] < 1) return fail('insufficient', `нет ингредиента: ${use.give}`);
-      // Роса, которую отдаёт сам автор, до обмена не считается.
       if (state.workshop.dew < 2) return fail('insufficient', 'в мастерской меньше двух Рос');
       return done([
         { type: 'ingredient', player: author, ingredient: use.give, delta: -1 },

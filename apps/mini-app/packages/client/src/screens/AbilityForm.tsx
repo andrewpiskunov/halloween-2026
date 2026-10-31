@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { AbilityArt } from '../components/AbilityIdentity';
 import { navigateTab } from '../narrative-navigation';
 import type { ComponentChildren } from 'preact';
@@ -71,7 +72,7 @@ function KindForm({ v, kind, mode, send }: { v: PlayerView; kind: AbilityKind; m
     case 'buyBulk': return <BulkForm v={v} send={send} />;
     case 'disassemble': case 'reforge': case 'sellToBank': return <ItemForm v={v} kind={kind} send={send} />;
     default:
-      return <p class="m-note">Кнопки способности — в карточках Мастерской.</p>;
+      return <p class="m-note"><ItemText>Кнопки способности — в карточках Мастерской.</ItemText></p>;
   }
 }
 
@@ -204,16 +205,17 @@ function SniffForm({ send }: { send: Send }) {
 
 const shortOf = (i: Ingredient) => INGREDIENTS.find(x => x.key === i)?.short ?? i;
 
-/** Брам: отдать 1 ингредиент в запас, взять 2 Росы. */
+/** Брам: отдать 1 Пепел или Лунную пыль в запас, взять 2 Росы. */
 function GrowForm({ v, send }: { v: PlayerView; send: Send }) {
   const a = v.me.available.ingredients;
   const [give, setGive] = useState('');
   return (
     <>
       <Field label="Отдать"><Select label="Что отдать" value={give} onChange={setGive} placeholder="выберите ингредиент"
-        options={ingredientOptions(i => `у вас ${a[i]}`).filter(o => a[o.value as Ingredient] > 0)} /></Field>
-      <p class="m-note">В запасе Росы: {v.workshop.dew}. Нужно не меньше двух.</p>
-      <Apply disabled={!give || a[give as Ingredient] < 1 || v.workshop.dew < 2} onClick={() => send({ kind: 'grow', give: give as Ingredient },
+        options={ingredientOptions(i => `у вас ${a[i]}`).filter(o => o.value !== 'dew' && a[o.value as Ingredient] > 0)} /></Field>
+      <p class="m-note"><ItemText>Отдайте 1 Пепел феникса или 1 Лунную пыль — получите 2 Росы.{a.ash < 1 && a.moon < 1 && ' Сейчас у вас нет подходящего ингредиента.'}</ItemText></p>
+      <p class="m-note"><ItemText>В запасе Росы: {v.workshop.dew}. Нужно не меньше двух.</ItemText></p>
+      <Apply disabled={!give || give === 'dew' || a[give as Ingredient] < 1 || v.workshop.dew < 2} onClick={() => send({ kind: 'grow', give: give as Ingredient },
         { title: `Отдать 1 ${shortOf(give as Ingredient)}, получить 2 Росы?` })} />
     </>
   );
@@ -262,7 +264,7 @@ function ItemForm({ v, kind, send }: { v: PlayerView; kind: 'disassemble' | 'ref
   const [y, setY] = useState('');
   const [into, setInto] = useState('');
   const item = items.find(i => i.id === id);
-  if (items.length === 0) return <p class="m-note">В сумке нет подходящих изделий.</p>;
+  if (items.length === 0) return <p class="m-note"><ItemText>В сумке нет подходящих изделий.</ItemText></p>;
   const label = item ? itemLabel(item, v).name : '';
   const stock = (i: Ingredient) => `в запасе ${v.workshop[i]}`;
   const recipeName = (rid: string) => v.recipes.find(r => r.id === rid)?.name ?? rid;
@@ -301,8 +303,8 @@ function ItemForm({ v, kind, send }: { v: PlayerView; kind: 'disassemble' | 'ref
             options={REFORGE_INTO.filter(r => r.kind !== item?.kind).map(r => ({ value: r.id, label: recipeName(r.id), image: itemImageUrl({ kind: r.kind, ref: r.id }) }))} />
         </Field>
       )}
-      {kind === 'disassemble' && x && y && !enoughStock && <p class="m-note">В запасе не хватает выбранных ингредиентов.</p>}
-      {kind === 'reforge' && v.me.available.gold < 1 && <p class="m-note">Для перековки нужно 1 доступное золото.</p>}
+      {kind === 'disassemble' && x && y && !enoughStock && <p class="m-note"><ItemText>В запасе не хватает выбранных ингредиентов.</ItemText></p>}
+      {kind === 'reforge' && v.me.available.gold < 1 && <p class="m-note"><ItemText>Для перековки нужно 1 доступное золото.</ItemText></p>}
       <Apply disabled={!ready} onClick={apply} />
     </>
   );
@@ -316,7 +318,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
   return (
     <>
       <div class="choice">
-        <span class="m-note">Какой эффект взять?</span>
+        <span class="m-note"><ItemText>Какой эффект взять?</ItemText></span>
         {copies.map(c => (
           <Button key={c.kind} small kind={pick === c.kind ? 'main' : 'sec'} onClick={() => setPick(c.kind)}>
             <span class="ability-inline"><AbilityArt roleKey={COPY_ART_ROLES[c.kind]} small/><span>{c.name} · {c.owner ? name(c.owner, v) : 'владелец не на ярмарке, согласие не нужно'}</span></span>
@@ -325,7 +327,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
       </div>
       {pick === 'substituteIngredient' && (
         <>
-          <p class="m-note">Замена делается в карточке рецепта.</p>
+          <p class="m-note"><ItemText>Замена делается в карточке рецепта.</ItemText></p>
           <Apply label="В мастерскую" onClick={() => { abilityDraft.value = { kind: 'substituteIngredient' }; navigateTab('workshop'); }} />
         </>
       )}

@@ -269,9 +269,15 @@ describe('скидка Лиры', () => {
 });
 
 describe('копия Астры', () => {
-  /** Ингредиент, который у игрока есть. */
+  /** Подходящий для Роста ингредиент, который у игрока есть. */
   const own = (s: GameState, key: string): Ingredient =>
-    (['ash', 'moon', 'dew'] as const).find(k => s.players[key].ingredients[k] > 0)!;
+    (['ash', 'moon'] as const).find(k => s.players[key].ingredients[k] > 0)!;
+
+  test('копия Роста тоже отклоняет росу без расхода дара', () => {
+    const s = makeGame(30, { present: allBut(30, ['o2']) });
+    expect(refusal(s, use({ kind: 'copyAbility', copy: { kind: 'grow', give: 'dew' } }), player('o17'))).toBe('invalid');
+    expect(s.players.o17.abilityUsedInAct).toBe(false);
+  });
 
   test('копия «Роста»: запрос Браму; после согласия исполнено, применение Брама не тронуто', () => {
     const s = makeGame(30);
@@ -282,7 +288,7 @@ describe('копия Астры', () => {
     expect(r.events[1]).toMatchObject({ type: 'AbilityUsed', author: 'o17', ability: 'copyAbility', copied: 'grow', requestId: req.id });
     expect(r.state.players.o17.abilityUsedInAct).toBe(true);
     expect(r.state.players.o2.abilityUsedInAct).toBe(false);
-    expect(r.state.players.o17.ingredients.dew).toBe(s.players.o17.ingredients.dew + 2 - (give === 'dew' ? 1 : 0));
+    expect(r.state.players.o17.ingredients.dew).toBe(s.players.o17.ingredients.dew + 2);
     expect(r.state.actions.at(-1)).toMatchObject({ source: { type: 'ability', ability: 'copyAbility', copied: 'grow' } });
   });
 

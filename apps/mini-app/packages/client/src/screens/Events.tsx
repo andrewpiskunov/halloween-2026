@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { PlayerStory } from './Story';
 import { useState } from 'preact/hooks';
 import type { Lot, PlayerView } from '@fair/shared';
@@ -24,7 +25,7 @@ export function Events({ v }: { v: PlayerView }) {
       <Frozen.Provider value={frozenReason(v)}><PlayerStory v={v} /></Frozen.Provider>
       <div class="m-card">
         <h5>Сюжет</h5>
-        <p class="text">{v.public.story}</p>
+        <p class="text"><ItemText>{v.public.story}</ItemText></p>
       </div>
       {v.lots.length > 0 && (
         <div class="m-card">
@@ -33,13 +34,13 @@ export function Events({ v }: { v: PlayerView }) {
         </div>
       )}
       <h2 class="scr-h">Объявления</h2>
-      {v.announcements.length === 0 && <p class="m-note" style={{ margin: '0 6px' }}>Объявлений пока нет.</p>}
+      {v.announcements.length === 0 && <p class="m-note" style={{ margin: '0 6px' }}><ItemText>Объявлений пока нет.</ItemText></p>}
       <div class="feed">
         {[...v.announcements].reverse().map((a, i) => (
           <div class="m-card" key={`${a.at}-${i}`}>
             <time>{new Date(a.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>
             <b>{a.title}</b>
-            <p class="hand">{a.text}</p>
+            <p class="hand"><ItemText>{a.text}</ItemText></p>
           </div>
         ))}
       </div>
@@ -76,7 +77,7 @@ export function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
         <b>{LOT_STATUS[l.status]}{until !== undefined && ` · ${mmss(left)}`}</b>
       </div>
       {l.items.map(i => { const lb = itemLabel(i, v); return <ItemCard key={i.id} emoji={lb.emoji} img={itemImageUrl(i)} title={lb.name} />; })}
-      {l.status === 'openBidding' && <p class="m-note">Торгуйтесь голосом; ставки в приложении откроет ведущий.</p>}
+      {l.status === 'openBidding' && <p class="m-note"><ItemText>Торгуйтесь голосом; ставки в приложении откроет ведущий.</ItemText></p>}
       {l.status === 'sealedBidding' && (
         <>
           <div class="m-row">
@@ -90,7 +91,7 @@ export function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
                 <Button onClick={bid}>{bounds.mine ? 'Поднять' : 'Поставить'}</Button>
               </div>
             )
-            : <p class="m-note">{bounds.max < bounds.min ? 'Свободного золота на ставку нет.' : 'Окно ставок закрыто.'}</p>}
+            : <p class="m-note"><ItemText>{bounds.max < bounds.min ? 'Свободного золота на ставку нет.' : 'Окно ставок закрыто.'}</ItemText></p>}
         </>
       )}
       {l.status === 'fixedPrice' && l.fixedPrice !== undefined && (

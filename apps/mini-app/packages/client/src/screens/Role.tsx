@@ -1,3 +1,4 @@
+import { ItemText } from '../components/ItemText';
 import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
 import { navigateTab } from '../narrative-navigation';
 import { StoryCards, StoryInvite } from './Story';
@@ -23,8 +24,8 @@ export function Role({ v }: { v: PlayerView }) {
         {/* Единственный портрет с фильтром на экране */}
         <Portrait roleKey={r.key} emoji={r.emoji} size="card" tint />
         <h3>{r.name}</h3>
-        <p>{r.title}</p>
-        {v.me.player.guise && <p class="guise">Ваш облик: {v.me.player.guise.name}</p>}
+        <p><ItemText>{r.title}</ItemText></p>
+        {v.me.player.guise && <p class="guise"><ItemText>Ваш облик: {v.me.player.guise.name}</ItemText></p>}
       </div>
       {side && (
         <div class="side-line" style={{ '--side': side.color }}>
@@ -32,53 +33,53 @@ export function Role({ v }: { v: PlayerView }) {
         </div>
       )}
       {!v.hidden17 && <SideChoice v={v} />}
-      {v.hidden17 && <div class="m-card hidden-intro"><h5>Только ваша история</h5><p class="text">{v.hidden17.briefing.publicFace}</p><p class="m-note">Ваши цели и знания видите только вы. Раскрывайте их в разговорах по своему выбору.</p></div>}
-      {v.hidden17 && <details class="m-card"><summary>Общие правила ярмарки</summary><ul class="list">{v.hidden17.publicRules.map(t => <li key={t}>{t}</li>)}</ul></details>}
+      {v.hidden17 && <div class="m-card hidden-intro"><h5>Только ваша история</h5><p class="text"><ItemText>{v.hidden17.briefing.publicFace}</ItemText></p><p class="m-note"><ItemText>Ваши цели и знания видите только вы. Раскрывайте их в разговорах по своему выбору.</ItemText></p></div>}
+      {v.hidden17 && <details class="m-card"><summary>Общие правила ярмарки</summary><ul class="list">{v.hidden17.publicRules.map(t => <li key={t}><ItemText>{t}</ItemText></li>)}</ul></details>}
       <StoryInvite />
       <StoryCards v={v} />
-      {!v.hidden17 && r.intro && <p class="lead">{r.intro}</p>}
+      {!v.hidden17 && r.intro && <p class="lead"><ItemText>{r.intro}</ItemText></p>}
 
       <div class="m-card">
         <h5>Ваши цели</h5>
         <ul class="goals">
           {v.me.goals.map((g, i) => (
-            <li key={i} class={g.done ? 'done' : ''}>
+            <li key={i} class={g.done ? 'done' : ''}><ItemText>
               <span>
                 {g.text}
                 <small class="goal-state">{g.done ? '✓ выполнено' : gameFrozen(v) ? 'не выполнено' : 'пока нет'}{g.byGm && ' · отмечено ведущим'}</small>
               </span>
-            </li>
+            </ItemText></li>
           ))}
         </ul>
-        {!gameFrozen(v) && <p class="m-note">Считается при закрытии ярмарки</p>}
+        {!gameFrozen(v) && <p class="m-note"><ItemText>Считается при закрытии ярмарки</ItemText></p>}
       </div>
 
       <div class="secret">
         <span class="seal" aria-hidden="true">✠</span>
         <b>Тайна, видите только вы</b>
-        <p>{r.secret}</p>
+        <p><ItemText>{r.secret}</ItemText></p>
       </div>
 
       <div class="m-card">
         <h5>Предыстория</h5>
-        <p class="text">{r.backstory}</p>
+        <p class="text"><ItemText>{r.backstory}</ItemText></p>
         <h5>Мотивация</h5>
-        <p class="text">{r.motivation}</p>
+        <p class="text"><ItemText>{r.motivation}</ItemText></p>
       </div>
 
       {v.hidden17 && <>
-        <div class="m-card"><h5>Что вы знаете</h5><ul class="list">{v.hidden17.briefing.knowledge.map(t => <li key={t}>{t}</li>)}</ul></div>
-        <div class="m-card"><h5>С чего начать</h5><ol class="list">{v.hidden17.briefing.firstSteps.map(t => <li key={t}>{t}</li>)}</ol></div>
+        <div class="m-card"><h5>Что вы знаете</h5><ul class="list">{v.hidden17.briefing.knowledge.map(t => <li key={t}><ItemText>{t}</ItemText></li>)}</ul></div>
+        <div class="m-card"><h5>С чего начать</h5><ol class="list">{v.hidden17.briefing.firstSteps.map(t => <li key={t}><ItemText>{t}</ItemText></li>)}</ol></div>
         <section class="m-card finale-guide" aria-labelledby="finale-guide-title">
           <h5 id="finale-guide-title">Что вы можете сделать в финале</h5>
-          <p class="m-note">Ваша личная памятка к обряду у могилы Сарна. Вы сами решаете, как поступить.</p>
+          <p class="m-note"><ItemText>Ваша личная памятка к обряду у могилы Сарна. Вы сами решаете, как поступить.</ItemText></p>
           <dl>
-            <dt>Подготовка</dt><dd>{v.hidden17.briefing.finale.prepare}</dd>
-            <dt>Действия у могилы</dt><dd>{v.hidden17.briefing.finale.action}</dd>
-            <dt>Личный выбор</dt><dd>{v.hidden17.briefing.finale.choice}</dd>
-            <dt>Возможные последствия</dt><dd>{v.hidden17.briefing.finale.impact}</dd>
+            <dt>Подготовка</dt><dd><ItemText>{v.hidden17.briefing.finale.prepare}</ItemText></dd>
+            <dt>Действия у могилы</dt><dd><ItemText>{v.hidden17.briefing.finale.action}</ItemText></dd>
+            <dt>Личный выбор</dt><dd><ItemText>{v.hidden17.briefing.finale.choice}</ItemText></dd>
+            <dt>Возможные последствия</dt><dd><ItemText>{v.hidden17.briefing.finale.impact}</ItemText></dd>
           </dl>
-          <p class="m-note">Кнопки обряда находятся во вкладке «Ритуал». Для просьбы к Сарну или другой сюжетной сцены обратитесь к ведущему.</p>
+          <p class="m-note"><ItemText>Кнопки обряда находятся во вкладке «Ритуал». Для просьбы к Сарну или другой сюжетной сцены обратитесь к ведущему.</ItemText></p>
         </section>
       </>}
       {gameFrozen(v) ? <ClosedCard v={v} /> : <AbilityCard v={v} />}
@@ -101,17 +102,17 @@ export function Role({ v }: { v: PlayerView }) {
       {r.rumor.trim() && <div class="secret rumor">
         <span class="seal" aria-hidden="true">☽</span>
         <b>Слух</b>
-        <p>{r.rumor}</p>
+        <p><ItemText>{r.rumor}</ItemText></p>
       </div>}
 
       <div class="m-card">
         <h5>Как играть</h5>
-        {r.acting.vibe && <p class="text"><b>Образ.</b> {r.acting.vibe}</p>}
-        {r.acting.voice && <p class="text"><b>Голос.</b> {r.acting.voice}</p>}
-        {r.acting.look && <p class="text"><b>Вид.</b> {r.acting.look}</p>}
-        {r.acting.actions.length > 0 && <ul class="list">{r.acting.actions.map(a => <li key={a}>{a}</li>)}</ul>}
-        {r.acting.lines.length > 0 && <ul class="list lines">{r.acting.lines.map(l => <li key={l}>«{l}»</li>)}</ul>}
-        {r.joke && <p class="m-note">{r.joke}</p>}
+        {r.acting.vibe && <p class="text"><ItemText><b>Образ.</b> {r.acting.vibe}</ItemText></p>}
+        {r.acting.voice && <p class="text"><ItemText><b>Голос.</b> {r.acting.voice}</ItemText></p>}
+        {r.acting.look && <p class="text"><ItemText><b>Вид.</b> {r.acting.look}</ItemText></p>}
+        {r.acting.actions.length > 0 && <ul class="list">{r.acting.actions.map(a => <li key={a}><ItemText>{a}</ItemText></li>)}</ul>}
+        {r.acting.lines.length > 0 && <ul class="list lines">{r.acting.lines.map(l => <li key={l}><ItemText>«{l}»</ItemText></li>)}</ul>}
+        {r.joke && <p class="m-note"><ItemText>{r.joke}</ItemText></p>}
       </div>
     </>
   );
@@ -143,7 +144,7 @@ function SideChoice({ v }: { v: PlayerView }) {
   return (
     <div class="m-card side-choice">
       <h5>Сторона</h5>
-      <p class="m-note">Вы пока ни на чьей стороне. Выбрать можно один раз, до третьего акта.</p>
+      <p class="m-note"><ItemText>Вы пока ни на чьей стороне. Выбрать можно один раз, до третьего акта.</ItemText></p>
       <div class="m-btns"><Button kind={open ? 'sec' : 'main'} onClick={() => setOpen(!open)}>{open ? 'Свернуть' : 'Выбрать сторону'}</Button></div>
       {open && options.map(f => (
         <div class="side-opt" key={f.id} style={{ '--side': f.color }}>
@@ -160,7 +161,7 @@ function ClosedCard({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>Способность</h5>
-      <p class="ab-state">{v.phase === 'revealed' ? 'Итоги показаны во вкладке „Итоги“' : 'Ведущий подводит итоги'}</p>
+      <p class="ab-state"><ItemText>{v.phase === 'revealed' ? 'Итоги показаны во вкладке „Итоги“' : 'Ведущий подводит итоги'}</ItemText></p>
     </div>
   );
 }
@@ -199,8 +200,8 @@ export function AbilityCard({ v }: { v: PlayerView }) {
         {ab.verbal && <span class="m-tag">словесная</span>}
       </AbilityIdentity>
       <AbilityDescription origin={v.hidden17?.narrative?.role.abilityOrigin} text={ab.text}/>
-      <p class={`ab-state ${ab.state}`}>{stateLine(v)}</p>
-      {v.hidden17?.board.filter(p => p.author === v.me.role.key && p.serviceAbility && ['open', 'accepted'].includes(p.status)).map(p => <p class="m-note" key={p.id}>Применение обещано по заказу «{p.title}». {p.worker ? `Получатель: ${roleName(p.worker, v)}. Примените способность к нему с согласия.` : 'Сначала дождитесь исполнителя.'}</p>)}
+      <p class={`ab-state ${ab.state}`}><ItemText>{stateLine(v)}</ItemText></p>
+      {v.hidden17?.board.filter(p => p.author === v.me.role.key && p.serviceAbility && ['open', 'accepted'].includes(p.status)).map(p => <p class="m-note" key={p.id}><ItemText>Применение обещано по заказу «{p.title}». {p.worker ? `Получатель: ${roleName(p.worker, v)}. Примените способность к нему с согласия.` : 'Сначала дождитесь исполнителя.'}</ItemText></p>)}
       {ab.state === 'pending' && <div class="m-btns"><Button kind="sec" onClick={cancel}>Отменить просьбу</Button></div>}
       {ab.state !== 'pending' && (ab.place === 'workshop'
         ? <div class="m-btns"><Button disabled={ab.state !== 'available'} onClick={toWorkshop}>В мастерскую</Button></div>
@@ -246,7 +247,7 @@ function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel 
     );
     case 'inventory': return (
       <div class="intel-bag">
-        <p class="text"><b>{head}Сумка {roleName(intel.target, v)}</b></p>
+        <p class="text"><ItemText><b>{head}Сумка {roleName(intel.target, v)}</b></ItemText></p>
         <ul class="bl">
           <li><Thumb src={resourceImageUrl('gold')} emoji={GOLD.emoji} size="sm" /><span>{goldText(intel.gold)}{intel.reservedGold ? `, ещё ${intel.reservedGold} обещано` : ''}</span></li>
           {INGREDIENTS.filter(i => intel.ingredients[i.key]).map(i => (
@@ -257,7 +258,7 @@ function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel 
             return <li key={n}><Thumb src={itemImageUrl(it)} emoji={l.emoji} size="sm" /><span>{l.name}</span></li>;
           })}
         </ul>
-        <p class="m-note">Снимок на момент применения; дальше могло измениться.</p>
+        <p class="m-note"><ItemText>Снимок на момент применения; дальше могло измениться.</ItemText></p>
       </div>
     );
   }
@@ -271,7 +272,7 @@ export function UsesCard({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>Ваши применения</h5>
-      <ul class="list">{list.map(a => <li key={a.id}><span class="ability-log"><AbilityArt roleKey={a.author} small/><span>{ownActionText(a, v)}</span></span></li>)}</ul>
+      <ul class="list">{list.map(a => <li key={a.id}><ItemText><span class="ability-log"><AbilityArt roleKey={a.author} small/><span>{ownActionText(a, v)}</span></span></ItemText></li>)}</ul>
     </div>
   );
 }

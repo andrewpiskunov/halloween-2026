@@ -1,3 +1,4 @@
+import { ItemText } from './components/ItemText';
 import './narrative.css';
 import { NarrativeRole } from './screens/NarrativeRole';
 import { NarrativeBag } from './screens/NarrativeBag';
@@ -62,7 +63,7 @@ export function App() {
       {v.kind === 'gm' ? <GmApp v={v} /> : <PlayerApp v={v} />}
       <Confirm />
       <PortraitViewer />
-      {toast.value && <div class="toast" role="alert" onClick={() => { toast.value = null; }}>{toast.value}</div>}
+      {toast.value && <div class="toast" role="alert" onClick={() => { toast.value = null; }}><ItemText>{toast.value}</ItemText></div>}
     </div>
   );
 }
@@ -72,10 +73,10 @@ function Notice({ icon, text, retry }: { icon: string; text: string; retry?: boo
   return (
     <div class="app notice">
       <div class="m-card">
-        <div class="notice-icon" aria-hidden="true">{icon}{'\uFE0E'}</div><p>{text}</p>
+        <div class="notice-icon" aria-hidden="true">{icon}{'\uFE0E'}</div><p><ItemText>{text}</ItemText></p>
         {retry && <Button onClick={() => { void retryLogin(); }}>Повторить</Button>}
       </div>
-      {toast.value && <div class="toast" role="alert">{toast.value}</div>}
+      {toast.value && <div class="toast" role="alert"><ItemText>{toast.value}</ItemText></div>}
     </div>
   );
 }

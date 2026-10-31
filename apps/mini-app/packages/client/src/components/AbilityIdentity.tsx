@@ -1,3 +1,4 @@
+import { ItemText } from './ItemText';
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { portraitUrl } from '../assets';
@@ -27,7 +28,7 @@ export function AbilityIdentity({ roleKey, name, children }: { roleKey: string; 
 /** Происхождение — курсивом, действие в игре — отдельным блоком обычным шрифтом. */
 export function AbilityDescription({ origin, text }: { origin?: string; text: ComponentChildren }) {
   return <div class="ability-description">
-    {origin && <p class="ability-origin">{origin}</p>}
-    <div class="ability-mechanics"><span class="ability-caption">Действие в игре</span><p>{text}</p></div>
+    {origin && <p class="ability-origin"><ItemText>{origin}</ItemText></p>}
+    <div class="ability-mechanics"><span class="ability-caption">Действие в игре</span><p><ItemText>{text}</ItemText></p></div>
   </div>;
 }
