@@ -1,0 +1,71 @@
+import { useState } from 'preact/hooks';
+import type { GmView, GoalEvaluation, GoalStatus, RitualKnowledge } from '@fair/shared';
+import { Button } from '../../components/Button';
+import { Select } from '../../components/Select';
+import { ask, loadedContent, run } from '../../store';
+
+const STATUS: Record<GoalStatus | 'unassessed', string> = {
+  unassessed: 'Ещё не оценена', achieved: 'Достигнута', partial: 'Частичный результат', 'not-achieved': 'Не достигнута',
+};
+const KNOWLEDGE: {value: RitualKnowledge; label: string; text: string}[] = [
+  {value:'place',label:'Устройство старой заставы',text:'Герой обнаружил устройство места. Способ соединения и чужие вмешательства этим не раскрываются.'},
+  {value:'joining',label:'Способ соединения частей',text:'Герой узнал способ соединения. Соль, управляющий знак и отвод силы остаются отдельными знаниями.'},
+];
+const who = (key: string) => loadedContent().roles.find(r=>r.key===key)?.name??key;
+const roleOptions = (v: GmView) => v.state.roster.map(key=>({value:key,label:who(key),avatar:key}));
+
+/** Явный переход старой партии и адресная передача сюжетных сведений. */
+export function GmNarrativePanel({v}:{v:GmView}) {
+  const h=v.state.hidden17;const data=loadedContent().hidden17?.narrative;
+  const [player,setPlayer]=useState('');const [knowledge,setKnowledge]=useState<RitualKnowledge>('place');const [documentId,setDocumentId]=useState('');
+  if(!h||!data)return null;
+  if(!h.narrative){
+    const offers=Object.values(v.state.offers).filter(o=>o.status==='pending').length;
+    const board=Object.values(h.board).filter(o=>o.status==='open'||o.status==='accepted').length;
+    const production=Object.values(h.production).filter(o=>o.status==='pending').length;
+    const dice=Object.values(h.dice).filter(o=>o.status==='pending'||o.status==='accepted').length;
+    const started=Object.values(h.dice).filter(o=>o.status==='started');
+    const finale=h.ritual.step!=='preparation'||v.state.phase==='closed'||v.state.phase==='revealed';
+    return <section class="m-card"><h3>Переход к сюжетной редакции</h3><p class="text">Личные истории и документы, согласованные обмены и оценки стремлений ведущим. Инвентарь, золото и привязки сохраняются. Новые стремления не наследуют прежние механические оценки.</p>
+      <p class="text">Незавершённые сделки: <b>{offers}</b>. Объявления с резервом: <b>{board}</b>. Заказы героям: <b>{production}</b>. Приглашения в кости: <b>{dice}</b>. Начатые броски: <b>{started.length}</b>.</p>
+      <p class="m-note">При переходе обычные предложения отменятся, резервы вернутся одновременно. В открытой партии участники сохранят уже известное соединение с отметкой в журнале. Исходы прежней редакции не пересчитываются.</p>
+      {started.length>0&&<p class="m-note warn">Сначала завершите или урегулируйте начатые броски: {started.map(d=>`${who(d.from)} — ${who(d.to)}`).join('; ')}.</p>}
+      {finale&&<p class="m-note warn">Финал уже начат или итоги зафиксированы. Завершите эту партию в прежней редакции; сюжетная редакция доступна для следующей.</p>}
+      <Button disabled={finale||started.length>0} onClick={()=>ask({title:'Перевести эту партию в сюжетную редакцию?',text:`Будут отменены сделки (${offers}), объявления с резервом (${board}), заказы (${production}) и приглашения в кости (${dice}). Их резервы вернутся. Новые стремления потребуют оценки ведущим.`,okLabel:'Перевести партию',onOk:()=>void run({type:'narrative.enable'})})}>Включить сюжетную редакцию</Button>
+    </section>;
+  }
+  const n=h.narrative; const known=player?n.knowledge[player]??[]:[];const chosen=KNOWLEDGE.find(k=>k.value===knowledge)!;
+  const doc=data.documents.find(d=>d.id===documentId);const holder=!!doc&&doc.holders.includes(player);const shared=!!doc&&(n.documentAccess[player]??[]).includes(doc.id);
+  const docsOpen=['act1','act2','act3'].includes(v.state.phase)&&h.ritual.step==='preparation'&&v.state.clock.pausedAt===undefined;
+  return <section class="m-card"><h3>Сюжетные знания и документы</h3><p class="m-note">Отмечайте сведения после состоявшейся сцены. Доступ к документу, знание способа и владение вещью учитываются отдельно.</p>
+    <div class="field"><span>Герой</span><Select label="Герой для сюжетных знаний" value={player} onChange={setPlayer} placeholder="Выберите героя" options={roleOptions(v)}/></div>
+    {player&&<p class="text">Известно: {KNOWLEDGE.filter(k=>known.includes(k.value)).map(k=>k.label).join('; ')||'эти сведения ещё не открыты'}.</p>}
+    <div class="field"><span>Знание</span><Select label="Сюжетное знание" value={knowledge} onChange={x=>setKnowledge(x as RitualKnowledge)} options={KNOWLEDGE.map(k=>({value:k.value,label:k.label}))}/></div><p class="text">{chosen.text}</p>
+    <Button disabled={!player||known.includes(knowledge)} onClick={()=>ask({title:`Подтвердить знание: ${who(player)}?`,text:chosen.text+' Запись останется в журнале.',okLabel:'Подтвердить знание',onOk:()=>void run({type:'narrative.knowledge',player,knowledge})})}>{known.includes(knowledge)?'Знание уже подтверждено':'Подтвердить знание'}</Button>
+    <h4>Показать источник</h4><div class="field"><span>Документ</span><Select label="Сюжетный документ" value={documentId} onChange={setDocumentId} placeholder="Выберите источник" options={data.documents.map(d=>({value:d.id,label:d.title,hint:d.source}))}/></div>
+    {doc&&<><p class="m-note">{doc.source}</p><details><summary>Текст, который увидит герой</summary><p class="text" style={{whiteSpace:'pre-wrap'}}>{doc.text}</p></details><p class="m-note">Показ не передаёт документ во владение. Герой узнает описанные в нём способы. Отзыв убирает доступ к тексту, но не стирает уже полученное знание.</p>{holder?<p class="text">Это личный источник героя. Его исходный доступ сохраняется.</p>:<Button disabled={!player||!docsOpen} kind={shared?'sec':'main'} onClick={()=>ask({title:shared?`Прекратить показ для ${who(player)}?`:`Показать «${doc.title}» герою ${who(player)}?`,text:shared?'Герой потеряет доступ к тексту. Уже подтверждённое знание сохранится.':`Герой увидит полный текст выбранного документа. Источник: ${doc.source}.`,okLabel:shared?'Прекратить показ':'Показать документ',onOk:()=>void run({type:'narrative.document.show',documentId:doc.id,player,allow:!shared})})}>{shared?'Прекратить показ документа':'Показать документ'}</Button>}</>}
+    {!docsOpen&&<p class="m-note">Показ документов доступен во время активного акта до начала финала.</p>}
+  </section>;
+}
+
+/** Четыре состояния оценки сохраняются без преобразования к прежним boolean-целям. */
+export function GmNarrativeGoals({v}:{v:GmView}) {
+  const n=v.state.hidden17?.narrative;const data=loadedContent().hidden17?.narrative;const [player,setPlayer]=useState(v.state.roster[0]??'');
+  if(!n||!data)return null;
+  const role=data.roles[player];const evaluations=n.evaluations[player]??{};
+  const assessed=v.state.roster.reduce((count,k)=>count+Object.keys(n.evaluations[k]??{}).length,0);
+  return <section class="m-card"><h3>Стремления героев</h3><p class="text">Оценено {assessed} из {v.state.roster.length*2}. Отсутствие оценки означает «ещё не оценена». Учитывайте поступки, договорённости и личный эпилог.</p><p class="m-note">После раскрытия итогов игрок видит только свои оценки и пояснения. Исправления сохраняются в журнале.</p>
+    <div class="field"><span>Чьи стремления оценить</span><Select label="Герой для оценки стремлений" value={player} onChange={setPlayer} options={roleOptions(v)}/></div>
+    {role?([0,1] as const).map(goal=><GoalEditor key={`${player}:${goal}:${evaluations[goal]?.status??''}:${evaluations[goal]?.note??''}`} player={player} goal={goal} text={role.goals[goal]} criteria={role.gmGoals[goal]} evaluation={evaluations[goal]}/>):<p class="m-note">Для этого героя нет сюжетной вводной.</p>}
+  </section>;
+}
+function GoalEditor({player,goal,text,criteria,evaluation}:{player:string;goal:0|1;text:string;criteria:string;evaluation?:GoalEvaluation}) {
+  const [status,setStatus]=useState<GoalStatus|'unassessed'>(evaluation?.status??'unassessed');const [note,setNote]=useState(evaluation?.note??'');const [saving,setSaving]=useState(false);
+  const unchanged=status===(evaluation?.status??'unassessed')&&(status==='unassessed'||note.trim()===(evaluation?.note??''));
+  const save=async()=>{setSaving(true);await run({type:'narrative.goal',player,goal,evaluation:status==='unassessed'?null:{status,note:note.trim()}});setSaving(false);};
+  return <article style={{borderTop:'1px solid rgba(128,112,91,.4)',marginTop:'24px',paddingTop:'16px'}}><h4>Стремление {goal+1}</h4><p class="text">{text}</p><details><summary>Ориентиры ведущему</summary><p class="text">{criteria}</p></details><p class="m-note">Сохранённая оценка: {STATUS[evaluation?.status??'unassessed']}.</p>
+    <div class="field"><span>Результат</span><Select label={`Результат стремления ${goal+1}`} value={status} onChange={x=>setStatus(x as GoalStatus|'unassessed')} options={(Object.keys(STATUS) as (GoalStatus|'unassessed')[]).map(key=>({value:key,label:STATUS[key]}))}/></div>
+    {status!=='unassessed'&&<label class="field"><span>Пояснение игроку</span><textarea aria-label={`Пояснение стремления ${goal+1}`} rows={4} maxLength={1200} value={note} onInput={e=>setNote(e.currentTarget.value)} style={{width:'100%',boxSizing:'border-box',font:'inherit',padding:'12px',resize:'vertical'}}/></label>}
+    <Button disabled={saving||unchanged||(status!=='unassessed'&&!note.trim())} onClick={()=>ask({title:`Сохранить оценку для ${who(player)}?`,text:`Стремление ${goal+1}: ${STATUS[status]}.${status==='unassessed'?' Прежняя оценка будет снята.':` ${note.trim()}`}`,okLabel:'Сохранить оценку',onOk:()=>void save()})}>{status==='unassessed'?'Снять оценку':'Сохранить оценку'}</Button>
+  </article>;
+}

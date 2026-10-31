@@ -1,3 +1,4 @@
+import { navigateTab } from '../narrative-navigation';
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { AbilityKind, AbilityUse, CopyableKind, Ingredient, Item, PlayerView, TargetMode } from '@fair/shared';
@@ -322,7 +323,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
       {pick === 'substituteIngredient' && (
         <>
           <p class="m-note">Замена делается в карточке рецепта.</p>
-          <Apply label="В мастерскую" onClick={() => { abilityDraft.value = { kind: 'substituteIngredient' }; tab.value = 'workshop'; }} />
+          <Apply label="В мастерскую" onClick={() => { abilityDraft.value = { kind: 'substituteIngredient' }; navigateTab('workshop'); }} />
         </>
       )}
       {pick && pick !== 'substituteIngredient' && <KindForm v={v} kind={pick} mode={COPY_TARGET[pick]} send={send} />}

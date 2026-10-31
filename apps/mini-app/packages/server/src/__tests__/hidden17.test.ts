@@ -8,7 +8,7 @@ function db() { const store = new EventStore(':memory:'); stores.push(store); re
 afterEach(() => { for (const store of stores.splice(0)) store.close(); });
 
 test.each([true, false])('сброс старой партии использует настройку новых правил сервера: %s', async hidden17 => {
-  const store = db(); const c = attachHiddenScenario(content);
+  const store = db(); const c = attachHiddenScenario(content, undefined, false);
   const old = Game.open(store, content, testOpts());
   await old.bindByCode(old.gmCode(), 12345);
   await openFair(old);
@@ -33,7 +33,7 @@ test.each([true, false])('сброс старой партии использу�
 });
 
 test('новая партия включает 17 ролей атомарным воспроизводимым событием; старый журнал не переводится', () => {
-  const c = attachHiddenScenario(content);
+  const c = attachHiddenScenario(content, undefined, false);
   const fresh = db(); const game = Game.open(fresh, c, { ...testOpts(), hidden17: true });
   expect(game.state().roster).toHaveLength(17);
   expect(game.state().hidden17?.ritual.step).toBe('preparation');
@@ -44,7 +44,7 @@ test('новая партия включает 17 ролей атомарным 
 });
 
 test('сервер истекает заказ, возвращает резерв и сохраняет результат при повторном открытии', async () => {
-  const c = attachHiddenScenario(content); const store = db(); const opts = { ...testOpts(), hidden17: true };
+  const c = attachHiddenScenario(content, undefined, false); const store = db(); const opts = { ...testOpts(), hidden17: true };
   const game = Game.open(store, c, opts);
   for (const roleKey of game.state().roster) expect((await game.submit(`present-${roleKey}`, { type: 'player.setPresent', roleKey, present: true }, gm)).ok).toBe(true);
   expect((await game.submit('open', { type: 'session.open' }, gm)).ok).toBe(true);

@@ -35,7 +35,7 @@ export interface ConnectOptions {
   onContent?: (data: ContentData) => void;
 }
 
-interface TelegramWebApp { initData?: string; ready(): void; expand(): void; openLink?(url: string): void }
+interface TelegramWebApp { initData?: string; ready(): void; expand(): void; openLink?(url: string): void; BackButton?: { show(): void; hide(): void; onClick(fn: () => void): void; offClick(fn: () => void): void } }
 declare global {
   interface Window { Telegram?: { WebApp?: TelegramWebApp } }
 }

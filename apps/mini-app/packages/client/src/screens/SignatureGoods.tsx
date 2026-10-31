@@ -6,18 +6,18 @@ import { ask, run } from '../store';
 import { roleName } from '../labels';
 import { SPECIAL_NAMES, people } from './HiddenCommon';
 
-export function SignatureGoods({ v }: { v: PlayerView }) {
+export function SignatureGoods({ v, historyOnly = false }: { v: PlayerView; historyOnly?: boolean }) {
   const h = v.hidden17!;
   const items = v.me.items.filter(i => i.kind === 'special' && ['shape-fixative', 'inspection-lens', 'herbal-incense'].includes(i.ref));
   return <>
-    {items.map(i => <SignatureUse key={i.id} item={i} v={v} />)}
+    {!historyOnly && items.map(i => <SignatureUse key={i.id} item={i} v={v} />)}
     {h.uses.map(u => <div class="m-card" key={u.id}><h5>{SPECIAL_NAMES[u.ref] ?? 'Особое изделие'}</h5><p class="text">{h.signatureGoods.find(g => g.id === u.ref)?.effect}</p>{u.guise && <p class="text">Закрепляемый облик: {u.guise}</p>}<p class="text">{roleName(u.author, v)} → {u.targets.map(k => roleName(k, v)).join(', ')}</p><p class="m-note">{u.status === 'pending' ? 'Ждёт согласия' : u.status === 'completed' ? 'Применено' : 'Отменено'}{u.question ? ` · ${u.question === 'material' ? 'материал реликвии' : 'скрытое отделение'}` : ''}{u.effects && Object.entries(u.effects).map(([k, e]) => ` · ${roleName(k, v)}: снять ${e === 'curse' ? 'проклятие' : 'шипы'}`).join('')}</p>{u.relicId && <p class="text">Реликвия: {h.knownItems[u.relicId]?.ref ?? v.me.items.find(i => i.id === u.relicId)?.ref ?? 'предъявленная вещь'}</p>}{u.answer && <p class="text">{u.answer}</p>}
       {u.status === 'pending' && u.targets.includes(v.me.role.key) && !u.approved.includes(v.me.role.key) && <div class="m-btns"><Button small onClick={() => void run({ type: 'hidden17.signature.respond', id: u.id, accept: true })}>Согласиться</Button><Button small kind="sec" onClick={() => void run({ type: 'hidden17.signature.respond', id: u.id, accept: false })}>Отказаться</Button></div>}
     </div>)}
-    {h.ritual.step === 'preparation' && <Present v={v} />}
+    {!historyOnly && h.ritual.step === 'preparation' && <Present v={v} />}
   </>;
 }
-function SignatureUse({ item, v }: { item: Item; v: PlayerView }) {
+export function SignatureUse({ item, v }: { item: Item; v: PlayerView }) {
   const h = v.hidden17!; const [target, setTarget] = useState(v.me.role.key); const [second, setSecond] = useState('');
   const [effect, setEffect] = useState<'curse' | 'thorns'>('curse'); const [effect2, setEffect2] = useState<'curse' | 'thorns'>('curse');
   const [relicId, setRelic] = useState(''); const [question, setQuestion] = useState<'material' | 'compartment'>('material');

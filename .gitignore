@@ -44,3 +44,5 @@ venv/
 
 # Рабочие файлы планирования
 .superpowers/
+
+apps/mini-app/test-results-narrative/

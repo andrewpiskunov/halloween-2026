@@ -1,3 +1,4 @@
+import { navigateTab } from '../narrative-navigation';
 import { StoryCards, StoryInvite } from './Story';
 import { useState } from 'preact/hooks';
 import type { ActionRecord, AltarSide, Intel, PlayerView } from '@fair/shared';
@@ -181,10 +182,10 @@ function stateLine(v: PlayerView): string {
 }
 
 /** Карточка способности: состояние, метки, кнопка и форма применения. */
-function AbilityCard({ v }: { v: PlayerView }) {
+export function AbilityCard({ v }: { v: PlayerView }) {
   const ab = v.me.ability;
   const [open, setOpen] = useState(false);
-  const toWorkshop = () => { abilityDraft.value = { kind: ab.kind }; tab.value = 'workshop'; };
+  const toWorkshop = () => { abilityDraft.value = { kind: ab.kind }; navigateTab('workshop'); };
   const cancel = () => ask({
     title: 'Отменить просьбу?', text: 'Способность останется неприменённой в этом акте.', okLabel: 'Отменить просьбу', danger: true,
     onOk: () => { if (ab.pendingRequest) void run({ type: 'consent.cancel', id: ab.pendingRequest }); },
@@ -216,7 +217,7 @@ function AbilityCard({ v }: { v: PlayerView }) {
 const isIntel = (a: ActionRecord): a is ActionRecord & { intel: Intel } => a.intel !== undefined;
 
 /** «Что вы узнали»: итоги наблюдений за всю игру, новые сверху. */
-function IntelCard({ v }: { v: PlayerView }) {
+export function IntelCard({ v }: { v: PlayerView }) {
   const me = v.me.role.key;
   const list = v.actions.filter(a => a.author === me).filter(isIntel).sort((a, b) => b.at - a.at);
   if (list.length === 0) return null;
@@ -263,7 +264,7 @@ function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel 
 }
 
 /** «Ваши применения»: свои записи способности с исходом, для целей «успешно применить». */
-function UsesCard({ v }: { v: PlayerView }) {
+export function UsesCard({ v }: { v: PlayerView }) {
   const me = v.me.role.key;
   const list = v.actions.filter(a => a.author === me && a.source.type === 'ability').sort((a, b) => b.at - a.at);
   if (list.length === 0) return null;

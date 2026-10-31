@@ -15,6 +15,11 @@ export function available(state: GameState, playerKey: string): { gold: number; 
   for (const b of Object.values(state.hidden17?.board ?? {})) {
     if (b.author === playerKey && (b.status === 'open' || b.status === 'accepted')) for (const k of INGREDIENTS) ingredients[k] -= b.reward.ingredients[k];
   }
+  for (const t of Object.values(state.hidden17?.narrative?.trades ?? {})) {
+    if (!['offered', 'replied'].includes(t.status)) continue;
+    const bundle = t.from === playerKey ? t.give : t.to === playerKey ? t.reply : undefined;
+    if (bundle) for (const k of INGREDIENTS) ingredients[k] -= bundle.ingredients[k];
+  }
   const items = Object.values(state.items)
     .filter(i => i.owner.type === 'player' && i.owner.key === playerKey && i.reservedFor === undefined)
     .map(i => i.id);

@@ -13,9 +13,9 @@ const MAX_TEXT = 2000;
 const MAX_DEPTH = 5;
 
 /** Поля, которые движок использует как ключи: если есть, обязаны быть короткими строками. */
-const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side', 'target'];
+const KEY_FIELDS = ['roleKey', 'itemId', 'id', 'to', 'code', 'recipeId', 'contributionId', 'playerKey', 'ingredient', 'side', 'target', 'player', 'documentId'];
 /** Свободный текст ведущего, описания, вопрос Весты и облик Камня: длиннее ключей. */
-const TEXT_FIELDS = new Set(['text', 'reason', 'rumor', 'question', 'guise']);
+const TEXT_FIELDS = new Set(['text', 'reason', 'rumor', 'question', 'guise', 'wish', 'note', 'title']);
 /** Поля параметров способности (AbilityUse); прочие в use не принимаются. */
 const USE_FIELDS = new Set(['kind', 'recipeId', 'from', 'to', 'ingredient', 'take', 'give', 'itemId', 'into', 'target', 'copy', 'question']);
 
@@ -43,6 +43,7 @@ function validValue(v: unknown, field: string, depth: number, nullable: (path: s
 
 /** Где команда допускает null: только change.value, change.name, change.side у gm.correct. */
 function nullableFor(type: string): (path: string[]) => boolean {
+  if (type === 'narrative.goal') return path => path.length === 1 && path[0] === 'evaluation';
   if (type !== 'gm.correct') return () => false;
   return path => path.length === 2 && path[0] === 'change' && NULLABLE_FIELDS.has(path[1]);
 }

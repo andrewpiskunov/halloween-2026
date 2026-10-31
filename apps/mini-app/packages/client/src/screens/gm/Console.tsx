@@ -296,7 +296,7 @@ function Correction({ v, preset }: { v: GmView; preset: FixPreset | null }) {
           { value: 'ingredient', label: 'Ингредиент', icon: '🔥', image: resourceImageUrl('ash') },
           { value: 'itemOwner', label: 'Владелец вещи', icon: '🎒' },
           ...(free ? [{ value: 'side', label: 'Сторона', icon: '⚑' }] : []),
-          { value: 'goal', label: 'Личная цель', icon: '✓' },
+          ...(!state.hidden17?.narrative ? [{ value: 'goal', label: 'Личная цель', icon: '✓' }] : []),
           ...(Object.keys(MARK_LABEL) as MarkField[]).map(f => ({ value: f, label: MARK_LABEL[f], icon: MARK_ICON[f] })),
         ]} />
       </div>

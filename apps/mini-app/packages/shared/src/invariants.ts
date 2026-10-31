@@ -80,6 +80,22 @@ export function checkInvariants(state: GameState): void {
     const r = it.reservedFor !== undefined ? state.requests[it.reservedFor] : undefined;
     if (r && r.status !== 'pending') fail(`вещь ${it.id} в резерве закрытого запроса ${r.id}`);
   }
+  const narrativeGold: Record<string, number> = {};
+  for (const trade of Object.values(state.hidden17?.narrative?.trades ?? {})) {
+    const active = trade.status === 'offered' || trade.status === 'replied';
+    if (active && (!present(trade.from) || !present(trade.to))) fail(`участник сделки ${trade.id} ушёл`);
+    if (trade.status === 'replied' && !trade.reply) fail(`нет ответа сделки ${trade.id}`);
+    for (const [key, bundle] of [[trade.from, trade.give], [trade.to, trade.reply]] as const) {
+      if (!bundle) continue;
+      if (active) narrativeGold[key] = (narrativeGold[key] ?? 0) + bundle.gold;
+      for (const id of bundle.items) {
+        const item = state.items[id];
+        if (active && (item?.reservedFor !== trade.id || item.owner.type !== 'player' || item.owner.key !== key)) fail(`потерян резерв вещи сделки ${trade.id}`);
+        if (!active && item?.reservedFor === trade.id) fail(`резерв закрытой сделки ${trade.id}`);
+      }
+    }
+  }
+  for (const [key, gold] of Object.entries(narrativeGold)) if (state.players[key].reservedGold < gold) fail(`потерян резерв золота ${key}`);
   checkClosed(state, present);
 }
 

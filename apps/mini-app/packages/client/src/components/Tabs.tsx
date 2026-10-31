@@ -1,3 +1,4 @@
+import { navigateTab } from '../narrative-navigation';
 import { tab, type Tab } from '../store';
 
 /** U+FE0E просит текстовое начертание символа, а не цветной эмодзи. */
@@ -28,16 +29,16 @@ export function effectiveTab(t: Tab, revealed: boolean): Tab {
  * Нижняя панель вкладок; badges — число на значке вкладки (входящие сделки и просьбы),
  * dots — точка без числа (способность доступна, новая отметка в сумке).
  */
-export function Tabs({ badges = {}, dots = [], revealed = false, hidden17 = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean; hidden17?: boolean }) {
+export function Tabs({ badges = {}, dots = [], revealed = false, hidden17 = false, narrative = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean; hidden17?: boolean; narrative?: boolean }) {
   const current = effectiveTab(tab.value, revealed);
   return (
     <nav class="tabs">
       <div class="tabs-in">
         {tabsFor(revealed).map(t => (
           <button type="button" key={t.key} class={current === t.key ? 'on' : ''} aria-current={current === t.key ? 'page' : undefined}
-            onClick={() => { tab.value = t.key; }}>
+            onClick={() => { if(narrative) navigateTab(t.key); else tab.value = t.key; }}>
             <i aria-hidden="true">{t.icon}{badges[t.key] ? <em class="badge">{badges[t.key]}</em> : dots.includes(t.key) ? <em class="badge dot-only" aria-label="есть новое" /> : null}</i>
-            {hidden17 && t.key === 'altars' ? 'Ритуал' : hidden17 && t.key === 'events' ? 'Таверна' : t.label}
+            {narrative && t.key === 'role' ? 'Персонаж' : narrative && t.key === 'altars' ? 'Застава' : hidden17 && t.key === 'altars' ? 'Ритуал' : hidden17 && t.key === 'events' ? 'Таверна' : t.label}
           </button>
         ))}
       </div>

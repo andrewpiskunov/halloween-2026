@@ -266,3 +266,12 @@ describe('опоздавший (этап 7, §2.6)', () => {
     expect(checkStart(bots, g.s, content, ['o11']).ok).toBe(false);
   });
 });
+
+test('legacy coverage excludes other rulesets but still requires supported commands',()=>{
+ const g=new Game(12);
+ const result=checkCoverage([],12,g.s);
+ expect(result.ok).toBe(false);
+ expect(result.details).toContain('команда без ok: shop.buy');
+ expect(result.details.some(d=>d.startsWith('команда без ok: hidden17.'))).toBe(false);
+ expect(result.details.some(d=>d.startsWith('команда без ok: narrative.'))).toBe(false);
+});

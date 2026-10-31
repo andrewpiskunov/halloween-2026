@@ -5,6 +5,7 @@ export type HiddenOrder = 'leave' | 'stay' | 'restore';
 export type HiddenStep = 'preparation' | 'assembly' | 'powder' | 'choices' | 'responses' | 'last-choice' | 'finished';
 export interface HiddenRole { publicFace: string; desire: string; secret: string; knowledge: string[]; firstSteps: string[]; goals: string[]; finale: { prepare: string; action: string; choice: string; impact: string }; acts: string[]; backstory: string; craftingKnown?: string[] }
 export interface HiddenContent {
+  narrative?: import("./narrative").NarrativeContent;
   title: string; publicIntro: string; publicRules: string[]; roles: Record<string, HiddenRole>;
   methods: { id: string; title: string; holders: string[]; cost: string; tell: string; counter: string; result: string; private: string }[];
   crafting: { rules: string[]; makers: Record<string, string[]> };
@@ -19,6 +20,7 @@ export interface HiddenUse { id: string; author: string; itemId: string; ref: st
 export interface HiddenChoice { player: string; kind: 'salt' | 'sign' | 'vessel' | 'withdraw' | 'pass'; itemId?: string; targetId?: string; shardIds?: string[]; status: 'hidden' | 'active' | 'invalid' | 'cancelled' | 'blocked'; controller?: string; order?: HiddenOrder }
 export interface HiddenOutcome { life: 'awake' | 'sleep' | 'destroyed'; freedom: 'free' | 'controlled'; controller?: string; order?: HiddenOrder; power: 'whole' | 'full' | 'weak' | 'empty'; vessels: Record<string, 'full' | 'weak' | 'empty'>; goals: Record<string, [boolean, boolean]> }
 export interface HiddenState {
+  narrative?: import("./narrative").NarrativeState;
   presentations: Record<string, string[]>; rumors: { author: string; text: string; at: number; unverified: true }[];
   version: 1; learned: Record<string, HiddenMethod[]>; prepared: Record<string, { method: HiddenMethod; controller?: string; order?: HiddenOrder }>;
   board: Record<string, HiddenBoard>; dice: Record<string, HiddenDice>; production: Record<string, HiddenProduction>; uses: Record<string, HiddenUse>;
@@ -53,6 +55,7 @@ export type HiddenCommand =
  | { type: 'hidden17.ritual.ward'; itemId: string; against: string }
  | { type: 'hidden17.fact'; fact: 'truth' | 'serafinaOffer' | 'veldaRenounced'; value: boolean };
 export interface HiddenPlayerView {
+  narrative?: import("./narrative").NarrativePlayerView;
   knownItems: Record<string, { kind: import('./types').ItemKind; ref: string; owner?: string }>;
   rumors: HiddenState['rumors'];
   briefing: HiddenRole; publicIntro: string; publicRules: string[]; craftingRules: string[];

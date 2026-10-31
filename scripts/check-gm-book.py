@@ -11,6 +11,7 @@ OUT=ROOT/'docs/prototypes'
 game=json.loads((ROOT/'docs/design/gm-book/game-data.json').read_text())
 edition=json.loads((ROOT/'docs/design/gm-book/edition-17.json').read_text())
 hidden=json.loads((ROOT/'docs/design/gm-book/hidden-17.json').read_text())
+narrative=json.loads((ROOT/'docs/design/gm-book/narrative-17.json').read_text())
 core=set(edition['roleKeys']); extra={r['key'] for r in game['roles']}-core
 assert len(core)==17 and len(extra)==13 and not core & extra
 class Page(HTMLParser):
@@ -39,8 +40,8 @@ for r in game['roles']:
     current=dict(r,**edition['roleOverrides'].get(r['key'],{}))
     values=[current['name'],current['backstory'],current['secret'],current['rumor'],current['effect'],*current['goals']]
     if r['key'] in core:
-        brief=hidden['roles'][r['key']]
-        values=[current['name'],current['effect'],brief['backstory'],brief['secret'],*brief['goals']]
+        brief=narrative['roles'][r['key']]
+        values=[current['name'],current['effect'],*brief['story'],*brief['goals'],*brief['gmGoals'],brief['abilityOrigin']]
     for value in values:assert value in text,(r['key'],'утрачены сведения редакции')
     original=' '.join(parsed[OUT/f'characters-30-archive/{r["key"]}.html'].text)
     for value in [r['name'],r['backstory'],r['secret'],r['rumor'],r['effect'],*r['goals']]:assert value in original,(r['key'],'утрачены исходные сведения в архиве')

@@ -1,3 +1,4 @@
+import { narrativeDecide, narrativeAfterEvent, narrativeGuard } from './narrative';
 import { hiddenDecide, hiddenGuard, enableHidden, hiddenGoals, hiddenAfterEvent } from './hidden17';
 import { storyCommands, storyReducers } from './story';
 import type { Content } from '../content';
@@ -40,6 +41,8 @@ export function initialState(content: Content, codes: Record<string, string>): G
 
 /** Проверяет команду и возвращает события; состояние не меняет. */
 export function decide(state: GameState, content: Content, cmd: Command, ctx: Ctx): Result {
+  const narrativeBlocked = narrativeGuard(state, cmd); if (narrativeBlocked) return narrativeBlocked;
+  const narrative = narrativeDecide(state, content, cmd, ctx); if (narrative) return narrative;
   const guarded = hiddenGuard(state, cmd); if (guarded) return guarded;
   const hidden = hiddenDecide(state, content, cmd, ctx); if (hidden) return hidden;
   const handler = lookup(commandHandlers, cmd.type) as AnyHandler | undefined;
@@ -54,12 +57,12 @@ export function decide(state: GameState, content: Content, cmd: Command, ctx: Ct
 
 /** Применяет одно событие и возвращает новое состояние; seq берётся из события или растёт на 1. */
 export function reduce(state: GameState, content: Content, event: Event): GameState {
-  if (event.type === 'Hidden17Enabled' || event.type === 'Hidden17Changed') return hiddenAfterEvent(state, { ...state, ...event.patch, seq: event.seq ?? state.seq + 1 });
+  if (event.type === 'Hidden17Enabled' || event.type === 'Hidden17Changed') return narrativeAfterEvent(state, hiddenAfterEvent(state, { ...state, ...event.patch, seq: event.seq ?? state.seq + 1 }), event);
   const reducer = eventReducers[event.type] as AnyReducer | undefined;
   if (!reducer) throw new Error(`Нет редьюсера для события ${event.type}`);
   let next = reducer(state, content, event);
   if (next.hidden17?.ritual.outcome && event.type === 'Corrected') { next = structuredClone(next); next.hidden17!.ritual.outcome!.goals = hiddenGoals(next, content); }
-  return hiddenAfterEvent(state, { ...next, seq: event.seq ?? state.seq + 1 });
+  return narrativeAfterEvent(state, hiddenAfterEvent(state, { ...next, seq: event.seq ?? state.seq + 1 }), event);
 }
 
 export function execute(state: GameState, content: Content, cmd: Command, ctx: Ctx):

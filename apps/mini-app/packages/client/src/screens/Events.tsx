@@ -50,7 +50,7 @@ export function Events({ v }: { v: PlayerView }) {
 type LotView = PlayerView['lots'][number];
 
 /** Лот: статус с отсчётом, вещи, своя ставка и действия: закрытая ставка или выкуп. */
-function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
+export function LotCard({ l, v }: { l: LotView; v: PlayerView }) {
   const me = v.me.role.key;
   const title = lotTitle(l.items, v);
   const until = l.status === 'openBidding' ? l.openUntil : l.status === 'sealedBidding' ? l.sealedUntil : undefined;

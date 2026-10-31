@@ -104,7 +104,7 @@ function craftWith(
   const { recipe, kind: itemKind } = found;
   const q = craftQuote(state, author, recipe, mod);
   if ('error' in q) return fail(q.error, q.detail);
-  const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, ...(!state.hidden17 || content.hidden17?.crafting.makers[author]?.includes(recipeId) ? { createdBy: author } : {}) };
+  const item: Item = { id: ctx.newId(), kind: itemKind, ref: recipeId, owner: { type: 'player', key: author }, ...(!state.hidden17 || (!state.hidden17.narrative && content.hidden17?.crafting.makers[author]?.includes(recipeId)) ? { createdBy: author } : {}) };
   return ok(
     used(author, kind, [], ctx, requestId, item),
     { type: 'ItemCrafted', at: ctx.now, player: author, item, ...q, viaAbility: kind },

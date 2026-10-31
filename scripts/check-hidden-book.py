@@ -6,6 +6,8 @@ from html.parser import HTMLParser
 from urllib.parse import urlsplit, unquote
 ROOT=Path(__file__).resolve().parents[1]; OUT=ROOT/'docs/prototypes'; DATA=ROOT/'docs/design/gm-book'
 h=json.loads((DATA/'hidden-17.json').read_text()); e=json.loads((DATA/'edition-17.json').read_text())
+n=json.loads((DATA/'narrative-17.json').read_text())
+assert set(n['roles'])==set(h['roles']) and n['version']==2
 assert set(h['roles'])==set(e['roleKeys']) and len(h['roles'])==17
 class Page(HTMLParser):
  def __init__(self,path):
@@ -27,8 +29,8 @@ for path in paths:
   assert target.is_file(),(path,ref)
   if u.fragment and target.suffix=='.html':assert unquote(u.fragment) in Page(target).ids,(path,ref)
  if path.parent.name=='players':
-  own=h['roles'][path.stem]
-  for v in [own['secret'],own['backstory'],*own['goals'],*own['knowledge'],*own['firstSteps']]:assert v in text,(path,'утрачены личные сведения',v)
+  own=n['roles'][path.stem]
+  for v in [*own['story'],*own['goals'],own['abilityOrigin']]:assert v in text,(path,'утрачены личные сведения',v)
   for key,other in h['roles'].items():
    if key!=path.stem:assert other['secret'] not in text,(path,'чужой секрет',key)
   for ref in doc.refs:
@@ -91,9 +93,9 @@ for file in expected:
 print('OK: три места, изготовители и три авторских товара; доска не раскрывает чужие цели; правила d6; 20 изображений вещей совпадают с исходниками.')
 for leak in ['цели Лиры','целей Греты','цели Сив','цель Ады']:
  assert leak not in public_text,('Публичное пояснение выдаёт личную цель',leak)
-assert 'Астра может применить скопированную замену' in ' '.join(h['crafting']['rules']), 'Копирование замены не применимо без профессии'
+assert len(n['craftingRules'])==3
 print('OK: публичные правила без персональных условий целей; скопированная замена Астры доступна в заказе.')
-# Физический обряд: общедоступная инструкция, никаких ответов по истории.
+# Физический обряд известен только из личных источников; никаких ответов по истории.
 ritual=h['ritual']
 assert len(ritual['steps'])==5
 for step in ritual['steps']:
@@ -111,3 +113,41 @@ assert all(ref.startswith('#') or ref.startswith('data:') for ref in stone.refs)
 for method in h['methods']:assert method['private'] not in stone_text
 for role in h['roles'].values():assert role['secret'] not in stone_text
 print('OK: пять физических шагов, два представления, надпись без секретов; речь Сарна только после исхода, исторического экзамена нет.')
+
+# Новая редакция: семантика целей, источники знания и публичные описания.
+docs={d['id']:d for d in n['documents']}
+assert len(docs)==len(n['documents'])
+assert all(d['source'] and d['text'] and set(d['holders'])<=set(n['roles']) for d in docs.values())
+for key,role in n['roles'].items():
+ assert len(role['story'])>=3 and all(len(p)>120 for p in role['story']),key
+ assert len(role['goals'])==len(role['gmGoals'])==2 and role['abilityOrigin']
+ assert set(role['documents'])=={d['id'] for d in docs.values() if key in d['holders']},key
+ text=' '.join(Page(OUT/f'players/{key}.html').text)
+ for d in docs.values():
+  assert (d['text'] in text)==(d['id'] in role['documents']),(key,d['id'],'граница документов')
+ for goal in role['gmGoals']:assert goal not in text,(key,'выдан критерий ведущего')
+ assert 'Ваше действие' not in text and 'Что вы знаете в начале' not in text and 'Внешний вид' not in text
+ assert 'resource:gold' in role['startingItems']
+ assert all(ref in n['items'] for ref in role['startingItems'])
+ own=next(r for r in g['roles'] if r['key']==key)
+ expected={'resource:gold',*[f'resource:{res}' for res,count in own['bundle'].items() if count]}
+ expected.update('relic:'+r['name'] for r in g['relics'] if r['owner']==key)
+ for holder,shard in [('o1','I'),('o5','II'),('o9','III'),('o14','V')]:
+  if key==holder:expected.add('shard:'+shard)
+ if key in ['o10','o16']:expected.add('clue:'+('B' if key=='o10' else 'C'))
+ assert set(role['startingItems'])==expected,(key,'неканонические стартовые вещи')
+ for rule in n['rules']:
+  assert rule['text'] in text and (source/rule['image']).is_file()
+joining=[d for d in docs.values() if 'joining' in d.get('knowledge',[])]
+assert {tuple(d['holders']) for d in joining}=={('o5',),('o17',)}
+for d in joining:
+ assert 'три разные целые части' in d['text'] and 'Два' in d['text'] and 'Фокуса' in d['text']
+ assert ritual['formula'].rstrip('.') in d['text'] and 'place' in d['knowledge']
+assert any('o4' in d['holders'] and 'place' in d.get('knowledge',[]) for d in docs.values())
+for public in [public_text,stone_text]:
+ assert ritual['formula'].rstrip('.') not in public and 'три целые части' not in public and 'два Фокуса' not in public
+ for d in docs.values():assert d['text'] not in public
+for key,forbidden in {'relic:Костяная флейта':['тайник','двойном дне','осколок','V'],'relic:Корона пепла':['вывоз','плата','дед'],'relic:Медный жезл':['разрез','убий','сердц'],'relic:Клятвенный перстень':['Эльмар','открыть ворота']}.items():
+ text=' '.join(n['items'][key].values())
+ for word in forbidden:assert word not in text,(key,'публичный секрет',word)
+print('OK: 17 историй, 34 цели и оценки, личные документы, независимые joining, канонические startingItems, нейтральный лист места и безопасные описания вещей.')

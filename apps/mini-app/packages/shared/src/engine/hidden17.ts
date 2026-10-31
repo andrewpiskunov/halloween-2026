@@ -1,3 +1,4 @@
+import { newNarrative } from './narrative';
 import { ABILITY_BY_ROLE } from '../abilities';
 import { storyReplacesAbility } from '../story';
 import type { Content } from '../content';
@@ -21,7 +22,7 @@ const activeBoard = (b: HiddenState['board'][string]) => b.status === 'open' || 
 export function newHiddenState(content: Content): HiddenState {
   const learned: HiddenState['learned'] = {};
   for (const key of Object.keys(content.hidden17!.roles)) learned[key] = content.hidden17!.methods.filter(m => ['salt', 'command', 'vessel'].includes(m.id) && m.holders.includes(key)).map(m => m.id === 'command' ? 'sign' : m.id as HiddenMethod);
-  return { version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
+  return { ...(content.hidden17?.narrative ? { narrative: newNarrative(content.hidden17.narrative) } : {}), version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
 }
 export function enableHidden(state: GameState, content: Content, at: number): Event {
   const roster = Object.keys(content.hidden17!.roles);
@@ -137,7 +138,7 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
     const before = () => requireThat(['act1', 'act2', 'act3'].includes(s.phase) && r.step === 'preparation', 'Обычные действия остановлены на финал', 'phase');
     const step = (...steps: string[]) => requireThat(steps.includes(r.step), 'Сейчас другое окно обряда', 'phase');
     switch (cmd.type) {
-      case 'hidden17.present': { player(); before(); const item = owned(s, key, cmd.itemId, false); requireThat(item.kind === 'relic' && s.players[cmd.player], 'Предъявить можно обычную реликвию'); const list = h.presentations[item.id] ?? []; h.presentations[item.id] = cmd.allow ? [...new Set([...list, cmd.player])] : list.filter(k => k !== cmd.player); break; }
+      case 'hidden17.present': { player(); before(); const item = owned(s, key, cmd.itemId, false); requireThat((h.narrative || item.kind === 'relic') && s.roster.includes(cmd.player) && s.players[cmd.player], h.narrative ? 'Нужна собственная вещь и участник' : 'Предъявить можно обычную реликвию'); const list = h.presentations[item.id] ?? []; h.presentations[item.id] = cmd.allow ? [...new Set([...list, cmd.player])] : list.filter(k => k !== cmd.player); break; }
       case 'hidden17.rumor': { player(); before(); textField(cmd.text, 800); requireThat(h.rumors.filter(x => x.author === key).length < 30, 'Лимит слухов', 'limit'); h.rumors.push({ author: key, text: cmd.text, at: ctx.now, unverified: true }); break; }
       case 'hidden17.produce': {
         player(); before(); const customer = cmd.customer ?? key; const fee = cmd.fee ?? 0;

@@ -112,7 +112,7 @@ export function Bag({ v }: { v: PlayerView }) {
 }
 
 /** Зелье и Камень: на себя или на другого (тогда просьба и вещь обещана до ответа). */
-function UseChoice({ v, item, onDone }: { v: PlayerView; item: Item; onDone: () => void }) {
+export function UseChoice({ v, item, onDone }: { v: PlayerView; item: Item; onDone: () => void }) {
   const [guise, setGuise] = useState('');
   const shape = item.kind === 'shape';
   const name = guise.trim();

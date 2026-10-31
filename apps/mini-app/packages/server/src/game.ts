@@ -153,6 +153,11 @@ export class Game {
           .catch(err => console.error('Ошибка истечения запроса согласия', err));
       }
     }
+    for (const trade of Object.values(this.current.hidden17?.narrative?.trades ?? {})) {
+      if (['offered', 'replied'].includes(trade.status) && trade.expiresAt <= now) {
+        this.submit('expire:narrative:' + trade.id, { type: 'narrative.trade.expire', id: trade.id }, { type: 'system' }).catch(err => console.error('Ошибка срока сюжетной сделки', err));
+      }
+    }
     for (const post of Object.values(this.current.hidden17?.board ?? {})) {
       if (['open', 'accepted'].includes(post.status) && post.expiresAt <= now) {
         this.submit('expire:board:' + post.id, { type: 'hidden17.board.expire', id: post.id }, { type: 'system' })

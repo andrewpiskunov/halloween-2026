@@ -1,3 +1,11 @@
+import './narrative.css';
+import { NarrativeRole } from './screens/NarrativeRole';
+import { NarrativeBag } from './screens/NarrativeBag';
+import { NarrativeTavern } from './screens/NarrativeTavern';
+import { NarrativeTrades } from './screens/NarrativeTrades';
+import { NarrativeWorkshop } from './screens/NarrativeWorkshop';
+import { GmNarrativePanel } from './screens/gm/Narrative';
+import { activateNarrativeNavigation } from './narrative-navigation';
 import { GmRitual, GmHiddenResults } from './screens/gm/Hidden';
 import { HiddenWorkshop } from './screens/HiddenWorkshop';
 import { Tavern } from './screens/Tavern';
@@ -120,7 +128,9 @@ function TopBar({ v, gold }: { v: PlayerView | GmView; gold?: number }) {
 
 function PlayerApp({ v }: { v: PlayerView }) {
   const me = v.me.role.key;
-  const incoming = v.offers.filter(o => o.to === me && o.status === 'pending').length
+  const narrative = !!v.hidden17?.narrative;
+  useEffect(() => narrative ? activateNarrativeNavigation(me) : undefined, [narrative, me]);
+  const incoming = (v.hidden17?.narrative?.trades.filter(t => (t.status === 'offered' && t.to === me) || (t.status === 'replied' && t.from === me)).length ?? 0) + v.offers.filter(o => o.to === me && o.status === 'pending').length
     + v.requests.filter(r => r.status === 'pending' && r.approvers.includes(me) && !r.approved.includes(me)).length;
   // Точка у «Сумки»: отметки изменились с последнего открытия вкладки.
   const p = v.me.player;
@@ -133,13 +143,13 @@ function PlayerApp({ v }: { v: PlayerView }) {
   const revealed = v.phase === 'revealed';
   const screen = (() => {
     switch (effectiveTab(tab.value, revealed)) {
-      case 'bag': return <Bag v={v} />;
-      case 'trades': return <Trades v={v} />;
-      case 'workshop': return v.hidden17 ? <HiddenWorkshop v={v} /> : <Workshop v={v} />;
+      case 'bag': return narrative ? <NarrativeBag v={v} /> : <Bag v={v} />;
+      case 'trades': return narrative ? <NarrativeTrades v={v} /> : <Trades v={v} />;
+      case 'workshop': return narrative ? <NarrativeWorkshop v={v} /> : v.hidden17 ? <HiddenWorkshop v={v} /> : <Workshop v={v} />;
       case 'altars': return v.hidden17 ? <Ritual v={v} /> : <Altars v={v} />;
-      case 'events': return v.hidden17 ? <Tavern v={v} /> : <Events v={v} />;
+      case 'events': return narrative ? <NarrativeTavern v={v} /> : v.hidden17 ? <Tavern v={v} /> : <Events v={v} />;
       case 'results': return <Results v={v} />;
-      default: return <Role v={v} />;
+      default: return narrative ? <NarrativeRole v={v} /> : <Role v={v} />;
     }
   })();
   return (
@@ -149,7 +159,7 @@ function PlayerApp({ v }: { v: PlayerView }) {
       {/* Ушедший видит экраны, но действовать не может: сервер всё равно откажет (§2.4). */}
       {playerLeft(v) && <div class="as-bar live-bar" role="status"><span>{leftText(v)}</span></div>}
       <main class="cnt"><Frozen.Provider value={v.hidden17 && v.hidden17.ritual.step !== 'preparation' && tab.value !== 'altars' ? 'Обычные действия завершены: идёт финал' : frozenReason(v)}>{screen}</Frozen.Provider></main>
-      <Tabs badges={{ trades: incoming }} dots={dots} revealed={revealed} hidden17={!!v.hidden17} />
+      <Tabs badges={{ trades: incoming }} dots={dots} revealed={revealed} hidden17={!!v.hidden17} narrative={narrative} />
     </>
   );
 }
@@ -159,7 +169,7 @@ function GmApp({ v }: { v: GmView }) {
     <>
       <TopBar v={v} />
       <LinkBar />
-      <main class="cnt">{v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <Roster v={v} />}</main>
+      <main class="cnt">{v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <><GmNarrativePanel v={v} /><Roster v={v} /></>}</main>
       <GmTabs hidden17={!!v.state.hidden17} />
     </>
   );

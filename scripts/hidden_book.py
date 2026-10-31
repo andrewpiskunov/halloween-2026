@@ -10,13 +10,49 @@ def build(c):
     esc,p,ul,labelled,section,page,portrait,illustration,link = [c[x] for x in ('esc','p','ul','labelled','section','page','portrait','illustration','link')]
     game, past = c['core_game'], c['core_past']
     h=json.loads((DATA/'hidden-17.json').read_text())
+    narrative=json.loads((DATA/'narrative-17.json').read_text())
+    documents={d['id']:d for d in narrative['documents']}
+    # Старый снимок остаётся для воспроизведения прежних партий. Эта проекция — новая книга.
+    h['status']='Сюжетная редакция: личные источники знаний и оценка стремлений ведущим.'
+    h['crafting']['rules']=narrative['craftingRules']
+    h['noticeboard']['intro']='На физической доске можно оставить просьбу, предложение и награду. Публикация не резервирует имущество.'
+    h['noticeboard']['rules']=['Пишите от своего имени и обещайте лишь то, чем вправе распоряжаться.', 'Обговорите условия лично. Награда передаётся отдельной подтверждённой сделкой; объявление не резервирует её.', 'Услугу или необычный результат подтверждает ведущий по согласованным условиям.']
+    h['dice']['steps']=['Два согласных участника физически бросают d6; у кого больше, тот выиграл. При равенстве — ничья.', 'До начала договоритесь о ставке. Можно играть без неё. Приложение не бросает кубик и не держит банк.', 'Итоговый перевод монет оформите обычной сделкой или через ведущего. Используйте только свободные игровые монеты.']
+    h['ritual']['discovery']='Полный способ хранится в двух независимых личных документах Вельды и Астры. Знающие могут показать запись. Туман, Лира и Мирон знают место, но не полный рецепт. При отсутствии источников ведущий выдаёт копию через осмотр или сюжетную заявку, фиксируя полученное знание; на общем листе рецепта нет.'
+    for m in h['methods']:
+        if m['id']=='voice':
+            m['cost']='Отдельное согласие уже живого Сарна; просьба о разговоре расходует единственное большое добровольное чудо ночи.'
+            m['tell']='Просьбу произносят Сарну после возвращения; сам способ соединения сначала изучают отдельно.'
+            m['private']='Мирон и Лира знают место могилы и возможность попросить разговор с умершим. Полного способа возвращения это знание не даёт; флейта не обязательный ключ. Сарн вправе отказать, а несколько просителей должны договориться об одном большом чуде.'
+    h['ritual']['props']=[x.replace('Печатная надпись с короткими шагами и формулой.','Нейтральный лист места; отдельные личные копии способа соединения.') for x in h['ritual']['props']]
+    h['preparation'][-1]='Обозначить старую заставу нейтральным листом места. Не вывешивать рецепт. Подготовить личные записи Вельды и Астры и резервную копию для осмотра по заявке; историю на память не проверять.'
+    h['timing'][0]['steps']=[x.replace('Показать зоны квартиры и место могилы. Сказать: у плиты есть старая надпись, её можно осмотреть.','Показать зоны квартиры и старую заставу. Предложить осмотр через заявку, не выдавая всем назначение места.') for x in h['timing'][0]['steps']]
+    h['knowledgeRoutes'][0]['fallback']='При отсутствии обоих носителей выдайте копию документа через осмотр старой заставы или сюжетную заявку. Полученное знание запишите; отсутствие гостя не блокирует линию.'
+    h['knowledgeRoutes'][1]=dict(topic='Где находится могила',sources=['o4','o14','o3'],fallback='Осмотр старой заставы по заявке ведущему открывает место; полный способ передаётся отдельно.',fact='Плита во внутреннем дворе у обвалившейся стены скрывает останки Сарна. Одно знание места не даёт рецепта.')
+    for chapter in h['chapters']:
+        for paragraph in chapter['paragraphs']:
+            if chapter['id']=='living' and 'Обряд записан' in paragraph['text']:
+                paragraph['text']='Ни флейта, ни жезл, ни титул не являются единственным ключом. Вельда и Астра независимо хранят полный способ соединения. Туман, Лира и Мирон знают место могилы, но не получают рецепт вместе с этим знанием. Запись можно показать другому; при отсутствии носителей её находят через осмотр по заявке. Память о Сарне нужна для доверия, а не как правильный ответ на экзамене.'
+            paragraph['text']=paragraph['text'].replace('короткая формула возвращения написана здесь же','короткую формулу возвращения читают из полученной записи')
+    for step in h['ritual']['steps']:
+        for field in ['gm','gmAction','roleNote']:
+            step[field]=step[field].replace('с плиты','из изученной записи').replace('с надписи','из изученной записи').replace('кто видит плиту','кто узнал способ')
+        step['players']=[x.replace('кто видит плиту','кто узнал способ') for x in step['players']]
+    h['ritual']['steps'][0]['gmAction']='Проверьте, что хотя бы один участник изучил полный способ соединения. Покажите схему из его записи с согласия владельца, подтвердите целостность и владение частями. Если нет трёх частей или двух Фокусов, дайте короткую возможность договориться; без ресурсов расхода и начала обряда нет.'
+    h['ritual']['steps'][2]['gm']='«Произнесённые слова отзываются под камнем теплом. Вы ещё не слышите ответа: Сарн пока не вернулся».'
+    h['ritual']['steps'][2]['players'][0]='Знающий способ участник читает или передаёт другому слова: «Сарн, вернись к своему сердцу. Сердце, верни ему жизнь». Не нужно отвечать на вопросы о прошлом.'
+    h['ritual']['steps'][2]['gmAction']='Попросите знающего способ участника произнести формулу или передать её другому. Не проверяйте знание истории. Соберите подготовленные вмешательства до раскрытия. Если формулу никто не произносит, обряд заканчивается сном; Фокусы уже потрачены.'
     roles=game['roles']; by={r['key']:r for r in roles}
+    for key,role in narrative['roles'].items():
+        h['roles'][key]['goals']=role['goals']
+
     assert set(by)==set(h['roles']) and len(roles)==17
     (OUT/'players').mkdir(exist_ok=True)
     item_source=c['ROOT']/'apps/mini-app/packages/client/public/assets/items'
     manifest=json.loads((item_source/'manifest.json').read_text())
     item_dir=ASSETS/'items'; item_dir.mkdir(exist_ok=True)
-    for source in item_source.glob('*.jpg'):shutil.copyfile(source,item_dir/source.name)
+    for source in item_source.iterdir():
+        if source.suffix in ('.jpg','.webp'):shutil.copyfile(source,item_dir/source.name)
     def item_picture(file,label,prefix=''):
         src=item_dir/file
         assert src.is_file(),src
@@ -53,7 +89,7 @@ def build(c):
         return result
     def acting(r):
         a=r['acting']
-        return labelled('Образ',a['vibe'])+labelled('Голос',a['voice'])+labelled('Внешний вид',a['look'])+ul(a['actions'])+''.join(f'<blockquote>{esc(x)}</blockquote>' for x in a['lines'])+labelled('Лёгкая задача для отыгрыша',r['joke'])
+        return labelled('Образ',a['vibe'])+labelled('Голос',a['voice'])+ul(a['actions'])+''.join(f'<blockquote>{esc(x)}</blockquote>' for x in a['lines'])+labelled('Лёгкая задача для отыгрыша',r['joke'])
     def method(m,private=False):
         fields=[('private','Что вам известно'),('cost','Подготовка и цена'),('tell','Наблюдаемый след'),('counter','Как могут ответить'),('result','Что получится')]
         return article(m['title'],''.join(labelled(label,m[k]) for k,label in fields if private or k!='private'))
@@ -67,7 +103,8 @@ def build(c):
         text=labelled('Изготовитель',name(g['maker']))
         text+=labelled('Материалы и базовая плата',', '.join(f'{resources[k]} × {v}' for k,v in g['cost'].items())+f'; золото × {g["gold"]}.')
         text+=labelled('Действие',g['effect'])+labelled('Как применить',g['use'])+labelled('Ограничения',g['limits'])+p('Выпуск: один авторский товар за акт. Гонорар изготовителю — по договорённости сверх базовой платы.')
-        if g['materialArt']:text+=item_picture(manifest['recipes'][g['materialArt']],g['artLabel'],prefix)
+        if (item_dir/(g['id']+'.webp')).is_file():text+=item_picture(g['id']+'.webp',g['name'],prefix)
+        elif g['materialArt']:text+=item_picture(manifest['recipes'][g['materialArt']],g['artLabel'],prefix)
         if gm and g.get('gmNote'):text+=labelled('Только ведущему',g['gmNote'])
         return article(g['name'],text)
     def profession(key,gm=False,prefix='../'):
@@ -96,8 +133,12 @@ def build(c):
         result+='<h3>К кому обратиться за изготовлением</h3>'+ul([name(k)+': '+', '.join(recipe_names[x] for x in ids)+'.' for k,ids in h['crafting']['makers'].items()])
         result+='<h3>Авторские товары</h3>'+p('Это открытые предложения ремесленников. Рецепты финальных вмешательств в этот список не входят.')+''.join(signature(g,gm,prefix) for g in h['signatureGoods'])
         return result
+    def short_rules(prefix=''):
+        return ''.join(article(rule['title'],item_picture(rule['image'],rule['title'],prefix)+p(rule['text'])) for rule in narrative['rules'])
+    def personal_documents(key):
+        return ''.join(article(documents[id]['title'],labelled('Источник',documents[id]['source'])+p(documents[id]['text'])) for id in narrative['roles'][key]['documents'])
     public=section('welcome','01','На одну ночь у брода','',p(h['publicIntro']))
-    public+=section('rules','02','Что можно делать','',ul(h['publicRules'])+p(h['consentPolicy']))
+    public+=section('rules','02','Что можно делать','',short_rules()+p(h['consentPolicy']))
     public+=section('workshop','03','Обычные изделия',h['venues']['workshop']['intro'],recipes()+p('Базовый ингредиент можно купить у ярмарки за 2 золота, если он есть в запасе. Торговля между игроками — по взаимной договорённости.'))
     public+=section('requests','04','Ваша идея может изменить историю','',p('Скажите ведущему: что хотите сделать, чем готовы заплатить и какого изменения ждёте. Вместе запишите условия успеха, заметный след, срок и возможный ответ других. Затем можно искать помощь и выполнять условия.')+p('Например: вырастить дерево из необычного семени, перенести проклятие в предмет, придумать временную способность или добровольную клятву. Это заявка на обсуждение, а не готовое право на эффект.'))
     public+=section('venues','05','Три места ярмарки','Заказы, сделки и разговоры дают повод найти друг друга.',venues())
@@ -105,7 +146,7 @@ def build(c):
     (OUT/'player-guide.html').write_text(standalone('Общие правила',public))
     def ritual_map():
         slots=''.join(f'<div class="grave-slot"><span>{n}</span><img src="assets/gm-book/items/{manifest["shard"]}" alt="Гнездо {n}" width="72" height="72"></div>' for n in ['I','II','III','IV','V'])
-        return '<div class="grave-map"><span class="eyebrow">Внутренний двор · у обвалившейся стены</span><h3>Плита над останками Сарна</h3><div class="grave-slots">'+slots+'</div><p>Любые 3 целые части · пыль из 2 Фокусов · формула с плиты</p></div>'
+        return '<div class="grave-map"><span class="eyebrow">Внутренний двор · у обвалившейся стены</span><h3>Плита над останками Сарна</h3><div class="grave-slots">'+slots+'</div><p>Только ведущему: любые 3 целые части · пыль из 2 Фокусов · формула из личной записи</p></div>'
     def ritual_steps():
         result=''
         for i,step in enumerate(h['ritual']['steps']):
@@ -117,13 +158,13 @@ def build(c):
     reference=''.join(article(x['title'],ordered(x['steps'])) for x in h['phases'])
     resolution=ritual_intro+ritual_steps()
     cases=''.join(article(x['title'],labelled('Если произошло',x['given'])+labelled('Результат',x['outcome'])) for x in h['casebook'])
-    stone=section('inscription','—','Надпись у могилы Сарна','Для размещения на игровом месте.',ordered(h['ritual']['stone'])+f'<blockquote>{esc(h["ritual"]["formula"])}</blockquote>'+item_gallery([(manifest['shard'],'Любые 3 целые части'),(manifest['recipes']['focus'],'2 Фокуса → ритуальная пыль')])+p('Порядок: гнёзда → пыль → формула → наблюдение → последнее решение. Всё проводится вместе с ведущим в момент закрытия брода.'))
-    stone_html=standalone('Надпись у могилы',stone)
+    stone=section('inscription','—','Старая застава','Лист игрового места.',p('Обвалившаяся стена, каменные плиты и следы старых линий. Здесь можно осмотреть развалины или поговорить с теми, кто помнит заставу.')+p('Чтобы исследовать место, сообщите ведущему, что именно вы рассматриваете. Он опишет находку и выдаст доступные сведения.'))
+    stone_html=standalone('Старая застава',stone)
     css_url='assets/gm-book/book.css?v='+hashlib.sha256((ASSETS/'book.css').read_bytes()).hexdigest()[:10]
     stone_html=stone_html.replace(f'<link rel="stylesheet" href="{css_url}">','<style>'+(ASSETS/'book.css').read_text()+'</style>')
-    for file in item_dir.glob('*.jpg'):
+    for file in (f for f in item_dir.iterdir() if f.suffix in ('.jpg','.webp')):
         version=hashlib.sha256(file.read_bytes()).hexdigest()[:10]
-        stone_html=stone_html.replace(f'assets/gm-book/items/{file.name}?v={version}','data:image/jpeg;base64,'+base64.b64encode(file.read_bytes()).decode())
+        stone_html=stone_html.replace(f'assets/gm-book/items/{file.name}?v={version}',('data:image/webp;base64,' if file.suffix=='.webp' else 'data:image/jpeg;base64,')+base64.b64encode(file.read_bytes()).decode())
     (OUT/'ritual-stone.html').write_text(stone_html)
     sheet=section('setup','00','Ритуал у могилы Сарна','Только для ведущего. Пять шагов, около 10 минут.',p(h['status'])+'<p><a href="ritual-stone.html">Печатная надпись для игрового места →</a></p>'+ul(h['ritual']['props']))
     sheet+=section('ritual','01','Слова ведущего и действия игроков','Сначала прочитайте только нужную сцену. Проверки и развилки находятся рядом.',resolution)
@@ -170,38 +211,39 @@ def build(c):
     ends+='<h3>Раскрытие ведущего</h3>'+p('До последнего шага слышны только удары из-под плиты. Когда возвращение действительно произошло, смените голос и произнесите реплику Сарна из пятой сцены. При сне или уничтожении живого разговора нет. Ведущий не получает собственного права переиграть чужие результаты.')
     ends+='<details><summary>Подробные правила для спорных сочетаний</summary>'+reference+'</details>'
     ends+=''.join(article(title,p(text)) for _,title,text in h['endings'])
-    ends+='<h3>Каждому — собственный эпилог</h3>'+p('Проверить обе цели по тексту личной карточки. «Получить и сохранить» означает владеть при закрытии. Применение или обмен подтверждается записью ведущего. Затем спросить: чего хотел; что сделал; что получил; кто почувствует последствия. Несовместимые личные цели допускают, что не все получат всё.')
+    ends+='<h3>Каждому — собственный эпилог</h3>'+p('Оценить обе цели: достигнута, частично достигнута или не достигнута; записать пояснение. Отсутствие оценки не означает провал. Предметы и журнал помогают оценке, но не заменяют смысл поступка. Затем спросить: чего хотел; что сделал; что получил; кто почувствует последствия. Несовместимые личные цели допускают, что не все получат всё.')
     for r in roles:
         b=h['roles'][r['key']]
-        ends+=article(r['name'],labelled('Проверить личные цели',' / '.join(b['goals']))+labelled('Последствие выбора',b['finale']['impact']))
+        ends+=article(r['name'],labelled('Проверить личные цели',' / '.join(b['goals']))+labelled('Пояснения к оценке',' / '.join(narrative['roles'][r['key']]['gmGoals'])))
     body+=section('endings','07','Финал: жизнь, свобода, цена','Пять шагов у могилы: слева сцена ведущему, справа действия игроков.',ends)
     (OUT/'magic-fair-v2.html').write_text(page(h['title'],body))
     for i,r in enumerate(roles):
         key=r['key']; b=h['roles'][key]
         private_methods=[m for m in h['methods'] if key in m['holders']]
         header=f'<section class="chapter"><span class="eyebrow">{esc(r["title"])}</span><div class="dossier-hero"><img class="role-portrait" src="{portrait(key,"../")}" alt="{esc(r["name"])}"><div><h1>{esc(r["name"])}</h1>{p(b["publicFace"],"lead")}{labelled("Чего вы хотите",b["desire"])}</div></div></section>'
-        private=header+section('background','01','Ваша история','',p(b['backstory'])+labelled('Ваш секрет',b['secret']))
-        private+=section('knowledge','02','Что вы знаете в начале','Чужие намерения предстоит выяснять. Это ваши исходные сведения, а не знание всей истории.',ul(b['knowledge'])+labelled('Первые разговоры','')+ordered(b['firstSteps']))
-        private+=section('goals','03','Две личные цели','Получить и сохранить — значит владеть вещью при закрытии; поступки и обмены фиксирует ведущий.',ordered(b['goals'])+labelled('На старте','')+gear(r)+ability(r))
-        private+=section('profession','03а','Изготовление и торговля','',profession(key))
-        own_notices=[n for n in h['noticeboard']['examples'] if n['author']==key]
-        if own_notices:private+=section('your-notice','03б','Если захотите дать объявление','Это только идея: вы сами решаете, публиковать ли её и за какую цену.',''.join(article(n['title'],p(n['request'])+labelled('Возможная награда',n['reward'])) for n in own_notices))
-        private+=section('choice','04','Если события дойдут до сердца','Это возможные действия, а не обязательный маршрут.',finale(b)+''.join(method(m,True) for m in private_methods)+p('Знание способа можно передать. В финальной сцене — одно основное действие и не более одного ответного щита на человека; новые компоненты после фиксации не появляются.'))
-        private+=section('acting','05','Как войти в роль','Костюм и постоянная актёрская игра не обязательны.',acting(r))
-        private+=section('common','06','Общие правила','',ul(h['publicRules'])+p(h['consentPolicy'])+p(h['venues']['workshop']['intro'])+recipes('../')+venues('../')+craft_rules(prefix='../'))
+        nr=narrative['roles'][key]
+        private=header+section('background','01','Ваша история','Личные сведения. Делитесь ими по своему выбору.',''.join(p(x) for x in nr['story']))
+        private+=section('goals','02','Ваши стремления','Итог оценивает ведущий с учётом смысла поступков; отсутствие оценки не означает провал.',ordered(nr['goals']))
+        private+=section('ability','03','Ваш дар','',p(nr['abilityOrigin'])+ability(r))
+        private+=section('documents','04','Письма и записи','Вы можете показать выбранную запись другому человеку целиком.',personal_documents(key))
+        private+=section('gear','05','С собой','',gear(r)+''.join(article(narrative['items'][ref]['name'],p(text)) for ref,text in nr['startingItems'].items()))
+        if key in h['crafting']['makers'] or any(g['maker']==key for g in h['signatureGoods']):
+            private+=section('profession','06','Ваше ремесло','',profession(key))
+        private+=section('acting','07','Как войти в роль','Постоянная актёрская игра не обязательна.',acting(r))
+        private+=section('common','08','Короткая памятка','',short_rules('../')+p(h['consentPolicy'])+p('Свою необычную идею можно предложить ведущему.'))
         private_html=standalone(r['name'],private,'../',True)
         css_url='../assets/gm-book/book.css?v='+hashlib.sha256((ASSETS/'book.css').read_bytes()).hexdigest()[:10]
         private_html=private_html.replace(f'<link rel="stylesheet" href="{css_url}">','<style>'+ (ASSETS/'book.css').read_text()+'</style>')
         private_html=private_html.replace(portrait(key,'../'),'data:image/jpeg;base64,'+base64.b64encode((ASSETS/f'portraits/{key}.jpg').read_bytes()).decode())
-        for file in item_dir.glob('*.jpg'):
+        for file in (f for f in item_dir.iterdir() if f.suffix in ('.jpg','.webp')):
             version=hashlib.sha256(file.read_bytes()).hexdigest()[:10]
-            private_html=private_html.replace(f'../assets/gm-book/items/{file.name}?v={version}','data:image/jpeg;base64,'+base64.b64encode(file.read_bytes()).decode())
+            private_html=private_html.replace(f'../assets/gm-book/items/{file.name}?v={version}',('data:image/webp;base64,' if file.suffix=='.webp' else 'data:image/jpeg;base64,')+base64.b64encode(file.read_bytes()).decode())
         (OUT/f'players/{key}.html').write_text(private_html)
         gmheader=header.replace('<section class="chapter">','<section class="chapter"><p class="breadcrumbs"><a href="../magic-fair-v2.html#characters">← Все персонажи</a></p>',1)
         dossier=gmheader+f'<section class="chapter"><a class="button" href="../players/{key}.html">Личные вводные {esc(r["name"])} — выдать игроку ↗</a>{p("Эту страницу оставить ведущему. Личная карточка не содержит ссылок на книгу и чужих секретов.","aside-note")}</section>'
-        dossier+=section('background','I','Предыстория','',p(b['backstory'])+labelled('Настоящее желание',b['desire']))
-        dossier+=section('secrets','II','Граница знаний','Не дополняйте исходную карточку всей картиной.',labelled('Личный секрет',b['secret'])+ul(b['knowledge'])+''.join(method(m) for m in private_methods))
-        dossier+=section('mechanics','III','Цели и способность','Цели этой редакции проверяются вручную.',ordered(b['goals'])+ability(r)+gear(r)+profession(key,True))
+        dossier+=section('background','I','Предыстория','',''.join(p(x) for x in nr['story'])+labelled('Настоящее желание',b['desire']))
+        dossier+=section('secrets','II','Граница знаний','Не дополняйте исходную карточку всей картиной.',personal_documents(key)+''.join(method(m) for m in private_methods))
+        dossier+=section('mechanics','III','Цели и способность','Цели этой редакции проверяются вручную.',ordered(nr['goals'])+labelled('Оценка ведущему','')+ordered(nr['gmGoals'])+p(nr['abilityOrigin'])+ability(r)+gear(r)+profession(key,True))
         relations=ordered(b['firstSteps'])
         for it in game['relics']:
             if key in it['wants'] or it['owner']==key:
@@ -210,7 +252,7 @@ def build(c):
         dossier+=section('relations','IV','Связи и повод для разговора','Первые контакты известны персонажу; полный круг желающих — ориентир для ведущего.',relations)
         acts='<div class="act-strip">'+''.join(article('Акт '+str(j+1),p(t)) for j,t in enumerate(b['acts']))+'</div>'
         dossier+=section('role-acts','V','Участие по актам','Подсказки для движения, а не обязательный сценарий.',acts)
-        dossier+=section('role-twists','VI','Личный поворот и финал','',finale(b)+p(h['consentPolicy']))
+        dossier+=section('role-twists','VI','Личный выбор и его оценка','',ordered(nr['gmGoals'])+p('Прежние предметные пороги — ориентиры, а не автоматические проверки этих стремлений. Возможны достигнута, частично достигнута и не достигнута; запишите причину. Неоценённая цель не считается провалом.')+p(h['consentPolicy']))
         dossier+=section('acting','VII','Отыгрыш','',acting(r))
         last=labelled('Если игрок застрял',b['firstSteps'][0]+' Предложите конкретную сделку или вопрос, не раскрывая чужой замысел.')+labelled('Если персонажа нет','Перенести его уникальные стартовые вещи на рынок; обычное золото и ингредиенты не добавлять. Проверить карту дублирующихся знаний. Никому не отдавать автоматическую власть над его сюжетной линией.')
         last+='<div class="notes-lines" aria-hidden="true"></div>'+f'<div class="folio-nav"><span>← {link(roles[(i-1)%17]["key"],True)}</span><span>{link(roles[(i+1)%17]["key"],True)} →</span></div>'

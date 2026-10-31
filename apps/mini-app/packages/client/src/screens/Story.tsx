@@ -1,3 +1,4 @@
+import { navigateTab } from '../narrative-navigation';
 import { useState } from 'preact/hooks';
 import type { PlayerView, StoryCard, StoryKind, StoryRequest } from '@fair/shared';
 import { storyAct, storyCardActive } from '../story-rules';
@@ -95,5 +96,5 @@ export function PlayerStory({ v }: { v: PlayerView }) {
 }
 
 export function StoryInvite() {
-  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text">Есть необычная идея? Предложите её ведущему: он может назначить обряд, выдать новую вещь или изменить вашу историю.</p><Button kind="sec" onClick={() => { tab.value = 'events'; }}>Заявки и послания</Button></div>;
+  return <div class="m-card"><h5>Можно больше, чем написано в карточке</h5><p class="text">Есть необычная идея? Предложите её ведущему: он может назначить обряд, выдать новую вещь или изменить вашу историю.</p><Button kind="sec" onClick={() => navigateTab('events')}>Заявки и послания</Button></div>;
 }

@@ -65,7 +65,7 @@ export function Select({ value, onChange, options, placeholder = 'Выберит
         <em aria-hidden="true">▾</em>
       </button>
       {open && (
-        <div class="sheet-back" onClick={() => setOpen(false)}>
+        <div class="sheet-back" onClick={e => { e.preventDefault(); setOpen(false); }}>
           <div class="sheet" onClick={e => e.stopPropagation()}>
             {label && <h5>{label}</h5>}
             <div class="sheet-list" role="listbox" aria-label={label} ref={listRef} onKeyDown={onListKey}>
@@ -73,7 +73,7 @@ export function Select({ value, onChange, options, placeholder = 'Выберит
                 <div
                   key={o.value} role="option" tabIndex={-1} aria-selected={o.value === value}
                   class={`sheet-item ${o.value === value ? 'on' : ''}`}
-                  onClick={() => pick(o.value)}
+                  onClick={e => { e.preventDefault(); pick(o.value); }}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(o.value); } }}
                 >
                   <OptionIcon o={o} />

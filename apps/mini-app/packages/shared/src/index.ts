@@ -12,3 +12,5 @@ export * from './invariants';
 export * from './story';
 
 export * from './hidden17';
+
+export * from './narrative';
