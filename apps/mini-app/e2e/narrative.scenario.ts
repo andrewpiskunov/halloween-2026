@@ -57,6 +57,14 @@ test('сюжетная редакция: 17 закрытых историй, с�
       if (!v.hidden17.narrative.knowledge.includes('joining')) expect(JSON.stringify(v)).not.toContain(source.ritual.formula);
       await expect(p.getByRole('heading', { name: 'Таверна', exact: true })).toBeVisible();
       await expect(p.getByRole('heading',{name:'История ярмарки',exact:true})).toBeVisible();
+      await expect(p.locator('.narrative-intro .text')).toHaveText(source.publicIntro);
+      expect(await p.locator('.narrative-intro .scr-h').evaluate(el=>{
+        const heading=getComputedStyle(el).color;
+        const body=getComputedStyle(el.parentElement!.querySelector('.text')!).color;
+        return {heading,body};
+      })).toEqual({heading:'rgb(34, 26, 18)',body:'rgb(34, 26, 18)'});
+      await screen(p,`${key}: введение`);
+      if(key==='o1')await p.locator('.narrative-intro').screenshot({path:info.outputPath('public-introduction.png')});
       for (const name of ['Персонаж', 'Сумка', 'Сделки', 'Мастерская', 'Застава']) {
         await nav(p, name); await screen(p, `${key}: ${name}`);
       }

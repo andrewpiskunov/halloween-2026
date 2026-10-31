@@ -11,6 +11,16 @@ import type { NarrativeContent } from '../narrative';
 const hidden = JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/hidden-17.json', import.meta.url),'utf8'));
 const narrative: NarrativeContent = { version:2, roles:Object.fromEntries(Object.keys(hidden.roles).map(k=>[k,{story:['История '+k],goals:['Стремление','Второе'],gmGoals:['Критерий','Критерий'],abilityOrigin:'Происхождение',documents:k==='o5'?['notes']:[],startingItems:{}}])), documents:[{id:'notes',title:'Записи',source:'Автор',text:'СЕКРЕТ СОЕДИНЕНИЯ',holders:['o5'],knowledge:['joining']}],items:{},rules:[],craftingRules:[] };
 const content: Content = {...base,hidden17:{...hidden,narrative}};
+test('every hero receives the complete public introduction in the narrative edition',()=>{
+ const g=new G();
+ for(const key of g.s.roster){
+  const v=viewFor(g.s,content,player(key),g.now);
+  expect(v.kind).toBe('player');
+  if(v.kind!=='player')continue;
+  expect(v.hidden17!.publicIntro).toBe(content.hidden17!.publicIntro);
+  expect(v.hidden17!.publicIntro).toContain('Раз в сто лет');
+ }
+});
 let id=0;
 class G {
  s=initialState(content,testCodes()); log:Event[]=[]; now=100;

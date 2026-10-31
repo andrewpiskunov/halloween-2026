@@ -67,3 +67,5 @@
 .ritual-orders input { flex: none; width: 18px; height: 18px; accent-color: var(--acc); }
 .ritual-other-name { margin: 14px 0; }
 .ritual-other-name summary { font-size: 15px; font-weight: 400; color: var(--note); }
+
+.narrative-intro .scr-h { margin: 0 0 12px; }
