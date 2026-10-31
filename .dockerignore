@@ -3,10 +3,12 @@
 !apps/mini-app
 !docs/design/game-data-v0.2.json
 !docs/design/gm-book/hidden-17.json
+!docs/design/gm-book/narrative-17.json
 apps/mini-app/node_modules
 apps/mini-app/**/node_modules
 apps/mini-app/**/dist
 apps/mini-app/test-results
+apps/mini-app/test-results-narrative
 apps/mini-app/.env
 apps/mini-app/.env.*
 !apps/mini-app/.env.production.example
