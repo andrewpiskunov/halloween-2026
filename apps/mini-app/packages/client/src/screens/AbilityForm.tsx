@@ -321,7 +321,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
         <span class="m-note"><ItemText>Какой эффект взять?</ItemText></span>
         {copies.map(c => (
           <Button key={c.kind} small kind={pick === c.kind ? 'main' : 'sec'} onClick={() => setPick(c.kind)}>
-            <span class="ability-inline"><AbilityArt roleKey={COPY_ART_ROLES[c.kind]} small/><span>{c.name} · {c.owner ? name(c.owner, v) : 'владелец не на ярмарке, согласие не нужно'}</span></span>
+            <span class="ability-inline"><AbilityArt roleKey={COPY_ART_ROLES[c.kind]} small preview={false}/><span>{c.name} · {c.owner ? name(c.owner, v) : 'владелец не на ярмарке, согласие не нужно'}</span></span>
           </Button>
         ))}
       </div>

@@ -94,10 +94,10 @@ export function Workshop({ v }: { v: PlayerView }) {
             sub={`осталось ${v.workshop[ing.key]}, у вас ${a.ingredients[ing.key]}`}>
             <Button small kind="sec" disabled={v.workshop[ing.key] < 1} onClick={() => buy(ing)}>Купить</Button>
             {live && kind === 'buyCheap' && (
-              <Button small disabled={v.workshop[ing.key] < 1 || a.gold < CHEAP_PRICE} onClick={() => buyCheap(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small/>За 1 · {ab.name}</span></Button>
+              <Button small disabled={v.workshop[ing.key] < 1 || a.gold < CHEAP_PRICE} onClick={() => buyCheap(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small preview={false}/>За 1 · {ab.name}</span></Button>
             )}
             {live && kind === 'buyFromBank' && (
-              <Button small disabled={a.gold < BANK_PRICE} onClick={() => buyBank(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small/>Из банка за 2</span></Button>
+              <Button small disabled={a.gold < BANK_PRICE} onClick={() => buyBank(ing.key)}><span class="ability-inline"><AbilityArt roleKey={v.me.role.key} small preview={false}/>Из банка за 2</span></Button>
             )}
           </ItemCard>
         ))}

@@ -147,7 +147,8 @@ for key,role in n['roles'].items():
 joining=[d for d in docs.values() if 'joining' in d.get('knowledge',[])]
 assert {tuple(d['holders']) for d in joining}=={('o5',),('o17',)}
 for d in joining:
- assert 'три разные целые части' in d['text'] and 'Два' in d['text'] and 'Фокуса' in d['text']
+ assert any(phrase in d['text'].lower() for phrase in ['три разные целые части', 'трёх разных целых осколков', 'три разных целых осколка']), d['id']
+ assert 'два фокуса силы' in d['text'].lower(), d['id']
  assert ritual['formula'].rstrip('.') in d['text'] and 'place' in d['knowledge']
 assert any('o4' in d['holders'] and 'place' in d.get('knowledge',[]) for d in docs.values())
 for public in [public_text,stone_text]:

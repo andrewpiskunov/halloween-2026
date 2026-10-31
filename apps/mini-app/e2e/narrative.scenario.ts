@@ -69,6 +69,22 @@ test('сюжетная редакция: 17 закрытых историй, с�
       for (const name of ['Персонаж', 'Сумка', 'Сделки', 'Мастерская', 'Застава']) {
         await nav(p, name); await screen(p, `${key}: ${name}`);
       }
+      await nav(p, 'Персонаж');
+      const art = p.getByRole('button', {name:`Рассмотреть способность: ${v.me.ability.name}`,exact:true});
+      await art.click();
+      const artwork = p.getByRole('dialog', {name:`Способность: ${v.me.ability.name}`,exact:true});
+      await expect(artwork).toBeVisible();
+      await expect(artwork.locator('img')).toHaveAttribute('src',new RegExp(`/assets/abilities/${key}\\.webp$`));
+      await expect(artwork.locator('img')).toHaveJSProperty('complete',true);
+      await artwork.getByRole('button',{name:'Увеличить',exact:true}).click();
+      await expect(artwork.getByRole('button',{name:'Целиком',exact:true})).toHaveAttribute('aria-pressed','true');
+      const zoomImage=await artwork.locator('img').boundingBox(),zoomCanvas=await artwork.locator('.portrait-viewer-canvas').boundingBox();
+      expect(zoomImage!.y).toBeLessThanOrEqual(zoomCanvas!.y+1);
+      if(key==='o17')await artwork.screenshot({path:info.outputPath('ability-zoom.png')});
+      await artwork.getByRole('button',{name:'Закрыть изображение способности',exact:true}).click();
+      await expect(artwork).toHaveCount(0);
+      await expect(art).toBeFocused();
+      if(key==='o1'){await art.press('Enter');await expect(artwork).toBeVisible();await p.keyboard.press('Escape');await expect(artwork).toHaveCount(0);await expect(art).toBeFocused();}
       await nav(p, 'Сделки');
       await expect(p.getByRole('combobox', { name: 'Вещь по названию' })).toHaveCount(0);
       await expect(p.getByLabel('Слух', { exact: true })).toHaveCount(0);

@@ -15,3 +15,6 @@
 .ability-log { display: flex; align-items: flex-start; gap: 9px; }
 .ability-log > span:last-child { flex: 1; min-width: 0; }
 .nc-gift .ability-identity { margin-top: 12px; }
+
+button.ability-art-preview { appearance: none; padding: 0; margin: 0; border-radius: 0; cursor: zoom-in; }
+button.ability-art-preview:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }

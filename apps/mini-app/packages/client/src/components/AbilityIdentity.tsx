@@ -2,6 +2,8 @@ import { ItemText } from './ItemText';
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { portraitUrl } from '../assets';
+import { content } from '../store';
+import { portraitPreview } from './PortraitViewer';
 import { BASE } from '../base';
 import './ability-identity.css';
 
@@ -12,17 +14,21 @@ export function abilityImageUrl(roleKey: string): string {
     : portraitUrl(roleKey);
 }
 
-/** Декоративная иллюстрация рядом с видимым названием способности. */
-export function AbilityArt({ roleKey, small = false }: { roleKey: string; small?: boolean }) {
+/** Иллюстрация открывается в том же просмотрщике, что и портрет; внутри кнопок действий остаётся декоративной. */
+export function AbilityArt({ roleKey, name: providedName, small = false, preview = true }: { roleKey: string; name?: string; small?: boolean; preview?: boolean }) {
   const [failed, setFailed] = useState<string[]>([]);
   const src = [abilityImageUrl(roleKey), portraitUrl(roleKey)].find(url => !failed.includes(url));
-  return <span class={`ability-art${small ? ' small' : ''}`} aria-hidden="true">
-    {src ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(previous => [...previous, src])}/> : <span>✦</span>}
-  </span>;
+  const name = providedName ?? content.value?.roles.find(r => r.key === roleKey)?.skill ?? 'Иллюстрация дара';
+  const art = src ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(previous => [...previous, src])}/> : <span>✦</span>;
+  const cls = `ability-art${small ? ' small' : ''}`;
+  if (!preview || !src) return <span class={cls} aria-hidden="true">{art}</span>;
+  return <button type="button" class={`${cls} ability-art-preview`} aria-label={`Рассмотреть способность: ${name}`} title="Рассмотреть иллюстрацию"
+    onClick={e => {e.preventDefault();e.stopPropagation();portraitPreview.value={roleKey,name,abilitySrc:src};}}
+    onKeyDown={e => {if(e.key==='Enter'||e.key===' ')e.stopPropagation();}}>{art}</button>;
 }
 
 export function AbilityIdentity({ roleKey, name, children }: { roleKey: string; name: string; children?: ComponentChildren }) {
-  return <div class="ability-identity"><AbilityArt roleKey={roleKey}/><div><h4>{name}</h4>{children && <div class="ability-tags">{children}</div>}</div></div>;
+  return <div class="ability-identity"><AbilityArt roleKey={roleKey} name={name}/><div><h4>{name}</h4>{children && <div class="ability-tags">{children}</div>}</div></div>;
 }
 
 /** Происхождение — курсивом, действие в игре — отдельным блоком обычным шрифтом. */
