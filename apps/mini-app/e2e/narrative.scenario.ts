@@ -52,6 +52,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
       const v = await state(p);
       expect(v.hidden17.narrative.role.story.length).toBeGreaterThan(0);
       expect(v.hidden17.narrative.role.goals).toHaveLength(2);
+      await expect(p.locator('nav.tabs').getByRole('button',{name:'Персонаж',exact:true}).locator('.badge')).toHaveCount(0);
       expect(v.hidden17.narrative.role.gmGoals).toBeUndefined();
       expect(v.public.relics).toEqual([]);
       if (!v.hidden17.narrative.knowledge.includes('joining')) expect(JSON.stringify(v)).not.toContain(source.ritual.formula);

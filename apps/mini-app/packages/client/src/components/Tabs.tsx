@@ -27,7 +27,7 @@ export function effectiveTab(t: Tab, revealed: boolean): Tab {
 
 /**
  * Нижняя панель вкладок; badges — число на значке вкладки (входящие сделки и просьбы),
- * dots — точка без числа (способность доступна, новая отметка в сумке).
+ * dots — точка без числа для новых отметок в сумке.
  */
 export function Tabs({ badges = {}, dots = [], revealed = false, hidden17 = false, narrative = false }: { badges?: Partial<Record<Tab, number>>; dots?: Tab[]; revealed?: boolean; hidden17?: boolean; narrative?: boolean }) {
   const current = effectiveTab(tab.value, revealed);

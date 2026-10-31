@@ -141,7 +141,6 @@ function PlayerApp({ v }: { v: PlayerView }) {
     ? [p.protection?.by ?? '', p.protection?.source ?? '', p.thorns, p.curse, p.discount].join('|') : '';
   useEffect(() => { if (tab.value === 'bag') bagSeenMarks.value = marks; }, [tab.value, marks]);
   const dots: Tab[] = [];
-  if (v.me.ability.state === 'available') dots.push('role');
   if (marks && marks !== bagSeenMarks.value && tab.value !== 'bag') dots.push('bag');
   const revealed = v.phase === 'revealed';
   const screen = (() => {
