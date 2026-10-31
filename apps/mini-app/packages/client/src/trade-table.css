@@ -36,4 +36,4 @@
 .nc-own-goods .nc-item-choice { grid-column: 1/-1; padding: 10px; border: 1px solid #a28d694d; background: #fff8e522; }
 .nc-own-goods .selected { border-color: #8a552f; background: #bd93422b; box-shadow: inset 0 0 0 1px #8a552f; }
 .nc-own-goods > .warn { grid-column: 1/-1; }
-@media(min-width:600px) { .trade-table-person .portrait.card { max-height: 250px; } }
+@media(min-width:600px) { .trade-table-person .portrait.card, .trade-table-unknown { max-height: 250px; } }
