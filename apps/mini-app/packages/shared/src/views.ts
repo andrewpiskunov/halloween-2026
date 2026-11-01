@@ -1,3 +1,4 @@
+import { finalRitualReadiness, type FinalRitualReadiness } from './final-rules';
 import { hiddenProjection } from './views-hidden17';
 import { storyFor, type StoryView } from './story';
 import type { AbilityKind, CopyableKind, TargetMode } from './abilities';
@@ -65,6 +66,7 @@ export interface PlayerView {
 }
 
 export interface GmView {
+  finalRitualReadiness?: FinalRitualReadiness;
   /** Свободные остатки для досье: все виды резервов считает сервер. */
   available: Record<string, { gold: number; ingredients: Counts; items: string[] }>;
   /** Содержимое приходит отдельным сообщением `content` при подключении; здесь только его версия. */
@@ -144,6 +146,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
   if (actor.type === 'gm') {
     return {
       kind: 'gm', state: gmStateView(state), contentVersion: content.version,
+      ...(state.hidden17?.rulesVersion===2?{finalRitualReadiness:finalRitualReadiness(state,now)}:{}),
       invites: state.roster.map(roleKey => ({
         roleKey,
         code: state.invites[roleKey],
@@ -247,5 +250,5 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
     requests: requestsFor(state, key),
     actions: actionsFor(state, key),
     ...(closing ? { closing } : {}),
-  });
+  }, now);
 }

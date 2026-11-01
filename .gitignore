@@ -49,3 +49,5 @@ venv/
 apps/mini-app/test-results-narrative/
 
 apps/mini-app/test-results-gm-workspace/
+
+apps/mini-app/test-results-final-edition/

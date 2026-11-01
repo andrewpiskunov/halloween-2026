@@ -1,5 +1,6 @@
 import {afterEach,expect,test} from 'vitest';
-import {attachHiddenScenario} from '../scenario';
+import {attachHiddenScenario as attachCurrent} from '../scenario';
+const attachHiddenScenario:typeof attachCurrent=(...args)=>{const c=attachCurrent(...args);if(c.hidden17)c.hidden17.rulesVersion=undefined;return c;};
 import {EventStore} from '../store';
 import {Game} from '../game';
 import {content,gm,testOpts,empty} from './fixtures';

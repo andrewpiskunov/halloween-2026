@@ -5,10 +5,13 @@ from html.parser import HTMLParser
 from urllib.parse import urlsplit, unquote
 import json
 import re
+import subprocess
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'docs/prototypes'
 game=json.loads((ROOT/'docs/design/gm-book/game-data.json').read_text())
+legacy=json.loads(subprocess.check_output(['pnpm','--dir',str(ROOT/'apps/mini-app/packages/server'),'exec','tsx',str(ROOT/'scripts/export-gm-data.ts'),'--legacy'],text=True))
+legacy_roles={r['key']:r for r in legacy['roles']}
 edition=json.loads((ROOT/'docs/design/gm-book/edition-17.json').read_text())
 hidden=json.loads((ROOT/'docs/design/gm-book/hidden-17.json').read_text())
 narrative=json.loads((ROOT/'docs/design/gm-book/narrative-17.json').read_text())
@@ -45,7 +48,8 @@ for r in game['roles']:
         values=[current['name'],current['effect'],*brief['story'],*brief['goals'],*brief['gmGoals'],brief['abilityOrigin']]
     for value in values:assert value in text,(r['key'],'утрачены сведения редакции')
     original=' '.join(parsed[OUT/f'characters-30-archive/{r["key"]}.html'].text)
-    for value in [r['name'],r['backstory'],r['secret'],r['rumor'],archive_effects[r['key']],*r['goals']]:assert value in original,(r['key'],'утрачены исходные сведения в архиве')
+    old=legacy_roles[r['key']]
+    for value in [old['name'],old['backstory'],old['secret'],old['rumor'],archive_effects[r['key']],*old['goals']]:assert value in original,(r['key'],'утрачены исходные сведения в архиве')
     for id in ['background','secrets','mechanics','relations','role-acts','role-twists','acting','gm']:assert id in parsed[OUT/f'characters/{r["key"]}.html'].ids
 assert len(list((OUT/'characters').glob('*.html')))==30
 for r in game['roles']:

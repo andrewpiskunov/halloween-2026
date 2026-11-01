@@ -58,6 +58,8 @@ if not archive.exists(): shutil.copyfile(OUT / 'magic-fair-v2.html', archive)
 
 # Полные источники остаются основой дополнения; редакция 17 — отдельный согласованный срез книги.
 full_game, full_notes, full_story, full_past = map(copy.deepcopy, (game, notes, story, past))
+# Дополнение использует прежние факты и цены; актуальный экспорт не переписывает его.
+full_game = json.loads(subprocess.check_output(['pnpm', '--dir', str(ROOT / 'apps/mini-app/packages/server'), 'exec', 'tsx', str(ROOT / 'scripts/export-gm-data.ts'), '--legacy'], text=True))
 edition = json.loads((DATA / 'edition-17.json').read_text())
 core_keys = set(edition['roleKeys'])
 assert core_keys == {r['key'] for r in roles if 17 in r['rosters']} and len(core_keys) == 17

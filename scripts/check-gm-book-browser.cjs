@@ -6,7 +6,7 @@ const { pathToFileURL } = require('node:url');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const dir = path.join(root,'docs/prototypes');
-const output = '/tmp/halloween-gm-book';
+const output = process.env.GM_BOOK_OUTPUT || '/tmp/halloween-gm-book';
 fs.mkdirSync(output,{recursive:true});
 (async () => {
   const browser = await chromium.launch();
@@ -40,8 +40,10 @@ fs.mkdirSync(output,{recursive:true});
     await page.setViewportSize({width:1440,height:1050});
     await page.locator('.sidebar').evaluate(el=>el.scrollTop=0);
     await page.locator('#character-search').fill('мИРОН');
-    assert.equal(await page.locator('[data-character]:visible').count(),1);
-    assert.equal(await page.locator('[data-character]:visible').getAttribute('data-character'),'o3');
+    assert(await page.locator('[data-character="o3"]').isVisible());
+    // Поиск включает цели: связанная роль тоже может содержать имя Мирона.
+    const matches = await page.locator('[data-character]:visible').evaluateAll(cards => cards.map(card => card.dataset.search.toLowerCase()));
+    assert(matches.length > 0 && matches.every(text => text.includes('мирон')));
     await page.locator('#character-search').fill('');
     await page.goto(local('magic-fair-expansion.html'));
     await images(); await fit();

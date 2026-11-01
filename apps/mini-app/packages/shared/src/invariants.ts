@@ -153,7 +153,7 @@ function bankFlow(e: Event): number {
     case 'LotBought': return -e.price;
     case 'Corrected': return e.change.field === 'gold' ? e.change.delta : 0;
     // Стартовое золото опоздавшего: 6, как при открытии.
-    case 'PlayerArrived': return e.startSet ? START_GOLD : 0;
+    case 'PlayerArrived': return e.startSet ? (e.startGold ?? START_GOLD) : 0;
     case 'AbilityUsed': case 'ItemUsed':
       return e.effects.reduce((n, x) => n + (x.type === 'gold' ? x.delta : 0), 0);
     default: return 0;

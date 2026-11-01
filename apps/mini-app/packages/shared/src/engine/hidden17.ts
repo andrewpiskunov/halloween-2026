@@ -1,4 +1,6 @@
+import { FINAL_RULES } from '../final-rules';
 import { newFair } from '../fair';
+import { finalRitualReadiness, ritualEffectGroup, COMPONENT_EFFECTS } from '../final-rules';
 import { newNarrative } from './narrative';
 import { ABILITY_BY_ROLE } from '../abilities';
 import { storyReplacesAbility } from '../story';
@@ -23,7 +25,8 @@ const activeBoard = (b: HiddenState['board'][string]) => b.status === 'open' || 
 export function newHiddenState(content: Content): HiddenState {
   const learned: HiddenState['learned'] = {};
   for (const key of Object.keys(content.hidden17!.roles)) learned[key] = content.hidden17!.methods.filter(m => ['salt', 'command', 'vessel'].includes(m.id) && m.holders.includes(key)).map(m => m.id === 'command' ? 'sign' : m.id as HiddenMethod);
-  return { ...(content.hidden17?.continuousFair ? { fair: newFair() } : {}), ...(content.hidden17?.narrative ? { narrative: newNarrative(content.hidden17.narrative) } : {}), version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
+  if(content.hidden17?.rulesVersion===2)for(const doc of content.hidden17.narrative?.documents??[])for(const key of doc.holders)learned[key]=[...new Set([...(learned[key]??[]),...(doc.methods??[])])];
+  return { ...(content.hidden17?.rulesVersion===2?{rulesVersion:2 as const}:{}), ...(content.hidden17?.continuousFair ? { fair: newFair() } : {}), ...(content.hidden17?.narrative ? { narrative: newNarrative(content.hidden17.narrative) } : {}), version: 1, presentations: {}, rumors: [], learned, prepared: {}, board: {}, dice: {}, production: {}, uses: {}, signatureActs: {}, fixedGuise: {}, facts: { truth: false, serafinaOffer: false, veldaRenounced: false }, ritual: { step: 'preparation', circle: [], focuses: [], permissions: {}, formulaSpoken: false, choices: {}, wards: {}, wardItems: {}, extinguished: [], observed: [] } };
 }
 export function enableHidden(state: GameState, content: Content, at: number): Event {
   const roster = Object.keys(content.hidden17!.roles);
@@ -55,7 +58,7 @@ function settleProduction(s: GameState, content: Content, p: HiddenProduction, c
     requireThat(!maker.abilityUsedInAct && !maker.abilityPending, 'Способность уже использована', 'limit');
     requireThat(p.ability === 'focusFree' ? p.maker === 'o5' && p.recipeId === 'focus' : p.maker === 'o6' && !!p.substitute, 'Эта способность недоступна');
   }
-  const q = craftQuote(s, p.customer, found.recipe, { freeWork: p.ability === 'focusFree', ...(p.ability === 'substituteIngredient' ? { substitute: p.substitute } : {}) });
+  const q = craftQuote(s, p.customer, found.recipe, { artisan: true, freeWork: p.ability === 'focusFree', ...(p.ability === 'substituteIngredient' ? { substitute: p.substitute } : {}) });
   if ('error' in q) throw new Invalid(q.error, q.detail);
   requireThat(q.paidGold === p.bankGold && INGREDIENTS.every(k => (q.paidIngredients[k] ?? 0) === (p.materials[k] ?? 0)), 'Цена изменилась: отмените заказ и согласуйте новый');
   requireThat(available(s, p.customer).gold >= q.paidGold + p.fee, 'Не хватает золота на работу и гонорар', 'insufficient');
@@ -76,11 +79,20 @@ function settleProduction(s: GameState, content: Content, p: HiddenProduction, c
 function completeUse(s: GameState, u: HiddenUse) {
   const item = owned(s, u.author, u.itemId, false);
   requireThat(item.reservedFor === u.id, 'Резерв изделия потерян');
-  if (item.ref === 'inspection-lens') { requireThat(!!u.answer, 'Ведущий ещё не сообщил физический факт'); }
+  if (item.ref === 'inspection-lens') {
+    if(s.hidden17!.rulesVersion===2&&u.question==='effect'){
+      requireThat(u.approved.length===u.targets.length&&u.relicId,'Нужно согласие владельца');
+      const component=owned(s,u.targets[0],u.relicId),prepared=s.hidden17!.prepared[component.id];
+      requireThat(prepared&&(u.targets[0]===u.author||s.hidden17!.presentations[component.id]?.includes(u.author)),'Компонент больше не предъявлен');
+      u.answer=COMPONENT_EFFECTS[prepared.method];
+    }
+    requireThat(!!u.answer, 'Ведущий ещё не сообщил физический факт');
+  }
   else if (item.ref === 'shape-fixative') {
     const target = u.targets[0]; requireThat(s.players[target].guise && s.players[target].guise!.name === u.guise, 'Выбранный образ изменился: согласуйте новое применение'); s.hidden17!.fixedGuise[target] = u.guise!;
   } else {
     for (const target of u.targets) {
+      if(s.hidden17!.rulesVersion===2&&item.ref==='herbal-incense'){requireThat(s.players[target].curse||s.players[target].thorns,'Чары уже сняты');s.players[target].curse=false;s.players[target].thorns=false;delete s.players[target].thornsBy;continue;}
       const effect = u.effects?.[target]; requireThat(effect && s.players[target][effect], 'Выбранного эффекта уже нет'); s.players[target][effect] = false;
       if (effect === 'thorns') delete s.players[target].thornsBy;
     }
@@ -164,7 +176,7 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
           requireThat(cmd.ability === 'focusFree' ? key === 'o5' && cmd.recipeId === 'focus' : key === 'o6' && !!cmd.substitute, 'Эта способность недоступна');
         }
         const found = recipeOf(content, cmd.recipeId); requireThat(found, 'Неизвестный рецепт');
-        const quote = craftQuote(s, customer, found.recipe, { freeWork: cmd.ability === 'focusFree', ...(cmd.ability === 'substituteIngredient' ? { substitute: cmd.substitute } : {}) });
+        const quote = craftQuote(s, customer, found.recipe, { artisan: true, freeWork: cmd.ability === 'focusFree', ...(cmd.ability === 'substituteIngredient' ? { substitute: cmd.substitute } : {}) });
         if ('error' in quote) throw new Invalid(quote.error, quote.detail);
         const id = ctx.newId(); const p: HiddenProduction = { id, maker: key, customer, fee, bankGold: quote.paidGold, materials: quote.paidIngredients, recipeId: cmd.recipeId, status: 'pending', ...(cmd.ability ? { ability: cmd.ability, substitute: cmd.substitute } : {}) };
         h.production[id] = p; if (customer === key) settleProduction(s, content, p, ctx); break;
@@ -175,30 +187,35 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         if (cmd.accept) settleProduction(s, content, p, ctx); else p.status = 'cancelled'; break;
       }
       case 'hidden17.signature.craft': {
-        player(); before(); const recipe = content.hidden17.signatureGoods.find(g => g.id === cmd.recipeId && g.maker === key); requireThat(recipe, 'Авторский рецепт недоступен', 'forbidden');
+        player(); before(); requireThat(h.rulesVersion!==2 || cmd.recipeId!=='shape-fixative','В этой редакции образ держится до конца вечера'); const recipe = content.hidden17.signatureGoods.find(g => g.id === cmd.recipeId && g.maker === key); requireThat(recipe, 'Авторский рецепт недоступен', 'forbidden');
         requireThat(h.signatureActs[key] !== (h.fair ? `fair:${h.fair.refreshes}` : s.phase), 'Дождитесь восстановления сил для следующего авторского изделия', 'limit');
         const cost = { ...blank(), gold: recipe.gold, ingredients: { ...blank().ingredients, ...recipe.cost } }; checkBundle(s, key, cost);
         s.players[key].gold -= cost.gold; for (const k of INGREDIENTS) s.players[key].ingredients[k] -= cost.ingredients[k];
         const id = ctx.newId(); s.items[id] = { id, kind: 'special', ref: recipe.id, createdBy: key, owner: { type: 'player', key } }; h.signatureActs[key] = h.fair ? `fair:${h.fair.refreshes}` : s.phase; break;
       }
       case 'hidden17.signature.use': {
-        player(); before(); const item = owned(s, key, cmd.itemId); requireThat(content.hidden17.signatureGoods.some(g => g.id === item.ref) && item.kind === 'special', 'Нужно авторское изделие');
+        player(); before(); const item = owned(s, key, cmd.itemId); requireThat((content.hidden17.signatureGoods.some(g => g.id === item.ref)||item.ref==='shape-fixative') && item.kind === 'special', 'Нужно авторское изделие');
         requireThat(Array.isArray(cmd.targets) && cmd.targets.length > 0 && new Set(cmd.targets).size === cmd.targets.length && cmd.targets.every(k => s.players[k]?.present), 'Неверные получатели');
         requireThat(cmd.targets.length <= (item.ref === 'herbal-incense' ? 2 : 1), 'Слишком много получателей');
         if (item.ref === 'shape-fixative') requireThat(s.players[cmd.targets[0]].guise && s.actions.some(a => a.source.type === 'item' && a.source.kind === 'shape' && a.target === cmd.targets[0] && a.outcome === 'done'), 'Сначала примените Камень облика');
-        if (item.ref === 'inspection-lens') { requireThat(cmd.relicId && ['material', 'compartment'].includes(cmd.question ?? ''), 'Выберите реликвию и физический вопрос'); requireThat(owned(s, cmd.targets[0], cmd.relicId).kind === 'relic', 'Линза только для обычных реликвий'); requireThat(cmd.targets[0] === key || h.presentations[cmd.relicId]?.includes(key), 'Владелец ещё не предъявил реликвию'); }
-        if (item.ref === 'herbal-incense') for (const k of cmd.targets) requireThat(['curse', 'thorns'].includes(cmd.effects?.[k] ?? '') && s.players[k][cmd.effects![k]], 'Выберите один текущий эффект для каждого');
+        if (item.ref === 'inspection-lens') {
+          requireThat(cmd.relicId && ['material','compartment',...(h.rulesVersion===2?['effect']:[])].includes(cmd.question??''),'Выберите предъявленную вещь и вопрос');
+          const inspected=owned(s,cmd.targets[0],cmd.relicId);
+          requireThat(cmd.question==='effect'?!!h.prepared[inspected.id]:inspected.kind==='relic','Нужен подготовленный компонент или обычная реликвия');
+          requireThat(cmd.targets[0]===key||h.presentations[inspected.id]?.includes(key),'Владелец ещё не предъявил вещь');
+        }
+        if (item.ref === 'herbal-incense') for (const k of cmd.targets) requireThat(h.rulesVersion===2 ? s.players[k].curse||s.players[k].thorns : ['curse', 'thorns'].includes(cmd.effects?.[k] ?? '') && s.players[k][cmd.effects![k]], 'У получателя нет выбранных чар');
         const id = ctx.newId(); h.uses[id] = { id, author: key, itemId: cmd.itemId, ref: item.ref, ...(item.ref === 'shape-fixative' ? { guise: s.players[cmd.targets[0]].guise!.name } : {}), targets: cmd.targets, approved: cmd.targets.includes(key) ? [key] : [], status: 'pending', relicId: cmd.relicId, question: cmd.question, effects: cmd.effects };
-        item.reservedFor = id; if (h.uses[id].approved.length === cmd.targets.length && item.ref !== 'inspection-lens') completeUse(s, h.uses[id]); break;
+        item.reservedFor = id; if (h.uses[id].approved.length === cmd.targets.length && (item.ref !== 'inspection-lens'||cmd.question==='effect')) completeUse(s, h.uses[id]); break;
       }
       case 'hidden17.signature.respond': {
         player(); before(); const u = h.uses[cmd.id]; requireThat(u?.status === 'pending' && u.targets.includes(key), 'Запрос недоступен');
-        if (!cmd.accept) cancelUse(s, u); else { if (!u.approved.includes(key)) u.approved.push(key); if (u.approved.length === u.targets.length && (s.items[u.itemId].ref !== 'inspection-lens' || u.answer)) completeUse(s, u); } break;
+        if (!cmd.accept) cancelUse(s, u); else { if (!u.approved.includes(key)) u.approved.push(key); if (u.approved.length === u.targets.length && (s.items[u.itemId].ref !== 'inspection-lens' || u.answer || u.question==='effect')) completeUse(s, u); } break;
       }
       case 'hidden17.signature.resolve': {
         master(); before(); const u = h.uses[cmd.id]; requireThat(u?.status === 'pending' && s.items[u.itemId]?.ref === 'inspection-lens', 'Это не запрос линзы');
         textField(cmd.answer); requireThat(u.approved.length === u.targets.length, 'Владелец ещё не предъявил реликвию');
-        requireThat(u.relicId && owned(s, u.targets[0], u.relicId).kind === 'relic', 'Реликвия больше не предъявлена'); u.answer = cmd.answer; completeUse(s, u); break;
+        requireThat(u.question!=='effect','Назначение компонента сообщает сама линза'); requireThat(u.relicId && owned(s, u.targets[0], u.relicId).kind === 'relic', 'Реликвия больше не предъявлена'); if(h.rulesVersion===2)requireThat(u.targets[0]===u.author||h.presentations[u.relicId]?.includes(u.author),'Вещь больше не предъявлена'); u.answer = cmd.answer; completeUse(s, u); break;
       }
       case 'hidden17.board.create': {
         player(); before(); textField(cmd.title, 120); textField(cmd.condition); textField(cmd.verification); if (cmd.service) textField(cmd.service);
@@ -253,11 +270,12 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
       }
       case 'hidden17.ritual.start': {
         master(); before();
+        if(h.rulesVersion===2){const readiness=finalRitualReadiness(s,ctx.now);requireThat(readiness.ready,readiness.reasons.join('. '));}
         if (h.fair) {
           requireThat(!Object.values(h.fair.destruction).some(d => ['pending','active'].includes(d.status)), 'Сначала завершите сцены с осколками');
           const participants = Object.entries(h.fair.admissions).filter(([k,a]) => { const q=s.story?.requests[a.requestId]; return s.players[k]?.present && a.at <= ctx.now && q?.author===k && !['cancelled','rejected'].includes(q.status); }).map(([k]) => k);
           requireThat(participants.length && participants.some(k => h.narrative?.knowledge[k]?.includes('joining')), 'Нужны прибывшие по заявкам участники и хотя бы один знающий обряд');
-          h.fair.participants = participants; h.fair.sealedAt = ctx.now; r.exposedShards=[];
+          h.fair.participants = participants; h.fair.sealedAt = ctx.now; r.exposedShards=h.rulesVersion===2?[...r.circle]:[];
         } else requireThat(s.phase === 'act3', 'Финал начинается в III акте', 'phase');
         closeHiddenBusiness(s, ctx.now);
         r.step = 'assembly'; break;
@@ -267,7 +285,7 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         const item = owned(s, key, cmd.itemId, false); const ownReserve = item.reservedFor === 'hidden17:ritual'; requireThat(!item.reservedFor || ownReserve, 'Вещь зарезервирована', 'reserved');
         requireThat(item.kind === 'shard' || (item.kind === 'focus' && r.step !== 'last-choice'), 'Нужна целая часть или Фокус'); requireThat(!r.extinguished.includes(item.ref), 'Часть погашена');
         const list = item.kind === 'shard' ? r.circle : r.focuses;
-        if (cmd.include) { if(h.fair && item.kind==='shard') r.exposedShards=[...new Set([...(r.exposedShards??[]),item.id])]; if (!list.includes(item.id)) list.push(item.id); item.reservedFor = 'hidden17:ritual'; }
+        if (cmd.include) { if(h.fair && item.kind==='shard' && (h.rulesVersion!==2||r.step!=='preparation')) r.exposedShards=[...new Set([...(r.exposedShards??[]),item.id])]; if (!list.includes(item.id)) list.push(item.id); item.reservedFor = 'hidden17:ritual'; }
         else { const index = list.indexOf(item.id); if (index >= 0) list.splice(index, 1); if (ownReserve) delete item.reservedFor; } break;
       }
       case 'hidden17.ritual.permission': {
@@ -275,10 +293,12 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
         const list = r.permissions[item.id] ?? []; r.permissions[item.id] = cmd.allow ? [...new Set([...list, cmd.player])] : list.filter(k => k !== cmd.player); break;
       }
       case 'hidden17.ritual.powder': {
-        master(); step('assembly'); const shards = r.circle.map(id => s.items[id]).filter(i => i?.kind === 'shard' && !r.extinguished.includes(i.ref) && i.owner.type === 'player' && s.players[i.owner.key]?.present);
-        requireThat(new Set(shards.map(i => i.ref)).size >= 3 && r.focuses.length >= 2, 'Нужны три разные целые части и два Фокуса');
-        for (const id of r.focuses.slice(0, 2)) { const i = s.items[id]; requireThat(i?.kind === 'focus' && i.reservedFor === 'hidden17:ritual' && i.owner.type === 'player' && s.players[i.owner.key]?.present, 'Фокус недоступен'); delete s.items[id]; }
-        for (const id of r.focuses.slice(2)) delete s.items[id].reservedFor; r.focuses = []; r.step = 'powder'; break;
+        master(); step('assembly'); const shards = r.circle.map(id => s.items[id]).filter(i => i?.kind === 'shard' && !r.extinguished.includes(i.ref) && i.owner.type === 'player' && s.players[i.owner.key]?.present && (h.rulesVersion!==2||(i.reservedFor==='hidden17:ritual'&&h.fair?.participants?.includes(i.owner.key))));
+        const focusAvailable=(id:string)=>{const i=s.items[id];return i?.kind==='focus'&&i.reservedFor==='hidden17:ritual'&&i.owner.type==='player'&&s.players[i.owner.key]?.present&&(h.rulesVersion!==2||h.fair?.participants?.includes(i.owner.key));};
+        const focuses=h.rulesVersion===2?[...new Set(r.focuses)].filter(focusAvailable):r.focuses;
+        requireThat(new Set(shards.map(i => i.ref)).size >= FINAL_RULES.shards && focuses.length >= FINAL_RULES.focuses, 'Нужны три разные целые части и два Фокуса');
+        for (const id of focuses.slice(0, FINAL_RULES.focuses)) { requireThat(focusAvailable(id), 'Фокус недоступен'); delete s.items[id]; }
+        for (const id of r.focuses) if(s.items[id]?.reservedFor==='hidden17:ritual')delete s.items[id].reservedFor; r.focuses = []; r.step = 'powder'; break;
       }
       case 'hidden17.ritual.formula': { player(); step('powder'); if(h.fair) requireThat(h.narrative?.knowledge[key]?.includes('joining'), 'Вы ещё не знаете формулу', 'forbidden'); requireThat(cmd.text.trim() === content.hidden17.ritual.formula, 'Прочтите формулу с надписи'); r.formulaSpoken = true; r.step = 'choices'; break; }
       case 'hidden17.ritual.choice': {
@@ -313,19 +333,27 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
       }
       case 'hidden17.ritual.ward': {
         player(); step('responses'); const c = r.choices[cmd.against]; requireThat(c?.status === 'active' && ['salt','sign','vessel'].includes(c.kind), 'Щит не отменяет отзыв или уже отменённую попытку');
-        const ward = owned(s, key, cmd.itemId, false); requireThat(ward.kind === 'ward' && (!ward.reservedFor || (ward.reservedFor === 'hidden17:ward' && r.wardItems[key] === ward.id)), 'Нужен свой свободный талисман', 'reserved');
-        const old = r.wardItems[key]; if (old && s.items[old]) delete s.items[old].reservedFor;
-        ward.reservedFor = 'hidden17:ward'; r.wards[key] = cmd.against; r.wardItems[key] = ward.id; break;
+        if(h.rulesVersion===2 && cmd.itemId===undefined){
+          requireThat(s.players[key].protection,'Нужна активная личная защита');
+          const old=r.wardItems[key];if(old&&s.items[old]?.reservedFor==='hidden17:ward')delete s.items[old].reservedFor;
+          delete r.wardItems[key];r.wards[key]=cmd.against;
+        }else{
+          requireThat(cmd.itemId,'Нужен защитный талисман');const ward = owned(s, key, cmd.itemId, false); requireThat(ward.kind === 'ward' && (!ward.reservedFor || (ward.reservedFor === 'hidden17:ward' && r.wardItems[key] === ward.id)), 'Нужен свой свободный талисман', 'reserved');
+          const old = r.wardItems[key]; if (old && s.items[old]?.reservedFor==='hidden17:ward') delete s.items[old].reservedFor;
+          ward.reservedFor = 'hidden17:ward'; r.wards[key] = cmd.against; r.wardItems[key] = ward.id;
+        }break;
       }
       case 'hidden17.ritual.resolve': {
         master(); step('responses');
-        const targets = [...new Set(Object.values(r.wards))]; const spent: Record<string, string> = {};
+        const group=(id:string)=>h.rulesVersion===2&&r.choices[id]?ritualEffectGroup(r.choices[id]):id;
+        const targets = [...new Set(Object.values(r.wards).map(group))]; const spent: Record<string, string> = {};
         for (const target of targets) {
-          const c = r.choices[target]; if (c?.status !== 'active') continue;
-          const defenders = Object.keys(r.wards).filter(k => r.wards[k] === target && s.players[k]?.present && s.items[r.wardItems[k]]?.reservedFor === 'hidden17:ward').sort();
+          const attempts=Object.entries(r.choices).filter(([id,c])=>group(id)===target&&c.status==='active');if(!attempts.length)continue;
+          const defenders = Object.keys(r.wards).filter(k => group(r.wards[k]) === target && s.players[k]?.present && (r.wardItems[k]?s.items[r.wardItems[k]]?.reservedFor === 'hidden17:ward':h.rulesVersion===2&&!!s.players[k].protection)).sort();
           if (!defenders.length) continue;
           const chosen = defenders[Math.min(defenders.length - 1, Math.floor(Math.max(0, ctx.random()) * defenders.length))];
-          delete s.items[r.wardItems[chosen]]; c.status = 'blocked'; spent[chosen] = target;
+          if(r.wardItems[chosen])delete s.items[r.wardItems[chosen]];else delete s.players[chosen].protection;
+          for(const [,c] of attempts)c.status='blocked';spent[chosen]=r.wards[chosen];
         }
         for (const id of Object.values(r.wardItems)) if (s.items[id]?.reservedFor === 'hidden17:ward') delete s.items[id].reservedFor;
         r.wards = spent; r.wardItems = {};

@@ -80,6 +80,7 @@ test('свободная заявка, личная карточка, подтв
     await gm.getByRole('button', { name: 'Послания', exact: true }).click();
     await gm.getByLabel('Заголовок послания').fill('Шёпот Сарна');
     await gm.getByLabel('Текст послания').fill('Я помню твоё пламя.');
+    await gm.getByRole('radio', { name: 'Выбранным героям', exact: true }).check();
     await gm.getByRole('checkbox', { name: 'Серафина', exact: true }).check();
     await gm.getByRole('button', { name: 'Отправить послание' }).click();
     await confirm(gm, 'Отправить');

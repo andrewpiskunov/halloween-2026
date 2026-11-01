@@ -3,7 +3,7 @@ import type { Bundle, ItemKind } from './types';
 export type RitualKnowledge = 'place' | 'joining';
 export type GoalStatus = 'achieved' | 'partial' | 'not-achieved';
 export interface GoalEvaluation { status: GoalStatus; note: string }
-export interface NarrativeDocument { id: string; title: string; source: string; text: string; holders: string[]; knowledge?: RitualKnowledge[] }
+export interface NarrativeDocument { id: string; title: string; source: string; text: string; holders: string[]; knowledge?: RitualKnowledge[]; methods?: import('./hidden17').HiddenMethod[] }
 /** Личное впечатление владельца карточки; не досье другого героя. */
 export interface NarrativeAcquaintance { role: string; relation: string; text: string }
 export interface NarrativeRole { story: string[]; goals: [string, string]; gmGoals: [string, string]; abilityOrigin: string; documents: string[]; startingItems: Record<string, string>; acquaintances?: NarrativeAcquaintance[] }

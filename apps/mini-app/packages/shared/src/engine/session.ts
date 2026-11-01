@@ -1,3 +1,4 @@
+import { FINAL_RULES } from '../final-rules';
 import type { Content } from '../content';
 import type { Actor, Ctx } from '../commands';
 import type { FairOpened } from '../events';
@@ -90,7 +91,7 @@ function buildOpening(state: GameState, content: Content, newId: () => string, a
   for (const key of state.roster) {
     const p = state.players[key];
     players[key] = p.present
-      ? { ...p, gold: START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle }, curse: CURSED_AT_START.includes(key), startIssuedAt: at }
+      ? { ...p, gold: state.hidden17?.rulesVersion===2?FINAL_RULES.startingGold:START_GOLD, ingredients: { ...zero(), ...content.roleByKey[key].bundle }, curse: CURSED_AT_START.includes(key), startIssuedAt: at }
       : { ...p, gold: 0, ingredients: zero() };
   }
   const nPresent = state.roster.filter(present).length;
@@ -207,7 +208,7 @@ export const sessionCommands: CommandHandlers = {
     const p = lookup(state.players, cmd.roleKey);
     if (!state.roster.includes(cmd.roleKey) || !p) return fail('not_found', cmd.roleKey);
     if (p.present === cmd.present) return ok();
-    if (cmd.present) return ok({ type: 'PlayerArrived', at: ctx.now, roleKey: cmd.roleKey, startSet: p.startIssuedAt === undefined });
+    if (cmd.present) return ok({ type: 'PlayerArrived', at: ctx.now, roleKey: cmd.roleKey, startSet: p.startIssuedAt === undefined, ...(state.hidden17?.rulesVersion===2?{startGold:FINAL_RULES.startingGold}:{}) });
     return ok(
       { type: 'PlayerLeft', at: ctx.now, roleKey: cmd.roleKey },
       ...cancelOffersOf(state, cmd.roleKey, ctx.now),
@@ -264,7 +265,7 @@ export const sessionReducers: EventReducers = {
     const bundle: Counts = { ...zero(), ...content.roleByKey[e.roleKey].bundle };
     const ingredients: Counts = { ash: p.ingredients.ash + bundle.ash, moon: p.ingredients.moon + bundle.moon, dew: p.ingredients.dew + bundle.dew };
     const started: Player = {
-      ...p, present: true, gold: p.gold + START_GOLD, ingredients,
+      ...p, present: true, gold: p.gold + (e.startGold ?? START_GOLD), ingredients,
       curse: p.curse || CURSED_AT_START.includes(e.roleKey), startIssuedAt: e.at,
     };
     return { ...state, players: { ...state.players, [e.roleKey]: started } };

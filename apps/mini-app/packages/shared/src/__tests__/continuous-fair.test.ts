@@ -7,6 +7,7 @@ import type {Content} from '../content';
 import type {Actor,Command} from '../commands';
 import type {GameState,ItemKind} from '../types';
 const source=JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/hidden-17.json',import.meta.url),'utf8'));
+source.rulesVersion=undefined;
 source.narrative=JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/narrative-17.json',import.meta.url),'utf8'));
 const content:Content={...legacy,hidden17:source};let uid=0;
 class Game{

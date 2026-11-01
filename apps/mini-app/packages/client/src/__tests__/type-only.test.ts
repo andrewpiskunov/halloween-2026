@@ -13,10 +13,18 @@ function sources(dir: string): string[] {
   });
 }
 
-test('клиент берёт из @fair/shared только типы: движок не попадает в сборку', () => {
+test('клиент берёт только типы и изолированные публичные правила: движок не попадает в сборку', () => {
   const files = sources(SRC);
   expect(files.length).toBeGreaterThan(5);
   const offenders = files.filter(f =>
-    readFileSync(f, 'utf8').split('\n').some(line => /from\s+['"]@fair\/shared/.test(line) && !/^\s*import\s+type\s/.test(line)));
+    readFileSync(f, 'utf8').split('\n').some(line => /from\s+['"]@fair\/shared/.test(line) && !/^\s*import\s+type\s/.test(line) && !/from\s+['"]@fair\/shared\/final-rules['"]/.test(line)));
   expect(offenders.map(f => relative(SRC, f))).toEqual([]);
+});
+
+// Разрешённый entry не импортирует движок, сценарий или содержимое во время исполнения.
+test('публичные правила изолированы от содержимого игры',()=>{
+ const rules=readFileSync(new URL('../../../shared/src/final-rules.ts',import.meta.url),'utf8');
+ const imports=rules.split('\n').filter(line=>/^\s*import\s/.test(line));
+ expect(imports.every(line=>/^\s*import\s+type\s/.test(line))).toBe(true);
+ expect(rules).not.toMatch(/import\s*\(|require\s*\(/);
 });

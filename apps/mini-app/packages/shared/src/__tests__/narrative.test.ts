@@ -10,7 +10,7 @@ import type { Event } from '../events';
 import type { NarrativeContent } from '../narrative';
 const hidden = JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/hidden-17.json', import.meta.url),'utf8'));
 const narrative: NarrativeContent = { version:2, roles:Object.fromEntries(Object.keys(hidden.roles).map(k=>[k,{story:['История '+k],goals:['Стремление','Второе'],gmGoals:['Критерий','Критерий'],abilityOrigin:'Происхождение',documents:k==='o5'?['notes']:[],startingItems:{}}])), documents:[{id:'notes',title:'Записи',source:'Автор',text:'СЕКРЕТ СОЕДИНЕНИЯ',holders:['o5'],knowledge:['joining']}],items:{},rules:[],craftingRules:[] };
-const content: Content = {...base,hidden17:{...hidden,narrative}};
+const content: Content = {...base,hidden17:{...hidden,rulesVersion:undefined,narrative}};
 test('every hero receives the complete public introduction in the narrative edition',()=>{
  const g=new G();
  for(const key of g.s.roster){

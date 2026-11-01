@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from 'vitest';
 import { Game } from '../game';
 import { EventStore } from '../store';
-import { attachHiddenScenario } from '../scenario';
+import { attachHiddenScenario as attachCurrent } from '../scenario';
+const attachHiddenScenario:typeof attachCurrent=(...args)=>{const c=attachCurrent(...args);if(c.hidden17)c.hidden17.rulesVersion=undefined;return c;};
 import { content, gm, openFair, testOpts } from './fixtures';
 const stores: EventStore[] = [];
 function db() { const store = new EventStore(':memory:'); stores.push(store); return store; }

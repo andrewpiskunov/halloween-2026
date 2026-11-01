@@ -11,6 +11,9 @@ import type { Content } from '../content';
 import type { Event } from '../events';
 
 const content: Content = { ...legacy, hidden17: JSON.parse(readFileSync(new URL('../../../../../../docs/design/gm-book/hidden-17.json', import.meta.url), 'utf8')) };
+content.hidden17!.rulesVersion=undefined;
+// Прежний каталог: текущая редакция больше не изготавливает закрепитель.
+content.hidden17!.signatureGoods.push({"id": "shape-fixative", "name": "Закрепитель облика", "maker": "o6", "cost": {"moon": 1, "dew": 1}, "gold": 1, "effect": "Расходуется с согласия владельца уже применённого Камня облика: выбранный вымышленный образ гарантированно держится до рассвета. Владелец вправе добровольно сменить его новым Камнем. Это не воскрешение, не новая способность и не постоянная смена природы.", "use": "Назовите получателя и выбранный образ ведущему; подтвердите его согласие и отметьте срок. Нужен уже применённый Камень, сам закрепитель его не заменяет.", "limits": "Только до начала финала. Несколько закрепителей не продлевают срок за рассвет. Закрепитель не является Очищающим зельем."});
 let nextId = 10000;
 class Game {
  s: GameState; log: Event[] = []; now = 100;

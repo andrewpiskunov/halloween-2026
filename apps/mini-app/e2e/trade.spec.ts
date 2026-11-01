@@ -156,11 +156,13 @@ test('ведущий открывает ярмарку на 12, Грета пр�
     await expect(greta.locator('.item-block', { hasText: 'Защитный талисман' })).toHaveCount(0);
 
     const block = gm.locator('.gm-abilities');
+    await block.locator('summary').filter({hasText:'Журнал применений'}).click();
     await expect(block.locator('.gm-act').first()).toHaveText(/^Акт II, \d\d:\d\d\. Грета: Защитный талисман, защита$/);
     await expect(block.locator('.gm-act').nth(1)).toHaveText(/^Акт II, \d\d:\d\d\. Грета: Замена ингредиента: Защитный талисман$/);
     await block.getByText('только враждебные').click();
     await expect(block.locator('.gm-act')).toHaveCount(0);
     await block.getByText('только враждебные').click();
+    await block.locator('summary').filter({hasText:'Отметки игроков'}).click();
     const mark = block.locator('.gm-mark-row', { hasText: 'Грета' }).getByRole('button', { name: /защита \(талисман\)/ });
     await expect(mark).toBeVisible();
     // «Снять» из отметок открывает исправление с выбранными игроком и полем.

@@ -1,3 +1,4 @@
+import { FINAL_RULES } from '@fair/shared/final-rules';
 import { fairWording } from '../labels';
 import { ItemText } from '../components/ItemText';
 import { AbilityArt, AbilityDescription, AbilityIdentity } from '../components/AbilityIdentity';
@@ -13,13 +14,14 @@ import { abilityDraft, ask, run } from '../store';
 import { AbilityForm, INLINE_WORKSHOP, sendAbility, sendCopy } from './AbilityForm';
 
 /** Модификатор изготовления способностью: копия CraftModifier из engine/shop.ts. */
-export interface CraftMod { ashByGold?: true; freeWork?: true; substitute?: { from: Ingredient; to: Ingredient } }
+export interface CraftMod { ashByGold?: true; freeWork?: true; substitute?: { from: Ingredient; to: Ingredient }; artisan?: boolean }
 
 /** Цена рецепта с учётом способности, шипов и скидки — так же считает сервер (craftQuote). */
 export function craftPrice(r: Recipe, v: PlayerView, mod: CraftMod = {}): number {
   const p = v.me.player;
   const base = r.gold + (mod.ashByGold ? 1 : 0) - (mod.freeWork ? 1 : 0);
-  return v.hidden17 ? Math.max(0, base - (p.discount ? 1 : 0)) + (p.thorns ? 1 : 0) : Math.max(0, base + (p.thorns ? 1 : 0) - (p.discount ? 1 : 0));
+  const surcharge=v.hidden17?.rulesVersion===2&&!mod.artisan?FINAL_RULES.workshopSurcharge:0;
+  return v.hidden17 ? surcharge + Math.max(0, base - (p.discount ? 1 : 0)) + (p.thorns ? 1 : 0) : Math.max(0, base + (p.thorns ? 1 : 0) - (p.discount ? 1 : 0));
 }
 
 /** Ингредиенты рецепта со способностью: Пепел за золото или замена одного ингредиента. */

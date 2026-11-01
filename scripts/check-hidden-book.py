@@ -61,7 +61,7 @@ print('OK: 17 изолированных вводных, публичная па
 assert 'добровольно снять свою' in ' '.join(h['phases'][1]['steps']), 'Не задан отказ от раскрытого вмешательства'
 assert any('сосуд' in k['topic'].lower() and k['fallback'] for k in h['knowledgeRoutes']), 'Нет резервного рецепта сосуда'
 for key in ['o5','o17']:
- assert any('разных доноров' in k for k in h['roles'][key]['knowledge']), 'Противоречие правила крови в короткой вводной'
+ assert any('sign' in d.get('methods',[]) and key in d['holders'] for d in n['documents']), 'Нет самостоятельного источника кровной привязки'
 assert 'О V' not in ' '.join(h['roles']['o8']['knowledge']), 'Никсу раскрыто существование V'
 g=json.loads((DATA/'game-data.json').read_text())
 for key,clue in [('o10','B'),('o16','C')]:
@@ -75,7 +75,7 @@ print('OK: отказ после раскрытия, резерв знания, 
 # Места и изготовление: источники и выдача игроку должны совпадать.
 assert set(h['venues'])=={'fair','workshop','tavern'}
 assert set(h['crafting']['makers'])=={'o5','o6','o10','o16'}
-assert {x['id'] for x in h['signatureGoods']}=={'shape-fixative','inspection-lens','herbal-incense'}
+assert {x['id'] for x in h['signatureGoods']}=={'inspection-lens','herbal-incense'}
 assert 'Принесите мастеру' in h['venues']['workshop']['intro']
 public_text=' '.join(Page(OUT/'player-guide.html').text)
 for entry in h['noticeboard']['examples']:
@@ -96,7 +96,7 @@ refs=Page(OUT/'magic-fair-v2.html').refs
 for file in expected:
  assert any('/items/'+file in ref for ref in refs),('Нет изображения в книге',file)
  assert (OUT/'assets/gm-book/items'/file).read_bytes()==(source/file).read_bytes()
-print('OK: три места, изготовители и три авторских товара; доска не раскрывает чужие цели; правила d6; 20 изображений вещей совпадают с исходниками.')
+print('OK: три места, изготовители и два авторских товара; доска не раскрывает чужие цели; правила d6; 20 изображений вещей совпадают с исходниками.')
 for leak in ['цели Лиры','целей Греты','цели Сив','цель Ады']:
  assert leak not in public_text,('Публичное пояснение выдаёт личную цель',leak)
 assert len(n['craftingRules'])==3
@@ -145,7 +145,7 @@ for key,role in n['roles'].items():
  for rule in n['rules']:
   assert rule['text'] in text and (source/rule['image']).is_file()
 joining=[d for d in docs.values() if 'joining' in d.get('knowledge',[])]
-assert {tuple(d['holders']) for d in joining}=={('o5',),('o17',)}
+assert {tuple(d['holders']) for d in joining}=={('o5',),('o17',),('o3',)}
 for d in joining:
  assert any(phrase in d['text'].lower() for phrase in ['три разные целые части', 'трёх разных целых осколков', 'три разных целых осколка']), d['id']
  assert 'два фокуса силы' in d['text'].lower(), d['id']
@@ -158,3 +158,31 @@ for key,forbidden in {'relic:Костяная флейта':['тайник','д�
  text=' '.join(n['items'][key].values())
  for word in forbidden:assert word not in text,(key,'публичный секрет',word)
 print('OK: 17 историй, 34 цели и оценки, личные документы, независимые joining, канонические startingItems, нейтральный лист места и безопасные описания вещей.')
+
+# Итоговая редакция: проверяем структуру знаний и оценки, не буквальный стиль прозы.
+assert h['rulesVersion']==2
+for key,r in n['roles'].items():
+ for criterion in r['gmGoals']:
+  assert all(label in criterion for label in ['Достигнута:', 'Частично достигнута:', 'Не достигнута:', 'Неявка и обход:']), (key, 'неполная оценка')
+ assert len(r.get('acquaintances',[]))>=1, (key, 'нет первого контакта')
+for doc in docs.values():
+ assert set(doc.get('methods',[])) <= {'salt','sign','vessel'}, doc['id']
+ assert set(doc.get('knowledge',[])) <= {'place','joining'}, doc['id']
+ assert not any(token in doc['text'] for token in ['hidden17.', 'fair.', 'narrative.', 'нажмите кнопку', 'допуск', 'окно ответа']), doc['id']
+assert docs['ada-grandmother'].get('methods',[])==[]
+assert docs['ada-salt']['methods']==['salt']
+assert 'соль' not in docs['ada-grandmother']['text'].lower()
+assert 'перчат' not in docs['ada-salt']['text'].lower()
+assert 'V' not in docs['veliar-notes']['text']
+for key in ['o5','o17','o3']:
+ incoming={who for who,r in n['roles'].items() for person in r.get('acquaintances',[]) if person['role']==key and any(w in person['text'].lower() for w in ['полную запись','полной записью','полный способ','расчёты','соединить сердце'])}
+ assert len(incoming)>=2, (key,'недостаточно входящих путей к полному источнику',incoming)
+assert {d['id'] for d in n['documents'] if 'vessel' in d.get('methods',[])}=={'greta-vessel'}
+assert {d['id'] for d in n['documents'] if 'salt' in d.get('methods',[])}=={'ada-salt','elmar-gates'}
+assert 'special:shape-fixative' not in n['items']
+# Нейтральный лист — тот же публичный текст, никакой формулы/рецепта при пересборке.
+assert 'Обвалившаяся стена, каменные плиты и следы старых линий.' in stone_text
+for text in [main, public_text]:
+ for obsolete in ['6 золотых', '102 золота', 'только неиспользованный предмет отменяет', 'публично сопоставить A+B+C', 'Уже активированная защита человека здесь не заменяет предмет']:
+  assert obsolete not in text, ('устаревший шаблон',obsolete)
+print('OK: rulesVersion 2, 34 оценки с partial/неявкой, три полных источника с входящими контактами, методы и раздельные документы соли/перчатки; нейтральный лист сохранён.')

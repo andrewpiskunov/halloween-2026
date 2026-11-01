@@ -18,7 +18,7 @@ import { SignatureGoods, SignatureUse } from './SignatureGoods';
 import { StoryCards } from './Story';
 
 export function PageBack(){return <button class="narrative-back" onClick={closePage}>← Назад</button>;}
-export function MissingPage(){return <><PageBack/><div class="m-card"><h5>Эта страница недоступна</h5><p class="text"><ItemText>Возможно, вы уже передали вещь, владелец закрыл показ документа или вы ещё не получили эти сведения.</ItemText></p></div></>;}
+export function MissingPage(){return <><PageBack/><div class="m-card"><h5>Эта страница недоступна</h5><p class="text"><ItemText>Возможно, вы уже передали вещь, вы ещё не получили эти сведения.</ItemText></p></div></>;}
 export function DocumentPage({v,id}:{v:PlayerView;id:string}){
  const d=v.hidden17!.narrative!.documents.find(d=>d.id===id);const [player,setPlayer]=useState('');
  const [pending,setPending]=useState(false),[message,setMessage]=useState('');
@@ -31,8 +31,8 @@ export function DocumentPage({v,id}:{v:PlayerView;id:string}){
    if(result.ok){showToast(`${allow?'Документ показан':'Документ забран'}: ${roleName(recipient,v)}.`);setPlayer('');setMessage(`${allow?'Документ показан':'Документ забран'}: ${roleName(recipient,v)}.`);}
   }finally{setPending(false);}
  }
- const mine=v.hidden17!.narrative!.role.documents.includes(id);
- return <><PageBack/><article class="m-card narrative-letter"><header class="narrative-letter-header"><h2>{d.title}</h2><span class="narrative-letter-seal" aria-hidden="true">✉</span></header><p class="m-note"><ItemText>{d.source}</ItemText></p><img class="narrative-letter-art" src={documentImageUrl(d.id)} alt="" width="960" height="640"/><div class="narrative-letter-text"><ItemText>{d.text}</ItemText></div></article>{mine&&<section class="m-card"><h5>Показать документ</h5><p class="text"><ItemText>Этот герой прочитает весь текст и узнает описанные в нём способы. Вы сами решаете, кому доверять.</ItemText></p><Select label="Кому показать документ" value={player} onChange={setPlayer} disabled={pending} options={people(v,false)}/><div class="m-btns"><Button disabled={!player||pending} onClick={()=>ask({title:'Показать личный документ?',text:`${roleName(player,v)} увидит «${d.title}». Прочитанное знание останется у него даже после отзыва.`,okLabel:'Показать',onOk:()=>showDocument(player,true)})}>Показать</Button><Button kind="sec" disabled={!player||pending} onClick={()=>void showDocument(player,false)}>Забрать документ</Button></div>{message&&<p class="text" role="status"><ItemText>{message}</ItemText></p>}</section>}</>;
+ const mine=!id.startsWith('memory:');
+ return <><PageBack/><article class="m-card narrative-letter"><header class="narrative-letter-header"><h2>{d.title}</h2><span class="narrative-letter-seal" aria-hidden="true">✉</span></header><p class="m-note"><ItemText>{d.source}</ItemText></p><img class="narrative-letter-art" src={documentImageUrl(d.id)} alt="" width="960" height="640"/><div class="narrative-letter-text"><ItemText>{d.text}</ItemText></div></article>{mine&&<section class="m-card"><h5>Показать документ</h5><p class="text"><ItemText>Этот герой получит постоянную копию, узнает описанные способы и сможет передать документ дальше. Отозвать копию нельзя.</ItemText></p><Select label="Кому показать документ" value={player} onChange={setPlayer} disabled={pending} options={people(v,false)}/><div class="m-btns"><Button disabled={!player||pending} onClick={()=>ask({title:'Показать личный документ?',text:`${roleName(player,v)} увидит «${d.title}». Он получит постоянную копию и сможет передать её дальше.`,okLabel:'Показать',onOk:()=>showDocument(player,true)})}>Показать</Button></div>{message&&<p class="text" role="status"><ItemText>{message}</ItemText></p>}</section>}{!mine&&<p class="m-note">Это устно полученное знание. Расскажите его другому герою и попросите ведущего подтвердить передачу.</p>}</>;
 }
 function PresentItem({v,item}:{v:PlayerView;item:Item}){
  const [player,setPlayer]=useState('');

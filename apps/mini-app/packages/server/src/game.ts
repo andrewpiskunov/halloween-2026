@@ -128,7 +128,15 @@ export class Game {
     return okResult(stored);
   }
 
+  private temporalKey = '';
+
+  private projectionTimeKey(): string {
+    const f=this.current.hidden17?.fair, at=this.opts.now();
+    return JSON.stringify([f?.ritualAnnouncement?at>=f.ritualAnnouncement.deadline:false,Object.entries(f?.admissions??{}).map(([key,a])=>[key,at>=a.at])]);
+  }
+
   private notify(): void {
+    this.temporalKey=this.projectionTimeKey();
     for (const fn of this.subscribers) {
       try { fn(this.current); } catch (err) { console.error('Ошибка подписчика игры', err); }
     }
@@ -148,6 +156,7 @@ export class Game {
     if (phase !== 'act1' && phase !== 'act2' && phase !== 'act3') return;
     if (this.current.clock.pausedAt !== undefined) return;
     const now = this.opts.now();
+    if(this.temporalKey!==this.projectionTimeKey())this.notify();
     for (const o of Object.values(this.current.offers)) {
       if (o.status === 'pending' && o.expiresAt <= now) {
         this.submit('expire:' + o.id, { type: 'offer.expire', id: o.id }, { type: 'system' })

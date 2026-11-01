@@ -2,6 +2,7 @@ import type { Command, Ctx } from '../commands';
 import type { Content } from '../content';
 import type { Event } from '../events';
 import { newFair, type FairCommand } from '../fair';
+import { finalParticipant, FINAL_RULES } from '../final-rules';
 import type { GameState } from '../types';
 import { hiddenGoals, closeHiddenBusiness } from './hidden17';
 import { fail, ok, type ErrorCode, type Result } from './result';
@@ -15,7 +16,7 @@ export function fairGuard(s: GameState, cmd: Command, ctx: Ctx): Result | undefi
  const f=s.hidden17?.fair; if(!f)return;
  if(cmd.type==='act.next')return fail('phase','Ярмарка идёт непрерывно; события запускаются отдельно');
  if(cmd.type.startsWith('hidden17.ritual.') && ctx.actor.type==='player') {
-  if(!f.participants?.includes(ctx.actor.roleKey))return fail('forbidden','Круг уже замкнут. Вы наблюдаете за сценой');
+  if(!(s.hidden17?.rulesVersion===2 && s.hidden17.ritual.step==='preparation' && ['hidden17.ritual.offer','hidden17.ritual.permission'].includes(cmd.type) ? finalParticipant(s,ctx.actor.roleKey,ctx.now) : f.participants?.includes(ctx.actor.roleKey)))return fail('forbidden','Круг уже замкнут. Вы наблюдаете за сценой');
   if(cmd.type==='hidden17.ritual.order')return fail('invalid','После пробуждения донор произносит приказ ведущему');
  }
  if(s.clock.pausedAt!==undefined && (cmd.type.startsWith('hidden17.ritual.') || cmd.type==='hidden17.prepare'))return fail('phase','Ярмарка на паузе');
@@ -49,6 +50,27 @@ export function fairDecide(state: GameState, content: Content, command: Command,
   } else {
    need(h.fair,'Непрерывная ярмарка не включена','phase');const f=h.fair;
    switch(cmd.type) {
+    case 'fair.ritual.announce': {
+     master();before();unpaused();need(h.rulesVersion===2,'Нужна новая редакция','phase');
+     if(!f.ritualAnnouncement){f.ritualAnnouncement={announcedAt:ctx.now,deadline:ctx.now+FINAL_RULES.ritualWarningMs};s.announcements.push({at:ctx.now,title:'Последние пять минут',text:'Через пять минут ведущий сможет остановить торговлю для заключительной сцены. Завершайте дела.'});}break;
+    }
+    case 'fair.ritual.cancel-announcement':master();before();unpaused();need(h.rulesVersion===2,'Нужна новая редакция','phase');delete f.ritualAnnouncement;s.announcements.push({at:ctx.now,title:'Ярмарка продолжается',text:'Предупреждение о завершении торговли отменено.'});break;
+    case 'fair.help.resolve': {
+     master();unpaused();need(h.rulesVersion===2&&r.step==='finished'&&r.outcome?.life==='awake','Помощь доступна после пробуждения','phase');need(!f.help,'Большая помощь уже использована','limit');
+     need(['seed','fort','dead','freedom','form','caravan'].includes(cmd.effect),'Неизвестная помощь');
+     need(s.roster.includes(cmd.beneficiary)&&s.players[cmd.beneficiary]?.present,'Нужен присутствующий получатель');
+     need(typeof cmd.note==='string'&&!!cmd.note.trim()&&cmd.note.length<=1500,'Нужно пояснение');
+     need(cmd.mode===(r.outcome.freedom==='free'?'free':'command'),'Режим не соответствует свободе Сарна');
+     const donor=r.outcome.controller;if(cmd.mode==='command')need(donor&&s.roster.includes(donor)&&s.players[donor]?.present,'Приказ может произнести только присутствующий донор');
+     f.help={effect:cmd.effect,beneficiary:cmd.beneficiary,mode:cmd.mode,note:cmd.note.trim(),at:ctx.now,...(cmd.mode==='command'?{donor}:{})};break;
+    }
+    case 'fair.portion.resolve': {
+     master();unpaused();need(h.rulesVersion===2&&r.step==='finished'&&r.outcome?.life==='awake','Порция доступна только после пробуждения','phase');
+     need(s.roster.includes(cmd.owner)&&s.players[cmd.owner]?.present&&r.outcome.vessels[cmd.owner]==='full','Нужен присутствующий владелец полной порции');
+     need(!f.portions?.[cmd.owner],'Порция уже использована','limit');need(['seed','focus','spring'].includes(cmd.effect),'Неизвестное применение');need(typeof cmd.note==='string'&&!!cmd.note.trim()&&cmd.note.length<=1500,'Нужно пояснение согласия и результата');
+     const itemId=cmd.effect==='focus'?ctx.newId():undefined;if(itemId)s.items[itemId]={id:itemId,kind:'focus',ref:'focus',owner:{type:'player',key:cmd.owner}};
+     (f.portions??={})[cmd.owner]={owner:cmd.owner,effect:cmd.effect,note:cmd.note.trim(),at:ctx.now,...(itemId?{itemId}:{})};break;
+    }
     case 'fair.refresh': {
      master();before();unpaused();need(f.refreshes<2,'Все восстановления уже использованы','limit');
      need(!Object.values(s.requests).some(q=>q.status==='pending'),'Сначала завершите или отмените запросы согласия');
@@ -75,6 +97,7 @@ export function fairDecide(state: GameState, content: Content, command: Command,
      master();before();unpaused();need(!Object.values(f.destruction).some(d=>['pending','active'].includes(d.status)),'Сначала завершите сцены с осколками');
      need(!Object.values(h.dice).some(d=>d.status==='started'),'Сначала закончите начатые броски');
      closeHiddenBusiness(s,ctx.now);
+     if(h.rulesVersion===2){for(const id of [...r.circle,...r.focuses])if(s.items[id]?.reservedFor==='hidden17:ritual')delete s.items[id].reservedFor;r.circle=[];r.focuses=[];}
      r.outcome={life:r.extinguished.length>=3?'destroyed':'sleep',freedom:'free',power:'empty',vessels:{},goals:{}};r.step='finished';r.outcome.goals=hiddenGoals(s,content);break;
     }
     case 'fair.destroy.request': {
@@ -92,6 +115,7 @@ export function fairDecide(state: GameState, content: Content, command: Command,
      else {master();unpaused();need(d.status==='active'&&ctx.now>=d.endsAt!,'Дайте участникам две минуты для спасения');delete s.items[target.id];delete h.presentations[target.id];delete r.permissions[target.id];if(!r.extinguished.includes(d.ref))r.extinguished.push(d.ref);d.status='destroyed';}
      break;
     }
+    default:return fail('invalid','Неизвестная команда ярмарки');
    }
   }
   return ok({type:'Hidden17Changed',at:ctx.now,action:cmd.type,bankDelta:0,patch:{hidden17:h,players:s.players,items:s.items,lots:s.lots,offers:s.offers,requests:s.requests,workshop:s.workshop,story:s.story,announcements:s.announcements}});
@@ -100,7 +124,15 @@ export function fairDecide(state: GameState, content: Content, command: Command,
 
 /** Пауза продлевает публичное окно спасения, не выполняя сцену за ведущего. */
 export function fairAfterEvent(after:GameState,e:Event):GameState {
- if(!after.hidden17?.fair||e.type!=='ClockResumed'||!e.pausedMs)return after;
- const next=structuredClone(after);for(const d of Object.values(next.hidden17!.fair!.destruction))if(d.status==='active'&&d.endsAt!==undefined)d.endsAt+=e.pausedMs;
+ const h=after.hidden17,f=h?.fair;if(!h||!f)return after;
+ const pausedMs=e.type==='ClockResumed'?e.pausedMs:0;
+ const stale=h.rulesVersion===2&&h.ritual.step==='preparation'?[...h.ritual.circle,...h.ritual.focuses].filter(id=>{
+  const i=after.items[id];if(!i||i.owner.type!=='player'||!after.players[i.owner.key]?.present)return true;
+  const a=f.admissions[i.owner.key],q=a&&after.story?.requests[a.requestId];return !a||a.at>e.at||!q||q.author!==i.owner.key||['cancelled','rejected'].includes(q.status);
+ }):[];
+ if(!pausedMs&&!stale.length)return after;
+ const next=structuredClone(after),fair=next.hidden17!.fair!,r=next.hidden17!.ritual;
+ for(const id of stale){if(next.items[id]?.reservedFor==='hidden17:ritual')delete next.items[id].reservedFor;r.circle=r.circle.filter(x=>x!==id);r.focuses=r.focuses.filter(x=>x!==id);}
+ if(pausedMs){for(const d of Object.values(fair.destruction))if(d.status==='active'&&d.endsAt!==undefined)d.endsAt+=pausedMs;if(fair.ritualAnnouncement)fair.ritualAnnouncement.deadline+=pausedMs;}
  return next;
 }

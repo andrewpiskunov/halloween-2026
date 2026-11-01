@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-const source = JSON.parse(readFileSync(new URL('../../../docs/design/gm-book/hidden-17.json', import.meta.url), 'utf8'));
+const source = JSON.parse(readFileSync(new URL('../packages/server/src/__tests__/data/legacy-hidden-17.json', import.meta.url), 'utf8'));
 async function cmd(page: Page, command: object) {
   const result = await page.evaluate(async command => {
     // @ts-ignore Vite module
@@ -26,6 +26,8 @@ async function checkScreen(p: Page, name: string) {
   expect.soft(overflow, name).toEqual([]);
   expect.soft(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), name).toBe(true);
   const broken = await p.locator('img').evaluateAll(async imgs => {
+    // Полная страница включает отложенные изображения ниже экрана.
+    for(const image of imgs)(image as HTMLImageElement).loading='eager';
     await Promise.all(imgs.map(i => (i as HTMLImageElement).decode().catch(() => undefined)));
     return imgs.filter(i => !(i as HTMLImageElement).naturalWidth).map(i => i.getAttribute('src'));
   });

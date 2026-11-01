@@ -1,3 +1,4 @@
+import { finalParticipant } from './final-rules';
 import { narrativeProjection } from './views-narrative';
 import { bloodMark } from './blood-mark';
 import type { Content } from './content';
@@ -6,15 +7,17 @@ import type { GameState } from './types';
 import { hiddenGoals } from './engine/hidden17';
 import type { PlayerView } from './views';
 
-export function hiddenProjection(state: GameState, content: Content, key: string, base: PlayerView): PlayerView {
+export function hiddenProjection(state: GameState, content: Content, key: string, base: PlayerView, now: number): PlayerView {
   if (!state.hidden17 || !content.hidden17) return base;
   const h = state.hidden17, source = content.hidden17, r = h.ritual, briefing = source.roles[key];
   const own = (id: string) => state.items[id]?.owner.type === 'player' && state.items[id].owner.key === key;
+  const preparing=h.rulesVersion===2&&r.step==='preparation';
+  const circle=preparing?r.circle.filter(own):r.circle, focuses=preparing?r.focuses.filter(own):r.focuses;
   const visible = new Set(base.me.items.map(i => i.id));
   for (const [id, viewers] of Object.entries(h.presentations)) if (viewers.includes(key)) visible.add(id);
-  for (const id of [...r.circle, ...r.focuses, ...(h.fair?r.exposedShards??[]:[])]) visible.add(id);
-  const canParticipate = !h.fair || !!h.fair.participants?.includes(key);
-  const accessibleShards = Object.values(state.items).filter(i => canParticipate && i.kind === 'shard' && !r.extinguished.includes(i.ref) && (own(i.id) || r.circle.includes(i.id) || (h.fair && r.exposedShards?.includes(i.id)) || r.permissions[i.id]?.includes(key))).map(i => i.id);
+  for (const id of [...circle, ...focuses, ...(h.fair?r.exposedShards??[]:[])]) visible.add(id);
+  const canParticipate = !h.fair || (preparing?finalParticipant(state,key,now):!!h.fair.participants?.includes(key));
+  const accessibleShards = Object.values(state.items).filter(i => canParticipate && i.kind === 'shard' && !r.extinguished.includes(i.ref) && (own(i.id) || circle.includes(i.id) || (h.fair && r.exposedShards?.includes(i.id)) || r.permissions[i.id]?.includes(key))).map(i => i.id);
   for (const id of accessibleShards) visible.add(id);
   const revealed = ['responses','last-choice','finished'].includes(r.step);
   const interventions = revealed ? Object.values(r.choices).filter(c => ['salt','sign','vessel'].includes(c.kind) && c.status !== 'invalid').map(c => ({ ...(c.id ? {id:c.id} : {}), ...(h.fair && c.controller ? {controller:c.controller} : {}), player: c.player, kind: c.kind, status: c.status, ...(c.targetId ? { targetId: c.targetId, ...(c.targetRef?{targetRef:c.targetRef}:{}) } : {}) })) : [];
@@ -28,13 +31,14 @@ export function hiddenProjection(state: GameState, content: Content, key: string
   const mineGoals = hiddenGoals(state, content)[key];
   const outcome = r.outcome && { ...r.outcome, goals: { [key]: r.outcome.goals[key] }, vessels: r.outcome.vessels };
   const hidden17: HiddenPlayerView = {
-    ...(h.fair ? {fair:{version:1 as const,refreshes:h.fair.refreshes,scenes:Object.values(h.fair.destruction).filter(d=>d.author===key||d.startedAt!==undefined),...(h.fair.admissions[key]?{admission:{at:h.fair.admissions[key].at}}:{}),canParticipate,participants:h.fair.participants??[]}} : {}),
+    ...(h.rulesVersion===2?{rulesVersion:2 as const}:{}),
+    ...(h.fair ? {fair:{...(h.fair.ritualAnnouncement?{ritualAnnouncement:h.fair.ritualAnnouncement}:{}),...(r.step==='finished'?{help:h.fair.help,portions:h.fair.portions}:{}),version:1 as const,refreshes:h.fair.refreshes,scenes:Object.values(h.fair.destruction).filter(d=>d.author===key||d.startedAt!==undefined),...(h.fair.admissions[key]?{admission:{at:h.fair.admissions[key].at}}:{}),canParticipate,participants:h.fair.participants??[]}} : {}),
     briefing, publicIntro: source.publicIntro, publicRules: source.publicRules, craftingRules: source.crafting.rules,
     methods: source.methods.filter(m => m.holders.includes(key) || h.learned[key]?.includes(m.id === 'command' ? 'sign' : m.id as 'salt' | 'vessel')).map(({ holders: _holders, ...m }) => ({ ...m, holders: [] })),
-    knownMethods: h.learned[key] ?? [], productionRecipes: source.crafting.makers[key] ?? [], signatureGoods: source.signatureGoods.map(g => ({ id: g.id, name: g.name, maker: g.maker, cost: g.cost, gold: g.gold, effect: g.effect, use: g.use, limits: g.limits })),
+    knownMethods: h.learned[key] ?? [], productionRecipes: source.crafting.makers[key] ?? [], signatureGoods: source.signatureGoods.filter(g=>h.rulesVersion!==2||g.id!=='shape-fixative').map(g => ({ id: g.id, name: g.name, maker: g.maker, cost: g.cost, gold: g.gold, effect: g.effect, use: g.use, limits: g.limits })),
     board: Object.values(h.board), dice: Object.values(h.dice).filter(d => d.from === key || d.to === key), production: Object.values(h.production).filter(p => p.maker === key || p.customer === key), uses: Object.values(h.uses).filter(u => u.author === key || u.targets.includes(key)),
     prepared: Object.fromEntries(Object.entries(h.prepared).filter(([id]) => own(id))), fixedGuise: h.fixedGuise[key], knownItems, rumors: h.rumors,
-    ritual: { accessibleShards, permissions: Object.fromEntries(Object.entries(r.permissions).filter(([id]) => own(id))), step: r.step, stone: source.ritual.stone, formula: source.ritual.formula, circle: r.circle, focuses: r.focuses, extinguished: r.extinguished, observed: r.observed, myChoice: r.choices[key], ...(h.fair?{myChoices:Object.values(r.choices).filter(c=>c.player===key)}:{}), interventions, wards: r.wards, orderSelected: r.orderSelected, orderOptions: !h.fair && r.step === 'last-choice' ? [...new Set(Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && c.controller === key).map(c => c.order!))] : [], ...(outcome ? { outcome } : {}) },
+    ritual: { ...(h.rulesVersion===2&&r.step==='responses'&&r.wards[key]?{myWard:{against:r.wards[key],source:r.wardItems[key]?'item' as const:'protection' as const,...(r.wardItems[key]?{itemId:r.wardItems[key]}:{})}}:{}),accessibleShards, permissions: Object.fromEntries(Object.entries(r.permissions).filter(([id]) => own(id))), step: r.step, stone: source.ritual.stone, formula: source.ritual.formula, circle, focuses, extinguished: r.extinguished, observed: r.observed, myChoice: r.choices[key], ...(h.fair?{myChoices:Object.values(r.choices).filter(c=>c.player===key)}:{}), interventions, wards: r.wards, orderSelected: r.orderSelected, orderOptions: !h.fair && r.step === 'last-choice' ? [...new Set(Object.values(r.choices).filter(c => c.kind === 'sign' && c.status === 'active' && c.controller === key).map(c => c.order!))] : [], ...(outcome ? { outcome } : {}) },
   };
   const role = { ...base.me.role, side: 'free' as const, block: '', intro: briefing.publicFace, goals: briefing.goals, secret: briefing.secret, backstory: briefing.backstory, motivation: briefing.desire, extra: '', rumor: '', contacts: [] };
   return narrativeProjection(state, content, key, { ...base, hidden17, me: { ...base.me, role, player: { ...base.me.player, side: undefined }, ability: { ...base.me.ability, ...(r.step !== 'preparation' ? { state: 'closed' as const } : {}) }, goals: briefing.goals.map((text, i) => ({ text, done: mineGoals[i], byGm: state.players[key].goalOverrides?.[i] != null })) }, contacts: [], altars: [], story: base.story, closing: undefined,

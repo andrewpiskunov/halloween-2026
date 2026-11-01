@@ -19,5 +19,25 @@ export function attachHiddenScenario(content: Content, path = fileURLToPath(new 
     scenario.narrative = narrative;
     scenario.continuousFair = continuousEnabled;
   } else delete scenario.narrative;
+  if (scenario.rulesVersion === 2 && scenario.narrative) {
+    // Актуальные доказательства берутся из той же редакции, что личные источники.
+    // Архивный справочник и переданный вызывающим кодом Content не изменяются.
+    const roles = content.roles.map(role => {
+      const current = scenario.narrative.roles[role.key];
+      if (!current) return role;
+      return {
+        ...role,
+        contacts: (current.acquaintances ?? []).map((person: { role: string; text: string }) => ({ role: person.role, text: person.text })),
+        ...(role.key === 'o10' ? { effect: 'Снимите одно проклятие с другого игрока, если он согласен. Зелье не нужно. Дар распознаёт и изгоняет удерживающую человека чужую волю.' } : {}),
+        ...(role.key === 'o6' ? { rumor: 'Старые проклятия иногда отзываются на очищающие травы; по одному признаку ещё нужно разобраться, что удерживает человека.' } : {}),
+      };
+    });
+    const clues = content.clues.map(clue => {
+      const text = scenario.narrative.items[`clue:${clue.id}`]?.description;
+      if (typeof text !== 'string' || !text.trim()) throw new Error(`Нет актуального текста улики: ${clue.id}`);
+      return { ...clue, text };
+    });
+    return { ...content, roles, roleByKey: Object.fromEntries(roles.map(role => [role.key, role])), clues, hidden17: scenario };
+  }
   return { ...content, hidden17: scenario };
 }

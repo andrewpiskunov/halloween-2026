@@ -1,0 +1,40 @@
+import {afterEach,expect,test} from 'vitest';
+import {attachHiddenScenario} from '../scenario';
+import {EventStore} from '../store';
+import {Game} from '../game';
+import {content,gm,testOpts} from './fixtures';
+import {parseCommandMessage} from '../ws';
+import {viewFor,type Content,type Command} from '@fair/shared';
+const stores:EventStore[]=[];afterEach(()=>{for(const s of stores.splice(0))s.close();});
+const db=()=>{const s=new EventStore(':memory:');stores.push(s);return s;};
+const loaded=attachHiddenScenario(content);
+const next:Content={...loaded,hidden17:{...loaded.hidden17!,rulesVersion:2}};
+const legacy:Content={...loaded,hidden17:{...loaded.hidden17!,rulesVersion:undefined}};
+test('старый журнал не получает новые деньги/правила при рестарте; reset включает редакцию2',async()=>{const store=db(),opts={...testOpts(),hidden17:true},g=Game.open(store,legacy,opts);await g.submit('present',{type:'player.setPresent',roleKey:'o1',present:true},gm);await g.submit('open',{type:'session.open'},gm);expect(g.state().players.o1.gold).toBe(6);const before=structuredClone(g.state()),resumed=Game.open(store,next,opts);expect(resumed.state()).toEqual(before);expect(resumed.state().hidden17!.rulesVersion).toBeUndefined();expect((await resumed.submit('reset',{type:'session.reset'},gm)).ok).toBe(true);await resumed.submit('present2',{type:'player.setPresent',roleKey:'o1',present:true},gm);await resumed.submit('open2',{type:'session.open'},gm);expect(resumed.state().hidden17!.rulesVersion).toBe(2);expect(resumed.state().players.o1.gold).toBe(8);expect(Game.open(store,next,opts).state()).toEqual(resumed.state());});
+test('новые команды принимаются websocket; предупреждение идемпотентно и воспроизводимо',async()=>{const store=db(),opts={...testOpts(),hidden17:true},g=Game.open(store,next,opts);await g.submit('present',{type:'player.setPresent',roleKey:'o1',present:true},gm);await g.submit('open',{type:'session.open'},gm);const commands:Command[]=[{type:'fair.ritual.announce'},{type:'fair.ritual.cancel-announcement'},{type:'fair.help.resolve',effect:'seed',beneficiary:'o2',mode:'free',note:'Просьба'},{type:'fair.portion.resolve',owner:'o6',effect:'focus',note:'Согласие'},{type:'hidden17.ritual.ward',against:'attempt'}];for(const cmd of commands)expect(parseCommandMessage(JSON.stringify({kind:'cmd',id:'test',cmd}))).toHaveProperty('cmd');const a=await g.submit('announce',commands[0],gm),b=await g.submit('announce',commands[0],gm);expect(a.ok).toBe(true);expect(b).toEqual(a);const deadline=g.state().hidden17!.fair!.ritualAnnouncement!.deadline;opts.clock.now+=10000;await g.submit('again',commands[0],gm);expect(g.state().hidden17!.fair!.ritualAnnouncement!.deadline).toBe(deadline);expect(Game.open(store,next,opts).state()).toEqual(g.state());expect(g.state().players.o1.gold).toBe(8);});
+test('тихая игра обновляет проекции по прибытию и дедлайну без игровых событий',async()=>{
+ const store=db(),opts={...testOpts(),hidden17:true},g=Game.open(store,next,opts);
+ const must=async(cmd:Command,actor=gm)=>expect(await g.submit(opts.newId(),cmd,actor)).toMatchObject({ok:true});
+ for(const roleKey of ['o1','o5','o9','o3'])await must({type:'player.setPresent',roleKey,present:true});await must({type:'session.open'});
+ for(const key of ['o1','o9','o3']){
+  const actor={type:'player' as const,roleKey:key};await must({type:'story.request',title:'Приход',text:'Прихожу к заставе',stake:''},actor);
+  const req=Object.values(g.state().story!.requests).find(q=>q.author===key)!;await must({type:'fair.admit',player:key,requestId:req.id,at:opts.now()},gm);
+  if(key==='o3')await must({type:'story.cancel',id:req.id,revision:req.revision},actor);
+ }
+ for(const ingredient of ['ash','moon','dew'] as const)await must({type:'gm.correct',playerKey:'o1',change:{field:'ingredient',ingredient,delta:5},reason:'Подготовка проверки'});
+ for(let n=0;n<2;n++)await must({type:'shop.craft',recipeId:'focus'},{type:'player',roleKey:'o1'});
+ for(const item of Object.values(g.state().items).filter(i=>i.kind==='focus'||i.kind==='shard'&&i.owner.type==='player'&&i.owner.key!=='o5'))if(item.owner.type==='player'&&['o1','o9'].includes(item.owner.key))await must({type:'hidden17.ritual.offer',itemId:item.id,include:true},{type:'player',roleKey:item.owner.key});
+ const player={type:'player' as const,roleKey:'o5'};
+ await must({type:'story.request',title:'Приход',text:'Прихожу к заставе',stake:''},player);
+ const q=Object.values(g.state().story!.requests).find(q=>q.author==='o5')!;
+ await must({type:'fair.admit',player:'o5',requestId:q.id,at:opts.now()+10000});
+ const ownShard=Object.values(g.state().items).find(i=>i.kind==='shard'&&i.owner.type==='player'&&i.owner.key==='o5')!;
+ await must({type:'fair.ritual.announce'});
+ const pv=(key:string)=>{const v=viewFor(g.state(),next,{type:'player',roleKey:key},opts.now());if(v.kind!=='player')throw Error('player');return v;};
+ expect(pv('o5').hidden17!.fair!.canParticipate).toBe(false);
+ let updates=0;g.subscribe(()=>updates++);let seq=g.state().seq;
+ opts.clock.now+=10000;g.tick();expect(updates).toBe(1);expect(g.state().seq).toBe(seq);expect(pv('o5').hidden17!.fair!.canParticipate).toBe(true);expect(pv('o3').hidden17!.fair!.canParticipate).toBe(false);
+ await must({type:'hidden17.ritual.offer',itemId:ownShard.id,include:true},player);updates=0;seq=g.state().seq;
+ opts.clock.now+=290000;g.tick();expect(updates).toBe(1);expect(g.state().seq).toBe(seq);const gv=viewFor(g.state(),next,gm,opts.now());expect(gv.kind==='gm'&&gv.finalRitualReadiness?.ready).toBe(true);
+ g.tick();expect(updates).toBe(1);
+});

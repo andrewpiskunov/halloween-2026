@@ -21,7 +21,7 @@ export interface PlayerBound extends EventBase { type: 'PlayerBound'; roleKey: s
 /** Ведущий отметил явку игрока. */
 export interface PresenceSet extends EventBase { type: 'PresenceSet'; roleKey: string; present: boolean }
 /** Игрок пришёл после открытия; startSet — впервые, ему выдан стартовый набор. */
-export interface PlayerArrived extends EventBase { type: 'PlayerArrived'; roleKey: string; startSet: boolean }
+export interface PlayerArrived extends EventBase { type: 'PlayerArrived'; roleKey: string; startSet: boolean; startGold?: number }
 /** Ведущий отметил, что игрок ушёл после открытия: вещи и золото остаются у него. */
 export interface PlayerLeft extends EventBase { type: 'PlayerLeft'; roleKey: string }
 /** Ярмарка открыта: всё начальное состояние первого акта. */

@@ -173,9 +173,9 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await screen(players.o15,'Сив: знакомые лица');
     await sivFaces.screenshot({path:info.outputPath('siv-acquaintances.png')});
     await nav(players.o5,'Персонаж');
-    await expect(players.o5.locator('main')).toContainText('Вы привезли осколок II и выписки Орвика. В старой заметке футляр флейты назван тайником для осколка V');
+    await expect(players.o5.locator('main')).toContainText('Среди бумаг уцелел полный способ соединения и заметка о старом тайнике осколка V в футляре флейты.');
     const veldaFaces=players.o5.locator('.narrative-acquaintances');
-    await expect(veldaFaces.getByRole('heading',{name:'Никс',exact:true})).toBeVisible();
+    await expect(veldaFaces.getByRole('heading',{name:'Грета',exact:true})).toBeVisible();
     await expect(veldaFaces.getByRole('heading',{name:'Астра',exact:true})).toHaveCount(0);
     await veldaFaces.screenshot({path:info.outputPath('velda-acquaintances.png')});
     const signMage=players.o5;
@@ -277,7 +277,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
       await a.setViewportSize({width,height:844});await screen(a,`Заказ ${width}`);await a.screenshot({path:info.outputPath(`recipe-${width}.png`),fullPage:true});
       await maker.setViewportSize({width,height:844});await screen(maker,`Заказ клиенту ${width}`);
     }
-    // Источник передаёт только выбранный текст и знания; отзыв не стирает прочитанное.
+    // Получатель постоянной копии пересылает её следующему герою через форму.
     const sourceOwner = players.o5;
     const joiningDoc = (await state(sourceOwner)).hidden17.narrative.documents.find((d:any)=>d.knowledge?.includes('joining'));
     expect(joiningDoc).toBeTruthy();
@@ -293,12 +293,11 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await expect.poll(async () => (await state(b)).hidden17.narrative.knowledge).toContain('joining');
     await nav(b,'Сумка');await b.locator('.narrative-document-link').filter({hasText:joiningDoc.title}).click();
     await expect(b.locator('.narrative-letter-text')).toHaveText(joiningDoc.text);
-    await expect(b.getByRole('combobox',{name:'Кому показать документ',exact:true})).toHaveCount(0);
-    await pick(sourceOwner,'Кому показать документ',(await state(b)).me.role.name);
-    await sourceOwner.getByRole('button',{name:'Забрать документ',exact:true}).click();
-    await expect(sourceOwner.getByRole('status')).toContainText('Документ забран');
-    await expect.poll(async () => (await state(b)).hidden17.narrative.documents.some((d:any)=>d.id===joiningDoc.id)).toBe(false);
-    await expect(b.getByText('Эта страница недоступна',{exact:true})).toBeVisible();
+    await expect(b.getByRole('combobox',{name:'Кому показать документ',exact:true})).toBeVisible();
+    await pick(b,'Кому показать документ',(await state(maker)).me.role.name);
+    await b.getByRole('button',{name:'Показать',exact:true}).click();await confirm(b,'Показать');
+    await expect.poll(async () => (await state(maker)).hidden17.narrative.documents.some((d:any)=>d.id===joiningDoc.id)).toBe(true);
+    await expect(sourceOwner.getByRole('button',{name:'Забрать документ',exact:true})).toHaveCount(0);
     expect((await state(b)).hidden17.narrative.knowledge).toContain('joining');
     expect((await state(b)).hidden17.ritual.formula).toBe(source.ritual.formula);
 
@@ -372,13 +371,19 @@ test('сюжетная редакция: 17 закрытых историй, с�
       await cmd(gm,{type:'fair.admit',player:key,requestId:q.id,at:Date.now()-1000});
     }
     await nav(gm,'Ритуал');await screen(gm,'допуски по личным заявкам');
-    await cmd(gm,{type:'hidden17.ritual.start'});
+    for(const item of circleParts)await cmd(players[item.owner.key],{type:'hidden17.ritual.offer',itemId:item.id,include:true});
+    for(const item of focuses)await cmd(a,{type:'hidden17.ritual.offer',itemId:item.id,include:true});
+    await gm.getByRole('button',{name:'Объявить последние пять минут',exact:true}).click();await confirm(gm,'Объявить');
+    await expect(gm.getByRole('button',{name:'1 · Начать сборку',exact:true})).toBeDisabled();
+    const advanced=await(await request.post('http://localhost:8092/__test/time',{data:{ms:300001}})).json();
+    await gm.clock.setFixedTime(advanced.now);
+    await expect(gm.getByRole('button',{name:'1 · Начать сборку',exact:true})).toBeEnabled();
+    await gm.getByRole('button',{name:'1 · Начать сборку',exact:true}).click();await confirm(gm,'Собрать у могилы');
     const outsider=Object.keys(players).find(k=>!entrants.has(k))!;
     await nav(players[outsider],'Застава');
     await expect(players[outsider].getByText('Вы наблюдаете за закрытой сценой.',{exact:false})).toBeVisible();
     await expect(players[outsider].getByRole('button',{name:'Положить',exact:true})).toHaveCount(0);
-    for(const item of circleParts)await cmd(players[item.owner.key],{type:'hidden17.ritual.offer',itemId:item.id,include:true});
-    for(const item of focuses)await cmd(a,{type:'hidden17.ritual.offer',itemId:item.id,include:true});
+
     await cmd(gm,{type:'hidden17.ritual.powder'});
     await nav(b,'Застава');await b.getByRole('button',{name:'Формула произнесена',exact:true}).click();
     await expect.poll(async () => (await state(a)).hidden17.ritual.step).toBe('choices');

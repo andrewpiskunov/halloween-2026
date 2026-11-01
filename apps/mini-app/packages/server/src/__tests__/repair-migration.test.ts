@@ -1,11 +1,14 @@
+import {readFileSync} from 'node:fs';
 import { expect, test } from 'vitest';
 import { type Event, type HiddenEvent, initialState, reduce, viewFor } from '@fair/shared';
 import { content as base, testOpts } from './fixtures';
-import { attachHiddenScenario } from '../scenario';
+import { attachHiddenScenario as attachCurrent } from '../scenario';
+const attachHiddenScenario:typeof attachCurrent=(...args)=>{const c=attachCurrent(...args);if(c.hidden17)c.hidden17.rulesVersion=undefined;return c;};
 import { EventStore } from '../store';
 import { Game } from '../game';
 import { repairMigrationKnowledge, REPAIR_ACTION } from '../repair-migration';
 const content = attachHiddenScenario(base);
+content.hidden17!.narrative=JSON.parse(readFileSync(new URL('./data/legacy-narrative-17.json',import.meta.url),'utf8'));
 function fixture() {
   const store = new EventStore(':memory:');
   const game = Game.open(store, content, {...testOpts(), hidden17:true});

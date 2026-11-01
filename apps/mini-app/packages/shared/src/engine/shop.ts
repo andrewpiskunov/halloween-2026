@@ -1,3 +1,4 @@
+import { FINAL_RULES } from '../final-rules';
 import type { Content, Recipe } from '../content';
 import type { Counts, GameState, Ingredient, Item, ItemKind, Player } from '../types';
 import { INGREDIENTS, available } from './bundles';
@@ -17,7 +18,7 @@ export function recipeOf(content: Content, recipeId: string): { recipe: Recipe; 
 }
 
 /** Поправки способностей к изготовлению: Пепел золотом, работа бесплатно, замена ингредиента. */
-export interface CraftModifier { ashByGold?: boolean; freeWork?: boolean; substitute?: { from: Ingredient; to: Ingredient } }
+export interface CraftModifier { artisan?: boolean; ashByGold?: boolean; freeWork?: boolean; substitute?: { from: Ingredient; to: Ingredient } }
 export type CraftQuote =
   | { paidGold: number; paidIngredients: Partial<Counts>; clearedThorns: boolean; clearedDiscount: boolean }
   | { error: ErrorCode; detail: string };
@@ -47,7 +48,8 @@ export function craftQuote(state: GameState, key: string, recipe: Recipe, mod: C
   const p = state.players[key];
   const base = recipe.gold + (mod.ashByGold ? 1 : 0) - (mod.freeWork ? 1 : 0);
   const beforeDiscount = state.hidden17 ? Math.max(0, base) : base + (p.thorns ? 1 : 0);
-  const paidGold = Math.max(0, beforeDiscount - (p.discount ? 1 : 0)) + (state.hidden17 && p.thorns ? 1 : 0);
+  const surcharge = state.hidden17?.rulesVersion===2 && !mod.artisan ? FINAL_RULES.workshopSurcharge : 0;
+  const paidGold = surcharge + Math.max(0, beforeDiscount - (p.discount ? 1 : 0)) + (state.hidden17 && p.thorns ? 1 : 0);
   if (a.gold < paidGold) return { error: 'insufficient', detail: 'не хватает золота' };
   return { paidGold, paidIngredients: cost, clearedThorns: p.thorns, clearedDiscount: p.discount && beforeDiscount > 0 };
 }

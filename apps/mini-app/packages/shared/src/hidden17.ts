@@ -5,6 +5,7 @@ export type HiddenOrder = 'leave' | 'stay' | 'restore';
 export type HiddenStep = 'preparation' | 'assembly' | 'powder' | 'choices' | 'responses' | 'last-choice' | 'finished';
 export interface HiddenRole { publicFace: string; desire: string; secret: string; knowledge: string[]; firstSteps: string[]; goals: string[]; finale: { prepare: string; action: string; choice: string; impact: string }; acts: string[]; backstory: string; craftingKnown?: string[] }
 export interface HiddenContent {
+  rulesVersion?: 2;
   continuousFair?: boolean;
   narrative?: import("./narrative").NarrativeContent;
   title: string; publicIntro: string; publicRules: string[]; roles: Record<string, HiddenRole>;
@@ -17,10 +18,11 @@ export interface HiddenContent {
 export interface HiddenBoard { createdAt: number; createdActionCount: number; serviceAbility?: boolean; id: string; author: string; title: string; condition: string; verification: string; reward: Bundle; rewardItems: Record<string, { kind: import('./types').ItemKind; ref: string }>; service?: string; expiresAt: number; worker?: string; status: 'open' | 'accepted' | 'completed' | 'cancelled' | 'expired'; cancelApproved: string[] }
 export interface HiddenDice { id: string; from: string; to: string; stake: 0 | 1; status: 'pending' | 'accepted' | 'started' | 'completed' | 'cancelled'; rolls?: [number, number] }
 export interface HiddenProduction { id: string; maker: string; customer: string; recipeId: string; fee: number; bankGold: number; materials: Partial<Counts>; status: 'pending' | 'completed' | 'cancelled'; ability?: 'focusFree' | 'substituteIngredient'; substitute?: { from: keyof Counts; to: keyof Counts } }
-export interface HiddenUse { id: string; author: string; itemId: string; ref: string; guise?: string; targets: string[]; approved: string[]; relicId?: string; question?: 'material' | 'compartment'; effects?: Record<string, 'curse' | 'thorns'>; status: 'pending' | 'completed' | 'cancelled'; answer?: string }
+export interface HiddenUse { id: string; author: string; itemId: string; ref: string; guise?: string; targets: string[]; approved: string[]; relicId?: string; question?: 'material' | 'compartment' | 'effect'; effects?: Record<string, 'curse' | 'thorns'>; status: 'pending' | 'completed' | 'cancelled'; answer?: string }
 export interface HiddenChoice { id?: string; player: string; kind: 'salt' | 'sign' | 'vessel' | 'withdraw' | 'pass'; itemId?: string; targetId?: string; targetRef?: string; shardIds?: string[]; status: 'hidden' | 'active' | 'invalid' | 'cancelled' | 'blocked'; controller?: string; order?: HiddenOrder }
 export interface HiddenOutcome { life: 'awake' | 'sleep' | 'destroyed'; freedom: 'free' | 'controlled'; controller?: string; order?: HiddenOrder; power: 'whole' | 'full' | 'weak' | 'empty'; vessels: Record<string, 'full' | 'weak' | 'empty'>; goals: Record<string, [boolean, boolean]> }
 export interface HiddenState {
+  rulesVersion?: 2;
   fair?: import("./fair").ContinuousFair;
   narrative?: import("./narrative").NarrativeState;
   presentations: Record<string, string[]>; rumors: { author: string; text: string; at: number; unverified: true }[];
@@ -37,7 +39,7 @@ export type HiddenCommand =
  | { type: 'hidden17.produce'; recipeId: string; customer?: string; fee?: number; ability?: 'focusFree' | 'substituteIngredient'; substitute?: { from: keyof Counts; to: keyof Counts } }
  | { type: 'hidden17.production.respond'; id: string; accept: boolean }
  | { type: 'hidden17.signature.craft'; recipeId: string }
- | { type: 'hidden17.signature.use'; itemId: string; targets: string[]; relicId?: string; question?: 'material' | 'compartment'; effects?: Record<string, 'curse' | 'thorns'> }
+ | { type: 'hidden17.signature.use'; itemId: string; targets: string[]; relicId?: string; question?: 'material' | 'compartment' | 'effect'; effects?: Record<string, 'curse' | 'thorns'> }
  | { type: 'hidden17.signature.respond'; id: string; accept: boolean }
  | { type: 'hidden17.signature.resolve'; id: string; answer: string }
  | { type: 'hidden17.board.create'; serviceAbility?: boolean; title: string; condition: string; verification: string; reward: Bundle; service?: string; expiresAt: number }
@@ -54,9 +56,10 @@ export type HiddenCommand =
  | { type: 'hidden17.ritual.choice'; kind: HiddenChoice['kind']; itemId?: string; targetId?: string; targetRef?: string; shardIds?: string[] }
  | { type: 'hidden17.ritual.order'; order: HiddenOrder }
  | { type: 'hidden17.ritual.cancel'; id?: string }
- | { type: 'hidden17.ritual.ward'; itemId: string; against: string }
+ | { type: 'hidden17.ritual.ward'; itemId?: string; against: string }
  | { type: 'hidden17.fact'; fact: 'truth' | 'serafinaOffer' | 'veldaRenounced'; value: boolean };
 export interface HiddenPlayerView {
+  rulesVersion?: 2;
   fair?: import("./fair").FairPlayerView;
   narrative?: import("./narrative").NarrativePlayerView;
   knownItems: Record<string, { kind: import('./types').ItemKind; ref: string; owner?: string; bloodDonor?: string }>;
@@ -65,7 +68,7 @@ export interface HiddenPlayerView {
   methods: HiddenContent['methods']; knownMethods: HiddenMethod[]; productionRecipes: string[]; signatureGoods: HiddenContent['signatureGoods'];
   board: HiddenBoard[]; dice: HiddenDice[]; production: HiddenProduction[]; uses: HiddenUse[];
   prepared: HiddenState['prepared']; fixedGuise?: string;
-  ritual: { accessibleShards: string[]; permissions: Record<string, string[]>; step: HiddenStep; stone: string[]; formula: string; circle: string[]; focuses: string[]; extinguished: string[]; observed: string[]; myChoice?: HiddenChoice; myChoices?: HiddenChoice[]; interventions: HiddenChoice[]; wards: Record<string, string>; orderSelected?: HiddenOrder; orderOptions: HiddenOrder[]; outcome?: HiddenOutcome };
+  ritual: { myWard?: { against:string; source:'item'|'protection'; itemId?:string }; accessibleShards: string[]; permissions: Record<string, string[]>; step: HiddenStep; stone: string[]; formula: string; circle: string[]; focuses: string[]; extinguished: string[]; observed: string[]; myChoice?: HiddenChoice; myChoices?: HiddenChoice[]; interventions: HiddenChoice[]; wards: Record<string, string>; orderSelected?: HiddenOrder; orderOptions: HiddenOrder[]; outcome?: HiddenOutcome };
 }
 /** Снимок атомарного результата; только серверный журнал, никогда не игроку. */
 export interface HiddenEvent { type: 'Hidden17Enabled' | 'Hidden17Changed'; at: number; seq?: number; patch: Partial<GameState>; action: string; bankDelta?: number }
