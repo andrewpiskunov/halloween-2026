@@ -15,6 +15,36 @@ async function state(page: Page): Promise<any> {
   });
 }
 const nav = (p: Page, name: string) => p.locator('nav.tabs').getByRole('button', { name, exact: true }).click();
+
+// По умолчанию headless Chromium прячет полосу и не воспроизводит сдвиг.
+test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'], args: ['--disable-features=OverlayScrollbar,OverlayScrollbars'] } });
+test.describe('Меню с обычной полосой прокрутки браузера', () => {
+  test('меню остаётся на месте на короткой и длинной странице', async ({page,request}) => {
+    const codes=await (await request.get('http://localhost:8092/api/dev/codes')).json();
+    await page.setViewportSize({width:550,height:1000});
+    await page.goto(`/?dev=4201&code=${codes.roles.o1}`);
+    await expect.poll(async () => (await state(page))?.kind).toBe('player');
+    await page.evaluate(() => document.fonts.ready);
+    const geometry=()=>page.locator('nav.tabs').evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return {x:r.x,width:r.width,buttons:[...el.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect();return {x:r.x,width:r.width};})};
+    });
+    await nav(page,'Застава');
+    expect(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+    const initial=await geometry();
+    await nav(page,'Персонаж');
+    expect(await page.evaluate(()=>document.documentElement.scrollHeight>innerHeight)).toBe(true);
+    expect(await geometry()).toEqual(initial);
+    await page.getByRole('button',{name:'Рассмотреть способность:',exact:false}).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(await geometry()).toEqual(initial);
+    await page.keyboard.press('Escape');
+    expect(await geometry()).toEqual(initial);
+    await nav(page,'Застава');
+    expect(await geometry()).toEqual(initial);
+  });
+});
+
 const confirm = (p: Page, name: string) => p.getByRole('dialog').getByRole('button', { name, exact: true }).click();
 async function pick(p: Page, name: string, choice: string) {
   await p.getByRole('combobox', { name, exact: true }).click();
