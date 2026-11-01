@@ -323,9 +323,9 @@ function OfferForm({ v }: { v: PlayerView }) {
             value: wantKey(c), label: c.name, hint: c.group, icon: c.emoji, image: itemImageUrl(c),
           }))} />
       </div>
-      <p class="m-note"><ItemText>Сумку собеседника приложение не показывает. Если просимой вещи у него нет, принять сделку он не сможет.</ItemText></p>
+      <p class="m-note"><ItemText>Сумку собеседника приложение не показывает. Если у него нет вещи, которую вы просите, он не сможет принять сделку.</ItemText></p>
 
-      <p class="m-note"><ItemText>Отданное будет обещано до ответа. Отменить можно, пока не приняли.</ItemText></p>
+      <p class="m-note"><ItemText>Предложенные вещи и ресурсы останутся в резерве до ответа. Вы можете отменить предложение, пока его не приняли.</ItemText></p>
       {tradesPaused(v)
         ? <PauseNote />
         : <Button kind="red" disabled={!canSend} onClick={() => void submit()}>Запечатать и отправить</Button>}

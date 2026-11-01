@@ -18,7 +18,7 @@ interface Conf { title: string; text?: string; danger?: boolean }
 /** Отправка вложенного вида: форма не знает, копия это или своя способность. */
 type Send = (use: AbilityUse, c: Conf) => void;
 
-const HOSTILE_TEXT = 'Это враждебное действие. Если у цели защита, попытка сгорит.';
+const HOSTILE_TEXT = 'Это враждебное действие. Если у цели есть защита, попытка будет потрачена без результата.';
 /** Изделия мастерской: копия CRAFTED и REFORGEABLE из engine/abilities.ts. */
 const CRAFTED: Item['kind'][] = ['potion', 'ward', 'focus', 'shape'];
 const REFORGEABLE: Item['kind'][] = ['potion', 'ward', 'focus'];
@@ -86,8 +86,8 @@ function targetConf(kind: AbilityKind, t: string, v: PlayerView): Conf {
     case 'discountOther': return self
       ? { title: 'Дать скидку себе?', text: 'Следующее изготовление на 1 золото дешевле.' }
       : { title: `Попросить ${nameCase(n, 'acc')} принять скидку?`, text: 'Его следующее изготовление на 1 золото дешевле. Нужно согласие.' };
-    case 'inspectInventory': return { title: `Осмотреть сумку ${nameCase(n, 'gen')}?`, text: 'Цель узнает, что её осмотрели.' };
-    case 'knowGold': return { title: `Узнать золото ${nameCase(n, 'gen')}?` };
+    case 'inspectInventory': return { title: `Осмотреть сумку ${nameCase(n, 'gen')}?`, text: 'Герой узнает, что вы осмотрели его сумку.' };
+    case 'knowGold': return { title: `Узнать, сколько золота у ${nameCase(n, 'gen')}?` };
     case 'askSide': return { title: `Узнать сторону ${nameCase(n, 'gen')}?` };
     case 'stealGold': return { title: `Взять 1 золото у ${nameCase(n, 'gen')}?`, text: HOSTILE_TEXT, danger: true };
     case 'thorns': return { title: `Наложить шипы на ${nameCase(n, 'acc')}?`, text: HOSTILE_TEXT, danger: true };
@@ -134,7 +134,7 @@ function AskForm({ v, send }: { v: PlayerView; send: Send }) {
   const apply = () => {
     const question = q.trim();
     send({ kind: 'askYesNo', target: t, ...(question ? { question } : {}) },
-      { title: `Задать вопрос ${nameCase(name(t, v), 'dat')}?`, text: 'Вопрос и ответ голосом.' });
+      { title: `Задать вопрос ${nameCase(name(t, v), 'dat')}?`, text: 'Задайте вопрос и получите ответ вслух.' });
   };
   return (
     <>
@@ -304,7 +304,7 @@ function ItemForm({ v, kind, send }: { v: PlayerView; kind: 'disassemble' | 'ref
         </Field>
       )}
       {kind === 'disassemble' && x && y && !enoughStock && <p class="m-note"><ItemText>В запасе не хватает выбранных ингредиентов.</ItemText></p>}
-      {kind === 'reforge' && v.me.available.gold < 1 && <p class="m-note"><ItemText>Для перековки нужно 1 доступное золото.</ItemText></p>}
+      {kind === 'reforge' && v.me.available.gold < 1 && <p class="m-note"><ItemText>Для перековки нужен 1 свободный золотой.</ItemText></p>}
       <Apply disabled={!ready} onClick={apply} />
     </>
   );
@@ -327,7 +327,7 @@ function CopyForm({ v, onDone }: { v: PlayerView; onDone?: () => void }) {
       </div>
       {pick === 'substituteIngredient' && (
         <>
-          <p class="m-note"><ItemText>Замена делается в карточке рецепта.</ItemText></p>
+          <p class="m-note"><ItemText>Заменить ингредиент можно в карточке рецепта.</ItemText></p>
           <Apply label="В мастерскую" onClick={() => { abilityDraft.value = { kind: 'substituteIngredient' }; navigateTab('workshop'); }} />
         </>
       )}

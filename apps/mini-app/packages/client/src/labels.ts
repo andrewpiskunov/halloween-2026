@@ -285,7 +285,7 @@ export function actionText(a: ActionRecord, v: PlayerView): string {
         ? `${n} ${verb(n, 'перенёс', 'перенесла')} на вас защиту до конца акта`
         : `${n} ${verb(n, 'перенёс', 'перенесла')} вашу защиту: теперь она у ${nameCase(plainName(a.to ?? '', v), 'gen')}`;
     case 'inspectInventory': return `${n} ${verb(n, 'осмотрел', 'осмотрела')} вашу сумку`;
-    case 'knowGold': return `${n} ${verb(n, 'узнал', 'узнала')} ваше золото`;
+    case 'knowGold': return `${n} ${verb(n, 'узнал', 'узнала')}, сколько у вас золота`;
     case 'askSide': return `${n} ${verb(n, 'узнал', 'узнала')} вашу сторону`;
     case 'askYesNo': return `${n} задаёт вопрос о ваших целях. Ответьте честно, голосом`;
     default: return `${n}: ${abilityTitle(kind)}`;

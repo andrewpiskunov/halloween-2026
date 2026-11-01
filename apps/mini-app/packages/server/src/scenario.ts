@@ -29,7 +29,7 @@ export function attachHiddenScenario(content: Content, path = fileURLToPath(new 
         ...role,
         contacts: (current.acquaintances ?? []).map((person: { role: string; text: string }) => ({ role: person.role, text: person.text })),
         ...(role.key === 'o10' ? { effect: 'Снимите одно проклятие с другого игрока, если он согласен. Зелье не нужно. Дар распознаёт и изгоняет удерживающую человека чужую волю.' } : {}),
-        ...(role.key === 'o6' ? { rumor: 'Старые проклятия иногда отзываются на очищающие травы; по одному признаку ещё нужно разобраться, что удерживает человека.' } : {}),
+        ...(role.key === 'o6' ? { rumor: 'Старые проклятия иногда отзываются на очищающие травы. Одного этого признака мало, чтобы понять, что удерживает человека.' } : {}),
       };
     });
     const clues = content.clues.map(clue => {

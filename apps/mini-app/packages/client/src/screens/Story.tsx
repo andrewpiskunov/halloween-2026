@@ -47,7 +47,7 @@ function RequestForm({ card, onDone }: { card?: StoryCard; onDone: () => void })
     <StoryText label="Название заявки" value={title} onChange={setTitle} max={120} small />
     <StoryText label="Чего хотите добиться и как будете действовать" value={text} onChange={setText} />
     <StoryText label="Что предлагаете потратить или чем рискуете (необязательно)" value={stake} onChange={setStake} max={500} />
-    <p class="m-note"><ItemText>Заявку и ответ увидите только вы и ведущий. Отправка ничего не расходует; дождитесь решения, прежде чем действовать.</ItemText></p>
+    <p class="m-note"><ItemText>Заявку и ответ увидите только вы и ведущий. Отправка ничего не расходует. Прежде чем действовать, дождитесь решения.</ItemText></p>
     <div class="m-btns"><Button disabled={busy || !title.trim() || !text.trim()} onClick={() => void send()}>Отправить заявку</Button><Button kind="sec" onClick={onDone}>Закрыть форму</Button></div>
   </div>;
 }
@@ -60,7 +60,7 @@ function PlayerCard({ c, v }: { c: StoryCard; v: PlayerView }) {
   return <div class="m-card story-card">
     <StoryCardBody c={c} phase={v.phase} fair={!!v.hidden17?.fair} />
     {!mine && <p class="m-note"><ItemText>Владелец: {plainName(c.owner, v)}</ItemText></p>}
-    {pending && <p class="ab-state"><ItemText>Применение ждёт решения ведущего. Ответ — в «Событиях».</ItemText></p>}
+    {pending && <p class="ab-state"><ItemText>Ведущий ещё не решил, можно ли применить карточку. Ответ появится в «Событиях».</ItemText></p>}
     {usable && !pending && <Button kind="sec" onClick={() => setUsing(!using)}>Попросить применить</Button>}
     {using && usable && !pending && <RequestForm card={c} onDone={() => setUsing(false)} />}
     {c.kind === 'item' && mine && <p class="m-note"><ItemText>Для передачи этого предмета договоритесь с игроком и обратитесь к ведущему.</ItemText></p>}
@@ -80,7 +80,7 @@ export function PlayerStory({ v }: { v: PlayerView }) {
   return <section class="story-stack">
     <div class="m-card">
       <h5>Свободная заявка ведущему</h5>
-      <p class="text"><ItemText>Придумайте обряд, сделку с магией или необычный поступок. Расскажите, чего хотите добиться, как и чем готовы рискнуть. Ведущий предложит условия и последствия.</ItemText></p>
+      <p class="text"><ItemText>Придумайте обряд, сделку с магией или необычный поступок. Расскажите, чего хотите добиться, как будете действовать и чем готовы рискнуть. Ведущий предложит условия и последствия.</ItemText></p>
       {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note"><ItemText>{v.hidden17?.fair?'Заявки доступны во время ярмарки.':'Заявки доступны во время актов.'}</ItemText></p>}
       {compose && live && <RequestForm onDone={() => setCompose(false)} />}
     </div>

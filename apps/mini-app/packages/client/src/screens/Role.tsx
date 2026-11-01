@@ -34,7 +34,7 @@ export function Role({ v }: { v: PlayerView }) {
         </div>
       )}
       {!v.hidden17 && <SideChoice v={v} />}
-      {v.hidden17 && <div class="m-card hidden-intro"><h5>Только ваша история</h5><p class="text"><ItemText>{v.hidden17.briefing.publicFace}</ItemText></p><p class="m-note"><ItemText>Ваши цели и знания видите только вы. Раскрывайте их в разговорах по своему выбору.</ItemText></p></div>}
+      {v.hidden17 && <div class="m-card hidden-intro"><h5>Только ваша история</h5><p class="text"><ItemText>{v.hidden17.briefing.publicFace}</ItemText></p><p class="m-note"><ItemText>Ваши цели и знания видите только вы. Вы сами решаете, кому о них рассказать.</ItemText></p></div>}
       {v.hidden17 && <details class="m-card"><summary>Общие правила ярмарки</summary><ul class="list">{v.hidden17.publicRules.map(t => <li key={t}><ItemText>{t}</ItemText></li>)}</ul></details>}
       <StoryInvite />
       <StoryCards v={v} />
@@ -162,7 +162,7 @@ function ClosedCard({ v }: { v: PlayerView }) {
   return (
     <div class="m-card">
       <h5>Способность</h5>
-      <p class="ab-state"><ItemText>{v.phase === 'revealed' ? 'Итоги показаны во вкладке „Итоги“' : 'Ведущий подводит итоги'}</ItemText></p>
+      <p class="ab-state"><ItemText>{v.phase === 'revealed' ? 'Итоги показаны во вкладке «Итоги»' : 'Ведущий подводит итоги'}</ItemText></p>
     </div>
   );
 }
@@ -170,7 +170,7 @@ function ClosedCard({ v }: { v: PlayerView }) {
 /** Строка состояния способности (§7.1). */
 function stateLine(v: PlayerView): string {
   const ab = v.me.ability;
-  if (v.hidden17 && v.hidden17.ritual.step !== 'preparation') return 'Обычные способности завершены. Действия финала — во вкладке «Ритуал».';
+  if (v.hidden17 && v.hidden17.ritual.step !== 'preparation') return 'Обычные способности больше недоступны. Действия финала находятся во вкладке «Ритуал».';
   switch (ab.state) {
     case 'available': return v.hidden17?.fair ? 'Дар доступен' : 'Доступна в этом акте';
     case 'used': return v.hidden17?.fair ? 'Дар использован до следующего обновления сил' : `Применена в акте ${roman(v.act)}`;
@@ -190,7 +190,7 @@ export function AbilityCard({ v }: { v: PlayerView }) {
   const [open, setOpen] = useState(false);
   const toWorkshop = () => { abilityDraft.value = { kind: ab.kind }; navigateTab('workshop'); };
   const cancel = () => ask({
-    title: 'Отменить просьбу?', text: v.hidden17?.fair ? 'Применение способности останется доступным.' : 'Способность останется неприменённой в этом акте.', okLabel: 'Отменить просьбу', danger: true,
+    title: 'Отменить просьбу?', text: v.hidden17?.fair ? 'Применение способности останется доступным.' : 'Вы сможете применить способность позже в этом акте.', okLabel: 'Отменить просьбу', danger: true,
     onOk: () => { if (ab.pendingRequest) void run({ type: 'consent.cancel', id: ab.pendingRequest }); },
   });
   return (
@@ -259,7 +259,7 @@ function IntelRow({ v, act, intel }: { v: PlayerView; act: number; intel: Intel 
             return <li key={n}><Thumb src={itemImageUrl(it)} emoji={l.emoji} size="sm" /><span>{l.name}</span></li>;
           })}
         </ul>
-        <p class="m-note"><ItemText>Снимок на момент применения; дальше могло измениться.</ItemText></p>
+        <p class="m-note"><ItemText>Так выглядела сумка в момент применения способности. С тех пор её содержимое могло измениться.</ItemText></p>
       </div>
     );
   }
