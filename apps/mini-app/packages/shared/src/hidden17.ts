@@ -5,6 +5,7 @@ export type HiddenOrder = 'leave' | 'stay' | 'restore';
 export type HiddenStep = 'preparation' | 'assembly' | 'powder' | 'choices' | 'responses' | 'last-choice' | 'finished';
 export interface HiddenRole { publicFace: string; desire: string; secret: string; knowledge: string[]; firstSteps: string[]; goals: string[]; finale: { prepare: string; action: string; choice: string; impact: string }; acts: string[]; backstory: string; craftingKnown?: string[] }
 export interface HiddenContent {
+  excludedRoles?: string[];
   rulesVersion?: 2;
   continuousFair?: boolean;
   narrative?: import("./narrative").NarrativeContent;

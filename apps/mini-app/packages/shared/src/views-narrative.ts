@@ -30,7 +30,7 @@ export function narrativeProjection(state:GameState,content:Content,key:string,b
  const completed=trades.filter(t=>t.status==='completed').sort((a,b)=>(b.closedAt??b.createdAt)-(a.closedAt??a.createdAt)||b.id.localeCompare(a.id));
  for(const item of ownItems){
   const received=completed.find(t=>(t.to===key&&t.give.items.includes(item.id))||(t.from===key&&t.reply?.items.includes(item.id)));
-  if(received){const from=received.to===key?received.from:received.to;origins[item.id]=`Вы получили эту вещь в сделке с героем «${content.roleByKey[from]?.name??from}».`;}
+  if(received){const from=received.to===key?received.from:received.to;origins[item.id]=content.hidden17?.excludedRoles?.includes(from)?'Вы получили эту вещь в сделке на ярмарке.':`Вы получили эту вещь в сделке с героем «${content.roleByKey[from]?.name??from}».`;}
   else if(initialIds.has(item.id)){const origin=startingItems[`${item.kind}:${item.ref}`]??startingItems[item.ref];if(origin)origins[item.id]=origin;}
  }
  const ownResourceRefs=['gold', 'ash', 'moon', 'dew'].filter(ref => (ref === 'gold' ? base.me.player.gold : base.me.player.ingredients[ref as 'ash' | 'moon' | 'dew']) > 0).map(ref=>`resource:${ref}`);

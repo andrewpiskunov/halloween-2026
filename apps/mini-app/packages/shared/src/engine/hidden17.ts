@@ -153,7 +153,7 @@ export function hiddenDecide(state: GameState, content: Content, command: Comman
     for (const flag of ['accept', 'include', 'allow', 'value', 'serviceAbility'] as const) if (flag in cmd) requireThat(typeof (cmd as unknown as Record<string, unknown>)[flag] === 'boolean', 'Ожидается явное согласие или отказ');
     if (cmd.type === 'hidden17.enable') {
       requireThat(gm, 'Только ведущий', 'forbidden'); requireThat(state.phase === 'setup', 'Переход возможен только до открытия', 'phase');
-      requireThat(content.hidden17 && Object.keys(content.hidden17.roles).length === 17, 'Сценарий 17 не загружен');
+      requireThat(content.hidden17 && Object.keys(content.hidden17.roles).length + (content.hidden17.excludedRoles?.length ?? 0) === 17, 'Сценарий 17 не загружен');
       return state.hidden17 ? ok() : ok(enableHidden(state, content, ctx.now));
     }
     requireThat(state.hidden17 && content.hidden17, 'Новый режим не включён', 'phase');

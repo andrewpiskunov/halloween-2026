@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { loadContent } from '@fair/shared';
 import { loadConfig } from './config';
 import { attachHiddenScenario } from './scenario';
+import { applyCast } from './cast';
 import { EventStore } from './store';
 import { Game } from './game';
 import { buildApp } from './http';
@@ -15,7 +16,7 @@ const config = loadConfig();
 if (config.dbPath !== ':memory:') mkdirSync(dirname(config.dbPath), { recursive: true });
 // Поправки содержимого на вечер (имена и тексты ролей): файл по CONTENT_PATCH_PATH, см. README.
 const patch = config.contentPatchPath ? JSON.parse(readFileSync(config.contentPatchPath, 'utf8')) : undefined;
-const content = attachHiddenScenario(loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')), patch), process.env.HIDDEN_SCENARIO_PATH || undefined, process.env.FAIR_NARRATIVE !== 'legacy', process.env.FAIR_CONTINUOUS !== 'legacy');
+const content = applyCast(attachHiddenScenario(loadContent(JSON.parse(readFileSync(config.contentPath, 'utf8')), patch), process.env.HIDDEN_SCENARIO_PATH || undefined, process.env.FAIR_NARRATIVE !== 'legacy', process.env.FAIR_CONTINUOUS !== 'legacy'), process.env.FAIR_CAST);
 if (patch) console.log(`Поправки содержимого: ${config.contentPatchPath}`);
 const store = new EventStore(config.dbPath);
 const game = Game.open(store, content, { now: Date.now, newId: () => randomUUID(), random: Math.random, hidden17: process.env.FAIR_RULESET !== 'legacy' });

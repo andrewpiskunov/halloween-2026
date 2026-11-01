@@ -4,6 +4,7 @@ import {
   type Actor, type Command, type Content, type ErrorCode, type Event, type GameState,
 } from '@fair/shared';
 import type { EventStore } from './store';
+import { reconcileCast } from './cast';
 
 export interface GameOpts { now: () => number; newId: () => string; random: () => number; hidden17?: boolean }
 export type SubmitResult = { ok: true; seq: number } | { ok: false; error: ErrorCode; detail?: string };
@@ -74,6 +75,8 @@ export class Game {
       if(!migrated.ok)throw new Error(`Не удалось включить непрерывную ярмарку: ${migrated.detail ?? migrated.error}`);
       state = store.append(migrated.events).reduce((s,e)=>reduce(s,content,e),state);
     }
+    const castEvents = reconcileCast(state, content, opts);
+    if (castEvents.length) state = store.append(castEvents).reduce((s, e) => reduce(s, content, e), state);
     return new Game(store, content, opts, state);
   }
 
