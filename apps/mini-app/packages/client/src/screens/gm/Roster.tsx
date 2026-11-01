@@ -1,3 +1,4 @@
+import { openGmPanel } from '../../gm/navigation';
 import { ItemText } from '../../components/ItemText';
 import { useState } from 'preact/hooks';
 import type { GmView } from '@fair/shared';
@@ -122,18 +123,14 @@ export function Roster({ v }: { v: GmView }) {
               </div>
               {inRoster && (
                 <div class="m-btns">
+                  <button type="button" class="m-btn sec small" aria-label={`Досье: ${r.name}`} onClick={() => openGmPanel({kind:"dossier",player:r.key})}>Досье</button>
                   <Button small kind="sec" onClick={() => { void playAs(r.key, r.name); }}>Играть за</Button>
                 </div>
               )}
               {i && (
                 <div class="m-btns">
                   <Button small kind="sec" onClick={() => { void copy(i.code); }}>Скопировать ссылку</Button>
-                  <Button small kind="sec" onClick={() => ask({
-                    title: `Перевыдать код: ${r.name}?`,
-                    text: 'Старая ссылка перестанет работать, игрока нужно будет пригласить заново.',
-                    okLabel: 'Перевыдать', danger: true,
-                    onOk: () => { void run({ type: 'gm.rebind', roleKey: r.key }); },
-                  })}>Перевыдать код</Button>
+
                 </div>
               )}
             </div>

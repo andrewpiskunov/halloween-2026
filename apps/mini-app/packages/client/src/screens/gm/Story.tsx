@@ -1,5 +1,7 @@
+import { MessageForm } from './Messages';
 import { ItemText } from '../../components/ItemText';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { gmCardDraft, gmStorySection } from '../../gm/navigation';
 import { GmNarrativePanel } from './Narrative';
 import type { GmView, Side, StoryCard, StoryCardInput, StoryKind, StoryRequest } from '@fair/shared';
 import { storyAct } from '../../story-rules';
@@ -49,7 +51,7 @@ function CardEditor({ v, initial, kind, owner, onDone }: { v: GmView; initial?: 
   </div>;
 }
 
-function Request({ q, v, onCard }: { q: StoryRequest; v: GmView; onCard: (owner: string) => void }) {
+export function StoryRequestCard({ q, v, onCard }: { q: StoryRequest; v: GmView; onCard: (owner: string) => void }) {
   const [reply, setReply] = useState(q.reply);
   const [busy, setBusy] = useState(false);
   const open = ['pending', 'conditions'].includes(q.status);
@@ -74,24 +76,6 @@ function Request({ q, v, onCard }: { q: StoryRequest; v: GmView; onCard: (owner:
   </div>;
 }
 
-function MessageForm({ v }: { v: GmView }) {
-  const [title, setTitle] = useState('');
-  const [text, setText] = useState('');
-  const [all, setAll] = useState(false);
-  const [recipients, setRecipients] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  return <div class="m-card"><h5>Послание ведущего</h5>
-    <StoryText label="Заголовок послания" value={title} onChange={setTitle} max={120} small />
-    <StoryText label="Текст послания" value={text} onChange={setText} />
-    <label class="check"><input type="checkbox" checked={all} onChange={e => setAll(e.currentTarget.checked)} />Объявить всем</label>
-    {!all && <Readers v={v} value={recipients} onChange={setRecipients} />}
-    <Button disabled={!live(v) || busy || !title.trim() || !text.trim() || !all && !recipients.length} onClick={() => ask({ title: all ? 'Отправить всем?' : 'Отправить выбранным участникам?', text: all ? title : recipients.map(who).join(', '), okLabel: 'Отправить', onOk: async () => {
-      setBusy(true);
-      try { const r = await run({ type: 'story.message', title, text, recipients: all ? [] : recipients }); if (r.ok) { setTitle(''); setText(''); showToast('Послание отправлено'); } } finally { setBusy(false); }
-    } })}>Отправить послание</Button>
-  </div>;
-}
-
 function SideForm({ v }: { v: GmView }) {
   const [player, setPlayer] = useState('');
   const [side, setSide] = useState('');
@@ -110,23 +94,25 @@ function SideForm({ v }: { v: GmView }) {
 }
 
 export function GmStory({ v }: { v: GmView }) {
-  const [section, setSection] = useState<'requests' | 'cards' | 'messages' | 'history'>('requests');
+  const section = gmStorySection.value;
+  const setSection = (section: typeof gmStorySection.value) => { gmStorySection.value = section; };
   const [edit, setEdit] = useState<{ kind: StoryKind; card?: StoryCard; owner?: string } | null>(null);
   const [closed, setClosed] = useState(false);
+  useEffect(() => { if (gmCardDraft.value) { setEdit({ kind: 'item', owner: gmCardDraft.value }); gmCardDraft.value = null; } }, []);
   const s = v.state.story;
   const pending = Object.values(s?.requests ?? {}).filter(q => q.status === 'pending').length;
   const requests = Object.values(s?.requests ?? {}).filter(q => closed || ['pending', 'conditions'].includes(q.status)).reverse();
   const create = (owner: string) => { setSection('cards'); setEdit({ kind: 'item', owner }); };
   return <>
     <h2 class="scr-h">Сюжет <small>{pending} новых заявок</small></h2>
-    {!live(v) && <p class="m-note"><ItemText>{v.state.hidden17?.fair?'Вмешательства доступны во время ярмарки.':'Вмешательства доступны во время актов.'} История сохранена для просмотра.</ItemText></p>}
-    <div class="m-btns">{([['requests', 'Заявки'], ['cards', 'Карточки'], ['messages', 'Послания'], ['history', 'История']] as const).map(([key, label]) => <Button small key={key} kind={section === key ? 'main' : 'sec'} onClick={() => setSection(key)}>{label}</Button>)}</div>
+    {!live(v) && <p class="m-note"><ItemText>Ярмарка не идёт. Можно публиковать общие объявления и просматривать историю.</ItemText></p>}
+    <div class="m-btns gm-story-tabs">{([['requests', 'Заявки'], ['cards', 'Карточки'], ['messages', 'Послания'], ['history', 'История']] as const).map(([key, label]) => <Button small key={key} kind={section === key ? 'main' : 'sec'} onClick={() => setSection(key)}>{label}</Button>)}</div>
     <GmNarrativePanel v={v} />
     {section === 'requests' && <>
       <p class="m-note"><ItemText>На заявку можно ответить условиями, подтвердить результат или предложить другой путь. Для нового эффекта выдайте карточку. Цена и последствия проводятся отдельно.</ItemText></p>
       <label class="check"><input type="checkbox" checked={closed} onChange={e => setClosed(e.currentTarget.checked)} />Показать завершённые заявки</label>
       {!requests.length && <p class="m-note"><ItemText>Открытых заявок пока нет. Игроки отправляют их из «Событий».</ItemText></p>}
-      {requests.map(q => <Request key={`${q.id}-${q.revision}`} q={q} v={v} onCard={create} />)}
+      {requests.map(q => <StoryRequestCard key={`${q.id}-${q.revision}`} q={q} v={v} onCard={create} />)}
     </>}
     {section === 'cards' && <>
       <div class="m-btns">{(Object.keys(STORY_KIND) as StoryKind[]).map(kind => <Button small key={kind} disabled={!live(v)} onClick={() => setEdit({ kind, owner: edit?.owner })}>+ {STORY_KIND[kind]}</Button>)}</div>

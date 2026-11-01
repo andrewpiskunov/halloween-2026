@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { GmView } from '@fair/shared';
+import type { DestructionScene, GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { ItemText } from '../../components/ItemText';
 import { Select } from '../../components/Select';
@@ -44,17 +44,19 @@ export function FairAdmissions({v}:{v:GmView}) {
  </section>;
 }
 export function GmDestructionScenes({v}:{v:GmView}) {
- const h=v.state.hidden17!,scenes=Object.values(h.fair!.destruction);
- const current=v.state.clock.pausedAt??now.value;
+ const scenes=Object.values(v.state.hidden17!.fair!.destruction).filter(s=>!['pending','active'].includes(s.status));
  if(!scenes.length)return null;
- return <section><h2 class="scr-h">Разрушение осколков</h2>{[...scenes].reverse().map(s=>{
+ return <details class="gm-fold"><summary>Завершённые сцены с осколками · {scenes.length}</summary>{[...scenes].reverse().map(s=><GmDestructionScene key={s.id} v={v} s={s}/>)}</details>;
+}
+export function GmDestructionScene({v,s}:{v:GmView;s:DestructionScene}) {
+  const h=v.state.hidden17!;
+  const current=v.state.clock.pausedAt??now.value;
   const left=Math.max(0,(s.endsAt??current)-current);
   return <div class="m-card" key={s.id}><h5>Осколок {s.ref} · {who(s.author)}</h5><p class="text">{s.status==='pending'?'Заявка: соль в резерве':s.status==='active'?`Окно спасения: ${mmss(left)}`:s.status==='destroyed'?'Осколок уничтожен':s.status==='saved'?`Спасён талисманом: ${who(s.wardBy??'')}`:'Попытка отменена'}</p>
    {s.status==='pending'&&<Button disabled={h.ritual.step!=='preparation'||v.state.clock.pausedAt!==undefined} onClick={()=>ask({title:`Объявить разрушение Осколка ${s.ref}?`,text:'Соль будет потрачена. Откроется двухминутное окно спасения для присутствующих героев.',okLabel:'Объявить сцену',onOk:()=>void run({type:'fair.destroy.start',id:s.id})})}>Объявить сцену · 2 минуты</Button>}
    {['pending','active'].includes(s.status)&&<Button kind="sec" onClick={()=>ask({title:'Отменить попытку?',text:s.status==='pending'?'Резерв соли вернётся автору.':'Потраченная соль не вернётся.',okLabel:'Отменить',onOk:()=>void run({type:'fair.destroy.cancel',id:s.id})})}>Отменить сцену</Button>}
    {s.status==='active'&&<Button disabled={left>0||v.state.clock.pausedAt!==undefined} onClick={()=>ask({title:`Подтвердить уничтожение Осколка ${s.ref}?`,text:'Окно спасения завершено. Осколок исчезнет навсегда; отменить это действие нельзя.',okLabel:'Подтвердить уничтожение',danger:true,onOk:()=>void run({type:'fair.destroy.resolve',id:s.id})})}>Подтвердить после окна</Button>}
   </div>;
- })}</section>;
 }
 
 /** Старый журнал переводится явно; начатый финал сохраняет прежние правила. */

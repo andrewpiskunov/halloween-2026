@@ -83,8 +83,9 @@ export const storyCommands: CommandHandlers = {
     return change(s, ctx, `${before ? 'Изменена' : 'Выдана'} карточка: ${after.title}`, { card: { before, after } });
   },
   'story.message': (state, _content, cmd, ctx) => {
-    const denied = blocked(state, ctx); if (denied) return denied;
+    if (ctx.actor.type !== 'gm') return fail('forbidden');
     if (!text(cmd.title, 120) || !text(cmd.text, 2000) || !audience(state, cmd.recipients)) return fail('invalid');
+    if (!live(state) && cmd.recipients.length > 0) return fail('phase', 'личные послания доступны во время ярмарки');
     const s = state.story ?? emptyStory();
     if (s.messages.length >= 500) return fail('limit');
     return change(s, ctx, `Сообщение: ${cmd.title.trim()}`, { message: { id: ctx.newId(), at: ctx.now, title: cmd.title.trim(), text: cmd.text.trim(), recipients: [...cmd.recipients], active: true } });

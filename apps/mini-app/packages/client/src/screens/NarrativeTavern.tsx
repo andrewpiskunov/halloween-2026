@@ -12,7 +12,7 @@ import { run, showToast } from '../store';
 import { PlayerStory, StoryText } from './Story';
 export function NarrativeTavern({v}:{v:PlayerView}){
  const n=v.hidden17!.narrative!;const [compose,setCompose]=useState(false),[title,setTitle]=useState(''),[text,setText]=useState(''),[busy,setBusy]=useState(false);
- const announcements=[...v.announcements.map((a,i)=>({...a,id:`gm-${i}`,author:'gm'})),...n.announcements].sort((a,b)=>b.at-a.at);
+ const announcements=[...v.announcements.map((a,i)=>({...a,id:`gm-${i}`,author:'gm'})),...n.announcements,...(v.story?.messages??[]).filter(m=>m.active&&m.recipients.length===0).map(m=>({...m,id:`message-${m.id}`,author:'gm'}))].sort((a,b)=>b.at-a.at);
  const publish=async()=>{setBusy(true);try{const r=await run({type:'narrative.announce',title:title.trim(),text:text.trim()});if(r.ok){setTitle('');setText('');setCompose(false);showToast('Объявление на доске');}}finally{setBusy(false);}};
  return <><header class="narrative-scene"><img src={`${BASE}assets/scenes/tavern.webp`} alt="Тёплая таверна с доской объявлений у входа"/><div><span class="narrative-eyebrow">Главная площадь ярмарки</span><h2>Таверна</h2></div></header>
  <FairScenes v={v}/><section class="narrative-board"><div class="narrative-section-head"><h2 class="scr-h">Объявления</h2><button class="narrative-back" onClick={()=>setCompose(!compose)}>{compose?'Закрыть':'+ Написать'}</button></div>

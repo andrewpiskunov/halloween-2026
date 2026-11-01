@@ -59,13 +59,13 @@ export function GmNarrativePanel({v}:{v:GmView}) {
 }
 
 /** Четыре состояния оценки сохраняются без преобразования к прежним boolean-целям. */
-export function GmNarrativeGoals({v}:{v:GmView}) {
-  const n=v.state.hidden17?.narrative;const data=loadedContent().hidden17?.narrative;const [player,setPlayer]=useState(v.state.roster[0]??'');
+export function GmNarrativeGoals({v,initialPlayer,lockedPlayer=false}:{v:GmView;initialPlayer?:string;lockedPlayer?:boolean}) {
+  const n=v.state.hidden17?.narrative;const data=loadedContent().hidden17?.narrative;const [player,setPlayer]=useState(initialPlayer??v.state.roster[0]??'');
   if(!n||!data)return null;
   const role=data.roles[player];const evaluations=n.evaluations[player]??{};
   const assessed=v.state.roster.reduce((count,k)=>count+Object.keys(n.evaluations[k]??{}).length,0);
-  return <section class="m-card"><h3>Стремления героев</h3><p class="text"><ItemText>Оценено {assessed} из {v.state.roster.length*2}. Отсутствие оценки означает «ещё не оценена». Учитывайте поступки, договорённости и личный эпилог.</ItemText></p><p class="m-note"><ItemText>После раскрытия итогов игрок видит только свои оценки и пояснения. Исправления сохраняются в журнале.</ItemText></p>
-    <div class="field"><span>Чьи стремления оценить</span><Select label="Герой для оценки стремлений" value={player} onChange={setPlayer} options={roleOptions(v)}/></div>
+  return <section class="m-card"><h3>{lockedPlayer?'Личные стремления':'Стремления героев'}</h3><p class="text"><ItemText>Оценено {lockedPlayer?Object.keys(evaluations).length:assessed} из {lockedPlayer?2:v.state.roster.length*2}. Отсутствие оценки означает «ещё не оценена». Учитывайте поступки, договорённости и личный эпилог.</ItemText></p><p class="m-note"><ItemText>После раскрытия итогов игрок видит только свои оценки и пояснения. Исправления сохраняются в журнале.</ItemText></p>
+    {!lockedPlayer&&<div class="field"><span>Чьи стремления оценить</span><Select label="Герой для оценки стремлений" value={player} onChange={setPlayer} options={roleOptions(v)}/></div>}
     {role?([0,1] as const).map(goal=><GoalEditor key={`${player}:${goal}:${evaluations[goal]?.status??''}:${evaluations[goal]?.note??''}`} player={player} goal={goal} text={role.goals[goal]} criteria={role.gmGoals[goal]} evaluation={evaluations[goal]}/>):<p class="m-note"><ItemText>Для этого героя нет сюжетной вводной.</ItemText></p>}
   </section>;
 }

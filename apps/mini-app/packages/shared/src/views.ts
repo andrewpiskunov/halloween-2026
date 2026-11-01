@@ -65,6 +65,8 @@ export interface PlayerView {
 }
 
 export interface GmView {
+  /** Свободные остатки для досье: все виды резервов считает сервер. */
+  available: Record<string, { gold: number; ingredients: Counts; items: string[] }>;
   /** Содержимое приходит отдельным сообщением `content` при подключении; здесь только его версия. */
   kind: 'gm'; state: GameState; contentVersion: string;
   invites: { roleKey: string; code: string; bound: boolean; present: boolean }[];
@@ -149,6 +151,7 @@ export function viewFor(state: GameState, content: Content, actor: Actor, now: n
         present: !!state.players[roleKey]?.present,
       })),
       abilities: gmAbilities(content),
+      available: Object.fromEntries(state.roster.map(key => [key, available(state, key)])),
     };
   }
 

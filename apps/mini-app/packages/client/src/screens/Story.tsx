@@ -84,7 +84,7 @@ export function PlayerStory({ v }: { v: PlayerView }) {
       {live ? <Button onClick={() => setCompose(!compose)}>Новая заявка</Button> : <p class="m-note"><ItemText>{v.hidden17?.fair?'Заявки доступны во время ярмарки.':'Заявки доступны во время актов.'}</ItemText></p>}
       {compose && live && <RequestForm onDone={() => setCompose(false)} />}
     </div>
-    {[...(v.story?.messages ?? [])].reverse().map(m => <div class="m-card hot" key={m.id}><h5>Послание ведущего{m.recipients.length ? ' · личное' : ' · всем'}</h5><h4>{m.title}</h4><p class="text story-prose"><ItemText>{m.text}</ItemText></p></div>)}
+    {[...(v.story?.messages ?? [])].filter(m => !v.hidden17?.narrative || m.recipients.length > 0).reverse().map(m => <div class="m-card hot" key={m.id}><h5>Послание ведущего{m.recipients.length ? ' · личное' : ' · всем'}</h5><h4>{m.title}</h4><p class="text story-prose"><ItemText>{m.text}</ItemText></p></div>)}
     {requests.map(q => <div class="m-card" key={q.id}>
       <h5>Ваша заявка · {STORY_STATUS[q.status]}</h5><h4>{q.title}</h4><p class="text story-prose"><ItemText>{q.text}</ItemText></p>
       {q.stake && <p class="text"><ItemText>Предложенная цена: {q.stake}</ItemText></p>}

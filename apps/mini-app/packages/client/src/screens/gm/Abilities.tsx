@@ -1,11 +1,12 @@
 import { ItemText } from '../../components/ItemText';
 import { AbilityArt } from '../../components/AbilityIdentity';
 import { useState } from 'preact/hooks';
-import type { GmView, Player } from '@fair/shared';
+import type { GmView } from '@fair/shared';
 import { Button } from '../../components/Button';
 import { Select } from '../../components/Select';
+import { playerMarks } from '../../gm/player';
 import { actionLine, filterActions, requestLine } from '../../gm/actions';
-import { mmss, nameCase } from '../../labels';
+import { mmss } from '../../labels';
 import { remainingMs } from '../../rules';
 import { ask, loadedContent, now, run, showToast } from '../../store';
 
@@ -38,28 +39,12 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
     onOk: () => { void run({ type: 'consent.cancel', id }).then(r => { if (r.ok) showToast('Просьба отменена'); }); },
   });
 
-  /** Отметки игрока: подпись и поле исправления; без поля — только показ (ожидание ответа). */
-  const marks = (p: Player): { label: string; field?: MarkField }[] => {
-    const out: { label: string; field?: MarkField }[] = [];
-    if (p.abilityUsedInAct) out.push({ label: state.hidden17?.fair ? 'дар использован' : 'применено в акте', field: 'abilityUsed' });
-    if (p.abilityPending) out.push({ label: 'ждёт ответа на просьбу' });
-    if (p.protection) {
-      const src = p.protection.source === 'ward' ? 'талисман' : p.protection.source === 'gm' ? 'от ведущего' : `от ${nameCase(name(p.protection.by), 'gen')}`;
-      out.push({ label: `защита (${src})`, field: 'protection' });
-    }
-    if (p.thorns) out.push({ label: p.thornsBy ? `шипы (от ${nameCase(name(p.thornsBy), 'gen')})` : 'шипы', field: 'thorns' });
-    if (p.curse) out.push({ label: 'проклятие', field: 'curse' });
-    if (p.discount) out.push({ label: p.discountBy ? `скидка (от ${nameCase(name(p.discountBy), 'gen')})` : 'скидка', field: 'discount' });
-    if (p.hostileAttemptsAgainstInAct > 0) out.push({ label: 'попытка по нему', field: 'hostileAttempt' });
-    if (p.guise) out.push({ label: `облик «${p.guise.name}»`, field: 'guise' });
-    return out;
-  };
 
   return (
     <div class="m-card gm-abilities">
       <h5>Способности и вещи</h5>
 
-      <h6>Журнал применений</h6>
+      <details class="gm-journal-fold"><summary>Журнал применений · {journal.length}</summary>
       <div class="field"><span>Игрок</span>
         <Select label="Игрок" value={player} onChange={setPlayer}
           options={[{ value: '', label: 'Все игроки' }, ...state.roster.map(k => ({ value: k, label: name(k), icon: content.roles.find(r => r.key === k)?.emoji, avatar: k }))]} />
@@ -81,7 +66,8 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         <Button kind="sec" small onClick={() => setAll(!all)}>{all ? 'Только последние' : `Показать все (${journal.length})`}</Button>
       )}
 
-      <h6>Открытые просьбы</h6>
+      </details>
+      <details><summary>Ожидающие согласия просьбы · {requests.length}</summary>
       {requests.length === 0 ? <p class="m-note"><ItemText>Открытых просьб нет.</ItemText></p> : requests.map(r => {
         const text = requestLine(r, v, content);
         const waiting = r.approvers.filter(k => !r.approved.includes(k));
@@ -97,11 +83,12 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         );
       })}
 
-      <h6>Отметки игроков</h6>
+      </details>
+      <details><summary>Отметки игроков</summary>
       {present.length === 0 ? <p class="m-note"><ItemText>На ярмарке пока никого.</ItemText></p> : (
         <div class="gm-marks">
           {present.map(k => {
-            const list = marks(state.players[k]);
+            const list = playerMarks(state.players[k], name, !!state.hidden17?.fair);
             return (
               <div class="gm-mark-row" key={k}>
                 <b>{name(k)}</b>
@@ -117,6 +104,7 @@ export function Abilities({ v, onFix }: { v: GmView; onFix: (p: FixPreset) => vo
         </div>
       )}
       <p class="m-note"><ItemText>Нажмите отметку, чтобы снять её: откроется исправление с причиной.</ItemText></p>
+      </details>
     </div>
   );
 }

@@ -47,3 +47,5 @@ venv/
 .worktrees/
 
 apps/mini-app/test-results-narrative/
+
+apps/mini-app/test-results-gm-workspace/

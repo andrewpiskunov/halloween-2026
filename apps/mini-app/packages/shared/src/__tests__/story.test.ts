@@ -9,6 +9,19 @@ const save = (over = {}) => ({ type: 'story.card.save', card: { ...card, ...over
 const story = (f: Fair) => f.s.story!;
 const own = (f: Fair, key = 'o1') => (viewFor(f.s, content, player(key), 0) as PlayerView).story!;
 
+test('общее послание ведущего доступно до открытия и после завершения; личное — во время игры', () => {
+  for (const phase of ['setup', 'closed', 'revealed'] as const) {
+    const f = new Fair(makeGame(12));
+    f.s.phase = phase;
+    const message = { type: 'story.message', title: 'Встречаемся в таверне', text: 'Приходите к столу.', recipients: [] } as const;
+    expect(run(f.s, { ...message, recipients: [] }, player('o1'))).toMatchObject({ ok: false, error: 'forbidden' });
+    expect(run(f.s, { ...message, recipients: ['o1'] }, gm)).toMatchObject({ ok: false, error: 'phase' });
+    f.run({ ...message, recipients: [] }, gm);
+    expect(own(f).messages).toHaveLength(1);
+    expect(own(f, 'o2').messages[0].text).toBe('Приходите к столу.');
+  }
+});
+
 test('заявка и ответ доступны только автору и ведущему; сообщение выбранным участникам', () => {
   const f = new Fair(makeGame(12));
   f.as('o1', { type: 'story.request', title: 'Оживить тень', text: 'Найду голос и принесу монету', stake: 'Камень облика' });

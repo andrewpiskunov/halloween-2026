@@ -11,6 +11,10 @@ import { GmRitual, GmHiddenResults } from './screens/gm/Hidden';
 import { HiddenWorkshop } from './screens/HiddenWorkshop';
 import { Tavern } from './screens/Tavern';
 import { Ritual } from './screens/Ritual';
+import { Dossier } from './screens/gm/Dossier';
+import { Administration } from './screens/gm/Administration';
+import { attentionFor } from './gm/attention';
+import { gmPanel, closeGmPanel } from './gm/navigation';
 import { GmStory } from './screens/gm/Story';
 import type { GmView, PlayerView } from '@fair/shared';
 import { PortraitViewer } from './components/PortraitViewer';
@@ -168,12 +172,14 @@ function PlayerApp({ v }: { v: PlayerView }) {
 }
 
 function GmApp({ v }: { v: GmView }) {
+  const panel = gmPanel.value;
+  const queue = attentionFor(v.state, now.value);
   return (
     <>
       <TopBar v={v} />
       <LinkBar />
-      <main class="cnt">{v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <><GmNarrativeMigration v={v} /><Roster v={v} /></>}</main>
-      <GmTabs hidden17={!!v.state.hidden17} />
+      <main class="cnt">{panel ? <><Button kind="sec" small onClick={closeGmPanel}>← Назад</Button>{panel.kind === 'dossier' ? <Dossier key={panel.player} v={v} player={panel.player} /> : <Administration v={v} />}</> : v.state.hidden17 && gmTab.value === 'ritual' ? <GmRitual v={v} /> : gmTab.value === 'story' ? <GmStory v={v} /> : gmTab.value === 'console' ? <Console v={v} /> : gmTab.value === 'results' ? (v.state.hidden17 ? <GmHiddenResults v={v} /> : <GmResults v={v} />) : <><GmNarrativeMigration v={v} /><Roster v={v} /></>}</main>
+      <GmTabs hidden17={!!v.state.hidden17} badges={{console:queue.ready.length,story:queue.ready.filter(e=>e.kind==='story').length}} />
     </>
   );
 }

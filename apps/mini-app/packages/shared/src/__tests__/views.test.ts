@@ -8,6 +8,22 @@ import { Fair, allBut, content, gm, makeGame, newGame, player, run, system, wake
 
 const pv = (v: unknown) => v as PlayerView;
 
+test('досье ведущего получает свободные остатки с сервера, игрок — только свои', () => {
+  const s = makeGame(12);
+  const shard = Object.values(s.items).find(i => i.kind === 'shard' && i.owner.type === 'player' && i.owner.key === 'o1')!;
+  const ingredient = (['ash','moon','dew'] as const).find(k => s.players.o1.ingredients[k] > 0)!;
+  const zero = { gold: 0, ingredients: { ash: 0, moon: 0, dew: 0 }, items: [] };
+  const r = run(s, { type: 'offer.create', to: 'o6', give: { gold: 2, ingredients: { ...zero.ingredients, [ingredient]: 1 }, items: [shard.id] }, get: zero }, player('o1'));
+  if (!r.ok) throw new Error(r.error);
+  const v = viewFor(r.state, content, gm, 0) as GmView;
+  expect(v.available.o1.gold).toBe(s.players.o1.gold - 2);
+  expect(v.available.o1.ingredients[ingredient]).toBe(s.players.o1.ingredients[ingredient] - 1);
+  expect(v.available.o1.items).not.toContain(shard.id);
+  expect(v.state.items[shard.id].owner).toEqual({ type: 'player', key: 'o1' });
+  expect(viewFor(r.state, content, player('o6'), 0)).not.toHaveProperty('available');
+});
+
+
 test('игрок не видит чужих целей, тайн, сторон, инвентарей и чужих предложений', () => {
   let s = makeGame(12);
   // предложение между o2 и o4, о1 в нём не участвует

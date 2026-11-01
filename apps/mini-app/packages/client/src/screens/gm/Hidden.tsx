@@ -69,22 +69,23 @@ export function GmHiddenResults({ v }: { v: GmView }) {
     {v.state.phase === 'revealed' && <p class="m-note"><ItemText>Игрокам показаны общий исход и только их собственные достижения.</ItemText></p>}
   </>;
 }
-export function GmTavern({ v }: { v: GmView }) {
+export function GmTavern({ v, includeInspections = true }: { v: GmView; includeInspections?: boolean }) {
   const h = v.state.hidden17!;
+  if (!includeInspections && !Object.values(h.board).some(p => ['open', 'accepted'].includes(p.status)) && !Object.values(h.dice).some(d => ['accepted', 'started'].includes(d.status))) return null;
   return <details class="m-card" open><summary>{h.narrative ? 'Осмотры вещей' : 'Таверна · заказы и кости'}</summary>
     {Object.values(h.board).filter(p => p.status === 'open' || p.status === 'accepted').map(p => <div class="gm-board" key={p.id}><h4>{p.title}</h4><p class="text"><ItemText>{who(p.author)}{p.worker && ` → ${who(p.worker)}`}: {p.condition}</ItemText></p><p class="m-note"><ItemText>Проверка: {p.verification}</ItemText></p><p class="m-note"><ItemText>Награда: {countsText(p.reward)} {p.reward.items.map(id => { const i = v.state.items[id]; return i ? SPECIAL_NAMES[i.ref] ?? i.ref : id; }).join(', ')} {p.service}</ItemText></p>
       <div class="m-btns"><Button small disabled={p.status !== 'accepted'} onClick={() => ask({ title: 'Условие выполнено?', text: 'Материальная награда будет выдана исполнителю. Если обещана услуга, подтвердите её фактическое выполнение и согласие участников.', okLabel: 'Подтвердить и выдать', onOk: () => void run({ type: 'hidden17.board.complete', id: p.id }) })}>Подтвердить выполнение</Button><Button small kind="sec" onClick={() => ask({ title: 'Отменить по решению ведущего?', text: 'Зарезервированная награда вернётся автору.', okLabel: 'Отменить', onOk: () => void run({ type: 'hidden17.board.cancel', id: p.id }) })}>Разрешить спор / отменить</Button></div>
     </div>)}
     {!h.narrative && !Object.values(h.board).some(p => p.status === 'open' || p.status === 'accepted') && <p class="m-note"><ItemText>Активных заказов нет.</ItemText></p>}
     {Object.values(h.dice).filter(d => d.status === 'accepted' || d.status === 'started').map(d => <GmDice key={d.id} d={d} />)}
-    {Object.values(h.uses).filter(u => u.status === 'pending' && u.question).map(u => <GmLens key={u.id} u={u} v={v} />)}
+    {includeInspections && Object.values(h.uses).filter(u => u.status === 'pending' && u.question).map(u => <GmLens key={u.id} u={u} v={v} />)}
   </details>;
 }
 function GmDice({ d }: { d: HiddenDice }) {
   const [a, setA] = useState(1); const [b, setB] = useState(1);
   return <div class="gm-board"><h5>Кости: {who(d.from)} · {who(d.to)}</h5><p class="m-note"><ItemText>{d.stake ? 'По 1 золотому' : 'Без ставки'}. Числа берите с настоящих кубиков.</ItemText></p>{d.status === 'accepted' ? <Button small onClick={() => ask({ title: 'Начать броски?', text: 'Оба согласились. После начала нельзя отменить партию.', okLabel: 'Бросайте', onOk: () => void run({ type: 'hidden17.dice.start', id: d.id }) })}>Разрешить броски</Button> : <><div class="m-row"><span>{who(d.from)}</span><Stepper label={`Бросок: ${who(d.from)}`} min={1} max={6} value={a} onChange={setA} /></div><div class="m-row"><span>{who(d.to)}</span><Stepper label={`Бросок: ${who(d.to)}`} min={1} max={6} value={b} onChange={setB} /></div><Button small onClick={() => ask({ title: `Записать ${a} : ${b}?`, text: 'Подтвердите выпавшие значения с обоими игроками. Банк будет распределён автоматически.', okLabel: 'Записать результат', onOk: () => void run({ type: 'hidden17.dice.resolve', id: d.id, rolls: [a, b] }) })}>Зафиксировать броски</Button></>}</div>;
 }
-function GmLens({ u, v }: { u: HiddenUse; v: GmView }) {
+export function GmLens({ u, v }: { u: HiddenUse; v: GmView }) {
   const [answer, setAnswer] = useState(''); const it = u.relicId ? v.state.items[u.relicId] : null;
   return <div class="gm-board"><h5>Осмотровая линза: {who(u.author)}</h5><p class="text"><ItemText>{it?.ref} · {u.question === 'material' ? 'Из какого материала?' : 'Есть ли скрытое отделение?'}</ItemText></p><p class="m-note"><ItemText>{loadedContent().hidden17?.signatureGoods.find(g => g.id === 'inspection-lens')?.gmNote} Нужны согласия: {u.targets.map(who).join(', ')}.</ItemText></p><StoryText label="Физическое наблюдение" value={answer} onChange={setAnswer} max={1000} /><Button small disabled={!answer.trim() || !u.targets.every(k => u.approved.includes(k))} onClick={() => void run({ type: 'hidden17.signature.resolve', id: u.id, answer })}>Сообщить результат осмотра</Button></div>;
 }
