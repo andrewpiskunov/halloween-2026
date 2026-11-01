@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-01",
+  "method": "Встроенный image_gen, отдельная генерация каждого значка с прозрачным фоном.",
+  "format": "WebP 192×192, сохранён альфа-канал; отображение 44×44 CSS px.",
+  "assets": [
+    {
+      "file": "apps/mini-app/packages/client/public/assets/navigation/bag.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one small navigation icon for a Russian dark fantasy medieval role-playing game's mobile app. Create ONE isolated hand-painted game inventory illustration, square canvas, genuine transparent background. Warm antique brass and amber highlights, rich but restrained colors, bold engraved painterly edges, tactile materials, confident simple silhouette readable at only 40 pixels tall. The object fills 86% of the square, centered, fully in frame with a small even margin. Bright readable upper-left lighting, clear light edges for display on near-black #0a0908. No text, no letters, no badge, no circle, no decorative frame, no backdrop, no tiny floating details, no scene, no cast shadow outside object. Subject: a single compact adventurer's leather satchel, front three-quarter view, rounded rectangular body made of warm cognac leather, broad flap, one large aged brass buckle, small curved handle, dark teal lining barely visible. Simple sturdy silhouette, no long strap."
+    },
+    {
+      "file": "apps/mini-app/packages/client/public/assets/navigation/trades.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one small navigation icon for a Russian dark fantasy medieval role-playing game's mobile app. Create ONE isolated hand-painted game inventory illustration, square canvas, genuine transparent background. Warm antique brass and amber highlights, rich but restrained colors, bold engraved painterly edges, tactile materials, confident simple silhouette readable at only 40 pixels tall. The object fills 86% of the square, centered, fully in frame with a small even margin. Bright readable upper-left lighting, clear light edges for display on near-black #0a0908. No text, no letters, no badge, no circle, no decorative frame, no backdrop, no tiny floating details, no scene, no cast shadow outside object. Subject: one antique brass merchant's balance scale, two broad shallow trays on a thick crossbar and short central pillar. One tray holds a single large gold coin, the other a single bright turquoise gemstone. Strong broad triangular silhouette, minimal chunky supports so it remains readable at tiny size, three-quarter view."
+    },
+    {
+      "file": "apps/mini-app/packages/client/public/assets/navigation/workshop.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one small navigation icon for a Russian dark fantasy medieval role-playing game's mobile app. Create ONE isolated hand-painted game inventory illustration, square canvas, genuine transparent background. Warm antique brass and amber highlights, rich but restrained colors, bold engraved painterly edges, tactile materials, confident simple silhouette readable at only 40 pixels tall. The object fills 86% of the square, centered, fully in frame with a small even margin. Bright readable upper-left lighting, clear light edges for display on near-black #0a0908. No text, no letters, no badge, no circle, no decorative frame, no backdrop, no tiny floating details, no scene, no cast shadow outside object. Subject: a broad blackened steel anvil with warm bright bronze rim highlights, and one large wooden-handled smithing hammer resting diagonally across its top. Compact simple silhouette, three-quarter view. The anvil and hammer are one grouped icon."
+    },
+    {
+      "file": "apps/mini-app/packages/client/public/assets/navigation/outpost.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one small navigation icon for a Russian dark fantasy medieval role-playing game's mobile app. Create ONE isolated hand-painted game inventory illustration, square canvas, genuine transparent background. Warm antique brass and amber highlights, rich but restrained colors, bold engraved painterly edges, tactile materials, confident simple silhouette readable at only 40 pixels tall. The object fills 86% of the square, centered, fully in frame with a small even margin. Bright readable upper-left lighting, clear light edges for display on near-black #0a0908. No text, no letters, no badge, no circle, no decorative frame, no backdrop, no tiny floating details, no scene, no cast shadow outside object. Subject: a small ancient stone gatehouse, one broad open arch between two short worn stone pillars, a steep simple arch lintel and warm amber light glowing within the opening. Mossy grey-green stone with golden edge highlights. Frontal view, compact chunky silhouette, no landscape, no castle towers, no magic symbols."
+    },
+    {
+      "file": "apps/mini-app/packages/client/public/assets/navigation/tavern.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one small navigation icon for a Russian dark fantasy medieval role-playing game's mobile app. Create ONE isolated hand-painted game inventory illustration, square canvas, genuine transparent background. Warm antique brass and amber highlights, rich but restrained colors, bold engraved painterly edges, tactile materials, confident simple silhouette readable at only 40 pixels tall. The object fills 86% of the square, centered, fully in frame with a small even margin. Bright readable upper-left lighting, clear light edges for display on near-black #0a0908. No text, no letters, no badge, no circle, no decorative frame, no backdrop, no tiny floating details, no scene, no cast shadow outside object. Subject: one sturdy medieval wooden tankard with thick antique brass bands, a large brass handle on its right and a small creamy foam head. Warm amber-brown wood, golden highlights, three-quarter view. Simple iconic broad silhouette, no spilling drops."
+    }
+  ],
+  "reused": {
+    "role": "Личный портрет героя из assets/portraits/<roleKey>.jpg",
+    "results": "assets/documents/notebook.webp"
+  }
+}

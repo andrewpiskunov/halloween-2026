@@ -162,7 +162,7 @@ function PlayerApp({ v }: { v: PlayerView }) {
       {/* Ушедший видит экраны, но действовать не может: сервер всё равно откажет (§2.4). */}
       {playerLeft(v) && <div class="as-bar live-bar" role="status"><span>{leftText(v)}</span></div>}
       <main class="cnt"><Frozen.Provider value={v.hidden17 && v.hidden17.ritual.step !== 'preparation' && tab.value !== 'altars' ? 'Обычные действия завершены: идёт финал' : frozenReason(v)}>{screen}</Frozen.Provider></main>
-      <Tabs badges={{ trades: incoming }} dots={dots} revealed={revealed} hidden17={!!v.hidden17} narrative={narrative} />
+      <Tabs roleKey={me} badges={{ trades: incoming }} dots={dots} revealed={revealed} hidden17={!!v.hidden17} narrative={narrative} />
     </>
   );
 }

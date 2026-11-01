@@ -65,9 +65,26 @@ test('сюжетная редакция: 17 закрытых историй, с�
         return {heading,body};
       })).toEqual({heading:'rgb(34, 26, 18)',body:'rgb(34, 26, 18)'});
       await screen(p,`${key}: введение`);
-      if(key==='o1')await p.locator('.narrative-intro').screenshot({path:info.outputPath('public-introduction.png')});
+      await expect(p.locator('nav.tabs img').first()).toHaveAttribute('src', new RegExp(`/assets/portraits/${key}\\.jpg`));
+      if(key==='o1') {
+        await p.locator('.narrative-intro').screenshot({path:info.outputPath('public-introduction.png')});
+        for(const width of [320,390,480]) {
+          await p.setViewportSize({width,height:780});
+          await screen(p,`навигация: ${width}px`);
+          const menu=p.getByRole('navigation',{name:'Разделы ярмарки'});
+          const bounds=await menu.getByRole('button').evaluateAll(buttons=>buttons.map(button=>{
+            const r=button.getBoundingClientRect();
+            return {width:r.width,height:r.height,inside:r.left>=0&&r.right<=innerWidth};
+          }));
+          expect(bounds).toHaveLength(6);
+          for(const r of bounds){expect(r.inside).toBe(true);expect(r.width).toBeGreaterThanOrEqual(44);expect(r.height).toBeGreaterThanOrEqual(44);}
+          await menu.screenshot({path:info.outputPath(`navigation-${width}.png`)});
+        }
+        await p.setViewportSize({width:320,height:780});
+      }
       for (const name of ['Персонаж', 'Сумка', 'Сделки', 'Мастерская', 'Застава']) {
         await nav(p, name); await screen(p, `${key}: ${name}`);
+        await expect(p.locator('nav.tabs').getByRole('button',{name,exact:true})).toHaveAttribute('aria-current','page');
       }
       await nav(p, 'Персонаж');
       const art = p.getByRole('button', {name:`Рассмотреть способность: ${v.me.ability.name}`,exact:true});

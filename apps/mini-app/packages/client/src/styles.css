@@ -10,7 +10,7 @@
   --bone: #d9ccb0; --bone-hi: #efe5cf; --dim: #8e826c; --dark-line: #3a3226; --wax: #150e0b;
   --serif: 'Old Standard TT', Georgia, 'Times New Roman', serif;
   --hand: Neucha, 'Comic Sans MS', cursive;
-  --tabs-h: 70px;
+  --tabs-h: 90px;
   --gut: 14px;
 
   /* Значения по умолчанию — тёмное поле */
@@ -366,26 +366,35 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow
 .select:disabled span, .select:disabled em { color: inherit; }
 .check input:disabled::after { background: var(--disabled-fg); }
 
-/* Нижние вкладки: символы, тонкая охряная черта под активной */
+/* Нижние вкладки: личный портрет и иллюстрации вещей ярмарки. */
 .tabs {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 5; width: 100%; max-width: 480px;
-  background: var(--field); padding: 0 var(--gut) env(safe-area-inset-bottom);
+  background: var(--field); padding: 0 6px env(safe-area-inset-bottom);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .35);
 }
-.tabs-in { display: flex; border-top: 1px solid var(--dark-line); padding: 4px 0 6px; }
+.tabs-in { display: flex; gap: 2px; min-height: var(--tabs-h); border-top: 1px solid var(--dark-line); padding: 6px 0 5px; }
 .tabs button {
-  flex: 1; min-width: 0; min-height: 58px; background: none; border: 0; padding: 4px 0 2px; cursor: pointer;
-  font: 400 12px/1.1 var(--serif); color: var(--dim); display: flex; flex-direction: column; align-items: center; gap: 3px;
-  white-space: nowrap;
+  flex: 1; min-width: 0; min-height: 78px; background: none; border: 0; border-radius: 7px; padding: 3px 0 4px; cursor: pointer;
+  font: 400 12px/1.1 var(--serif); color: #c4b496; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  white-space: nowrap; position: relative;
 }
-.tabs button i { font-style: normal; font-size: 22px; line-height: 1; height: 24px; position: relative; color: var(--dim); font-family: 'Segoe UI Symbol', 'Noto Sans Symbols', 'DejaVu Sans', var(--serif); }
-.tabs button.on { color: var(--bone-hi); }
-.tabs button.on i { color: var(--ochre); }
-.tabs button::after { content: ""; width: 18px; height: 1px; background: transparent; margin-top: 1px; }
-.tabs button.on::after { background: var(--ochre); }
+.tab-art { width: 46px; height: 46px; flex: none; position: relative; display: grid; place-items: center; }
+.tab-art-image { display: block; width: 44px; height: 44px; filter: saturate(.85) brightness(.92); }
+.tab-art-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tab-art-portrait { width: 38px; height: 38px; overflow: hidden; border-radius: 50%; border: 1px solid #8e7450; }
+.tab-art-portrait img { object-fit: cover; object-position: 50% 10%; transform: scale(1.75); transform-origin: 50% 22%; }
+.tabs button.on { color: var(--bone-hi); background: radial-gradient(ellipse at 50% 42%, #5c3d1e66, #35251533 58%, transparent 85%); }
+.tabs button.on .tab-art-image { filter: saturate(1.12) brightness(1.1) drop-shadow(0 0 5px #e8ad6538); }
+.tabs button.on .tab-art-portrait { border-color: var(--ochre); }
+.tabs button.on .tab-label { text-shadow: 0 0 10px #e8ad6555; }
+.tabs button::after { content: ""; position: absolute; bottom: 0; width: 24px; height: 2px; border-radius: 2px; background: transparent; }
+.tabs button.on::after { background: var(--ochre); box-shadow: 0 0 8px #e8ad6544; }
+@media (hover: hover) { .tabs button:hover { background-color: #e8ad6510; color: var(--bone-hi); } }
 .badge {
   position: absolute; top: -5px; left: calc(100% - 2px); min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
   background: var(--cinnabar); color: #f6e8d6; font: 700 11px/18px var(--serif); font-style: normal;
 }
+.tabs .badge { top: 0; left: auto; right: -2px; box-shadow: 0 0 0 2px var(--field); }
 
 /* Подтверждение и сообщения */
 .modal-back { position: fixed; inset: 0; z-index: 20; background: rgba(5, 4, 3, .72); display: grid; place-items: center; padding: 16px; }
