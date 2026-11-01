@@ -8,9 +8,16 @@ const view = (fair = true) => ({
 }) as unknown as PlayerView;
 test('бутылёк сохраняет имя донора, неизвестный бутылёк не раскрывает его',()=>{
  const v=view();
- expect(specialLabel({id:'blood',kind:'special',ref:'blood-vial'} as Item,v)).toBe('Кровь Серафина');
+ expect(specialLabel({id:'blood',kind:'special',ref:'blood-vial'} as Item,v)).toBe('Бутылёк крови · Отметка: Серафина');
  expect(specialLabel({kind:'special',ref:'blood-vial'},v)).toBe('Бутылёк крови');
  expect(specialLabel({kind:'special',ref:'inscribed-focus'},view(false))).toBe('Фокус с начертанными линиями');
+});
+test('на показанном бутыле видно имя донора, а не нынешнего владельца',()=>{
+ const v=view();
+ v.hidden17!.prepared={};
+ v.others=[{roleKey:'o5',name:'Вельда',guise:'Странница'}] as PlayerView['others'];
+ v.hidden17!.knownItems.blood={kind:'special',ref:'blood-vial',owner:'o1',bloodDonor:'o5'};
+ expect(specialLabel({id:'blood',kind:'special',ref:'blood-vial'},v)).toBe('Бутылёк крови · Отметка: Вельда');
 });
 test('в новой редакции защита и журнал описывают обновление сил, прежняя партия сохраняет акты',()=>{
  expect(marksText(view())[0].value).toBe('от талисмана, до обновления сил');

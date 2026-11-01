@@ -59,7 +59,7 @@ export type HiddenCommand =
 export interface HiddenPlayerView {
   fair?: import("./fair").FairPlayerView;
   narrative?: import("./narrative").NarrativePlayerView;
-  knownItems: Record<string, { kind: import('./types').ItemKind; ref: string; owner?: string }>;
+  knownItems: Record<string, { kind: import('./types').ItemKind; ref: string; owner?: string; bloodDonor?: string }>;
   rumors: HiddenState['rumors'];
   briefing: HiddenRole; publicIntro: string; publicRules: string[]; craftingRules: string[];
   methods: HiddenContent['methods']; knownMethods: HiddenMethod[]; productionRecipes: string[]; signatureGoods: HiddenContent['signatureGoods'];

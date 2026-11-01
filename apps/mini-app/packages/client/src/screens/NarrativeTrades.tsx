@@ -14,7 +14,7 @@ import { emptyBundle, INGREDIENTS, itemLabel, mmss, requestText, roleEmoji, role
 import { closePage, detailPage, openPage } from '../narrative-navigation';
 import { canOffer, remainingMs, tradesPaused } from '../rules';
 import { ask, now, run, tradeDraft } from '../store';
-import { people, specialLabel } from './HiddenCommon';
+import { people, specialLabel, SpecialItemName } from './HiddenCommon';
 import '../narrative-commerce.css';
 
 const STATUS: Record<NarrativeTrade['status'], string> = { offered: 'Ждёт ответа', replied: 'Ждёт подтверждения автора', completed: 'Обмен завершён', declined: 'Отклонено', cancelled: 'Отменено', expired: 'Срок истёк' };
@@ -25,18 +25,18 @@ export function validOwnGoods(b: Bundle, v: PlayerView): boolean {
     && new Set(b.items).size === b.items.length && b.items.every(id => v.me.items.some(i => i.id === id && canOffer(i, v)));
 }
 export function tradeGoodsRows(b: Bundle, v: PlayerView, trade?: NarrativeTrade) {
-  const rows: { id: string; name: string; image?: string; emoji: string; count: number }[] = [];
+  const rows: { id: string; name: string; image?: string; emoji: string; count: number; item?: NarrativeTrade['items'][string] & { id: string } }[] = [];
   if (b.gold) rows.push({ id: 'gold', name: 'Золото', image: resourceImageUrl('gold'), emoji: '◉', count: b.gold });
   for (const i of INGREDIENTS) if (b.ingredients[i.key]) rows.push({ id: i.key, name: i.name, image: resourceImageUrl(i.key), emoji: i.emoji, count: b.ingredients[i.key] });
   for (const id of b.items) {
     const it = trade?.items[id] ?? v.me.items.find(i => i.id === id);
-    rows.push({ id, name: it ? specialLabel(it, v) : 'Предъявленная вещь', image: it && itemImageUrl(it), emoji: it ? itemLabel(it, v).emoji : '✦', count: 1 });
+    rows.push({ id, ...(it ? { item: {...it,id} } : {}), name: it ? specialLabel({...it,id}, v) : 'Предъявленная вещь', image: it && itemImageUrl(it), emoji: it ? itemLabel(it, v).emoji : '✦', count: 1 });
   }
   return rows;
 }
 function TableGoods({b,v,trade,emptyText}:{b:Bundle;v:PlayerView;trade?:NarrativeTrade;emptyText:string}) {
   const rows=tradeGoodsRows(b,v,trade);
-  return rows.length ? <ul class="trade-table-goods">{rows.map(r=><li key={r.id}><Thumb src={r.image} emoji={r.emoji}/><b>×{r.count}</b><span>{r.name}</span></li>)}</ul> : <p class="trade-table-empty"><ItemText>{emptyText}</ItemText></p>;
+  return rows.length ? <ul class="trade-table-goods">{rows.map(r=><li key={r.id}><Thumb src={r.image} emoji={r.emoji}/><b>×{r.count}</b><span>{r.item?<SpecialItemName item={r.item} v={v}/>:r.name}</span></li>)}</ul> : <p class="trade-table-empty"><ItemText>{emptyText}</ItemText></p>;
 }
 function ExchangeTable({v,from,to,give,reply,trade,draft=false}:{v:PlayerView;from:string;to:string;give:Bundle;reply?:Bundle;trade?:NarrativeTrade;draft?:boolean}) {
   return <div class="trade-table" aria-label="Стороны обмена">
@@ -51,7 +51,7 @@ function OwnGoods({ value, onChange, v }: { value: Bundle; onChange: (b: Bundle)
   const resources = [{key:'gold' as const, name:'Золото', emoji:'◉'}, ...INGREDIENTS];
   return <div class="nc-own-goods">
     {resources.map(i => <div class={`nc-resource-edit ${(i.key==='gold'?value.gold:value.ingredients[i.key])>0?'selected':''}`} key={i.key}><span><Thumb src={resourceImageUrl(i.key)} emoji={i.emoji} size="sm" />{i.name}<small>Свободно: {i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]}</small></span><Stepper label={`Предложить: ${i.name}`} value={i.key === 'gold' ? value.gold : value.ingredients[i.key]} max={i.key === 'gold' ? v.me.available.gold : v.me.available.ingredients[i.key]} onChange={n => onChange(i.key === 'gold' ? {...value,gold:n} : {...value,ingredients:{...value.ingredients,[i.key]:n}})} /></div>)}
-    {v.me.items.filter(i => canOffer(i,v)).map(i => <label class={`nc-item-choice ${value.items.includes(i.id)?'selected':''}`} key={i.id}><input type="checkbox" checked={value.items.includes(i.id)} onChange={e => onChange({...value,items:e.currentTarget.checked ? [...value.items,i.id] : value.items.filter(id => id !== i.id)})} /><Thumb src={itemImageUrl(i)} emoji={itemLabel(i,v).emoji} /><span>{specialLabel(i,v)}</span></label>)}
+    {v.me.items.filter(i => canOffer(i,v)).map(i => <label class={`nc-item-choice ${value.items.includes(i.id)?'selected':''}`} key={i.id}><input type="checkbox" checked={value.items.includes(i.id)} onChange={e => onChange({...value,items:e.currentTarget.checked ? [...value.items,i.id] : value.items.filter(id => id !== i.id)})} /><Thumb src={itemImageUrl(i)} emoji={itemLabel(i,v).emoji} /><SpecialItemName item={i} v={v}/></label>)}
     {!validOwnGoods(value,v) && <p class="m-note warn"><ItemText>Часть выбранного уже недоступна. Обновите предложение.</ItemText></p>}
   </div>;
 }

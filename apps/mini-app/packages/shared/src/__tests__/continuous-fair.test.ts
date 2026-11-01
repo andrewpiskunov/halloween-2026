@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {expect,test} from 'vitest';
-import {content as legacy,gm,player,testCodes} from './helpers';
+import {content as legacy,gm,player,testCodes,bundle} from './helpers';
 import {execute,initialState} from '../engine';
 import {viewFor} from '../views';
 import type {Content} from '../content';
@@ -66,4 +66,20 @@ test('обновление сил не позволяет отменой ста�
  const g=new Game();const card={kind:'ability' as const,owner:'o1',title:'Тень',text:'Временный дар',price:'',visibility:'private' as const,readers:[],uses:1,duration:'act' as const,replacesAbility:true,active:true,completed:false};
  g.run({type:'story.card.save',card});const c=Object.values(g.s.story!.cards)[0];g.run({type:'story.card.save',id:c.id,revision:c.revision,card:{...card,text:'Уточнённый дар',active:false}});const edit=g.s.story!.history.at(-1)!;
  g.run({type:'fair.refresh'});expect(g.s.story!.cards[c.id].active).toBe(false);expect(g.try({type:'story.undo',id:edit.id}).ok).toBe(false);expect(g.pv('o1').me.ability.state).toBe('available');
+});
+
+test('отметка донора видна на предъявленном бутыле и в сделке, сохраняется после передачи',()=>{
+ const g=new Game(), id=g.prep('o5','sign');
+ expect(g.pv('o1').hidden17!.knownItems[id]).toBeUndefined();
+ g.as('o5',{type:'hidden17.present',itemId:id,player:'o1',allow:true});
+ expect(g.pv('o1').hidden17!.knownItems[id]).toMatchObject({ref:'blood-vial',bloodDonor:'o5'});
+ expect(g.pv('o1').hidden17!.prepared[id]).toBeUndefined();
+ g.as('o5',{type:'narrative.trade.create',to:'o2',give:bundle({items:[id]}),wish:''});
+ const trade=Object.values(g.s.hidden17!.narrative!.trades).at(-1)!;
+ expect(g.pv('o2').hidden17!.narrative!.trades[0].items[id]).toMatchObject({ref:'blood-vial',bloodDonor:'o5'});
+ expect(g.pv('o3').hidden17!.knownItems[id]).toBeUndefined();
+ g.as('o2',{type:'narrative.trade.reply',id:trade.id,give:bundle()});
+ g.as('o5',{type:'narrative.trade.confirm',id:trade.id});
+ expect(g.pv('o2').hidden17!.knownItems[id]).toMatchObject({owner:'o2',bloodDonor:'o5'});
+ expect(g.pv('o5').hidden17!.narrative!.trades[0].items[id]).toMatchObject({bloodDonor:'o5'});
 });

@@ -1,4 +1,5 @@
 import { KIND_BY_RECIPE } from './engine/shop';
+import { bloodMark } from './blood-mark';
 import type { Content } from './content';
 import type { GameState } from './types';
 import type { PlayerView } from './views';
@@ -13,7 +14,9 @@ export function narrativeProjection(state:GameState,content:Content,key:string,b
   ...person,name:content.roleByKey[person.role].name,emoji:content.roleByKey[person.role].emoji,
  }));
  const knowledge=n.knowledge[key]??[], joining=knowledge.includes('joining');
- const trades=Object.values(n.trades).filter(t=>t.from===key||t.to===key);
+ const trades=Object.values(n.trades).filter(t=>t.from===key||t.to===key).map(t=>({...t,
+  items:Object.fromEntries(Object.entries(t.items).map(([id,item])=>[id,{...item,...bloodMark(state,id,item.ref)}])),
+ }));
  const knownItems={...hidden.knownItems};
  for(const t of trades)for(const [id,item] of Object.entries(t.items))if(!knownItems[id])knownItems[id]=item;
  const knownRefs=new Set(Object.values(knownItems).flatMap(i=>[i.ref,i.kind,`${i.kind}:${i.ref}`]));

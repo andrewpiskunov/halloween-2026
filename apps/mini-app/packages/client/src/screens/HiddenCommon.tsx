@@ -1,7 +1,7 @@
 import type { Bundle, HiddenOrder, HiddenStep, Item, PlayerView } from '@fair/shared';
 import { itemImageUrl } from '../assets';
 import { Thumb } from '../components/Thumb';
-import { countsText, itemLabel, roleName } from '../labels';
+import { countsText, itemLabel, plainName, roleName } from '../labels';
 
 export const SPECIAL_NAMES: Record<string, string> = {
   'blood-vial': 'Бутылёк крови', 'sealed-powder': 'Запечатанный порошок', 'inscribed-focus': 'Фокус с начертанными линиями', 'copper-vial': 'Сосуд с медным налётом', salt: 'Разрывная соль', sign: 'Управляющий знак', vessel: 'Отводящий сосуд',
@@ -17,13 +17,24 @@ export const STEPS: Record<HiddenStep, string> = {
 };
 export const FAIR_STEPS: Record<HiddenStep, string> = { preparation: 'Подготовка', assembly: '1 · Сбор', powder: '2 · Пробуждение и вмешательства', choices: '2 · Пробуждение и вмешательства', responses: '3 · Раскрытие и ответы', 'last-choice': '4 · Последний выбор', finished: '4 · Исход' };
 export const methodLabel = (method: string, fair: boolean) => method === 'sign' && fair ? 'Бутылёк крови' : SPECIAL_NAMES[method];
-export const specialLabel = (it: Pick<Item, 'kind' | 'ref'> & { id?: string }, v: PlayerView) => {
-  const prepared = it.id ? v.hidden17?.prepared[it.id] : undefined;
-  if (it.ref === 'blood-vial' || (v.hidden17?.fair && prepared?.method === 'sign' && !prepared.order)) return prepared?.controller ? `Кровь ${roleName(prepared.controller, v)}` : 'Бутылёк крови';
+type NamedItem = Pick<Item, 'kind' | 'ref'> & { id?: string; bloodDonor?: string };
+const isBloodVial = (it: NamedItem, v: PlayerView) => it.ref === 'blood-vial' ||
+  !!(v.hidden17?.fair && it.id && v.hidden17.prepared[it.id]?.method === 'sign' && !v.hidden17.prepared[it.id]?.order);
+export function bloodMarkLabel(it: NamedItem, v: PlayerView): string | undefined {
+  if (!isBloodVial(it, v)) return;
+  const donor = it.bloodDonor ?? (it.id ? v.hidden17?.prepared[it.id]?.controller ?? v.hidden17?.knownItems[it.id]?.bloodDonor : undefined);
+  return donor ? `Отметка: ${plainName(donor, v)}` : undefined;
+}
+export const specialLabel = (it: NamedItem, v: PlayerView) => {
+  if (isBloodVial(it, v)) { const mark = bloodMarkLabel(it, v); return `Бутылёк крови${mark ? ` · ${mark}` : ''}`; }
   return SPECIAL_NAMES[it.ref] ?? itemLabel(it, v).name;
 };
+export function SpecialItemName({ item, v }: { item: NamedItem; v: PlayerView }) {
+  const mark = bloodMarkLabel(item, v);
+  return <span class="special-item-name"><span>{isBloodVial(item, v) ? 'Бутылёк крови' : specialLabel(item, v)}</span>{mark && <small class="blood-donor-mark">{mark}</small>}</span>;
+}
 export function HiddenItem({ item, v }: { item: Pick<Item, 'kind' | 'ref'> & { id?: string }; v: PlayerView }) {
-  return <span class="hidden-item"><Thumb src={itemImageUrl(item)} emoji={item.kind === 'special' ? '✦' : itemLabel(item, v).emoji} size="sm" />{specialLabel(item, v)}</span>;
+  return <span class="hidden-item"><Thumb src={itemImageUrl(item)} emoji={item.kind === 'special' ? '✦' : itemLabel(item, v).emoji} size="sm" /><SpecialItemName item={item} v={v}/></span>;
 }
 export function Reward({ reward, service, v }: { reward: Bundle; service?: string; v: PlayerView }) {
   const count = countsText(reward);

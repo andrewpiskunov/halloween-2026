@@ -1,4 +1,5 @@
 import { narrativeProjection } from './views-narrative';
+import { bloodMark } from './blood-mark';
 import type { Content } from './content';
 import type { HiddenPlayerView } from './hidden17';
 import type { GameState } from './types';
@@ -20,7 +21,7 @@ export function hiddenProjection(state: GameState, content: Content, key: string
   for (const c of interventions) if (c.targetId) visible.add(c.targetId);
   const knownItems = Object.fromEntries([...visible].flatMap(id => {
     const i = state.items[id]; if (!i) return [];
-    return [[id, { kind: i.kind, ref: i.ref, ...(i.owner.type === 'player' ? { owner: i.owner.key } : {}) }]];
+    return [[id, { kind: i.kind, ref: i.ref, ...bloodMark(state, id, i.ref), ...(i.owner.type === 'player' ? { owner: i.owner.key } : {}) }]];
   }));
   for(const c of interventions)if(c.targetId && c.targetRef && !knownItems[c.targetId])knownItems[c.targetId]={kind:'shard',ref:c.targetRef};
   for (const b of Object.values(h.board)) for (const [id, metadata] of Object.entries(b.rewardItems ?? {})) if (!knownItems[id]) knownItems[id] = metadata;

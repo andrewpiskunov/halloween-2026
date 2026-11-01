@@ -18,7 +18,7 @@ export function FairPreparation({ v }: { v: PlayerView }) {
  const selected=source.some(i=>i.id===itemId)?itemId:source[0]?.id??'';
  const title=method==='sign'?'Наполнить бутылёк своей кровью':method==='salt'?'Приготовить разрывную соль':'Подготовить отводящий сосуд';
  const prepare=()=>ask({title:`${title}?`,text:method==='sign'?'Один Фокус силы будет израсходован. Донором останетесь вы, даже если передадите бутылёк. При успешной привязке вы сможете произнести одно устное распоряжение до рассвета.':`Одно Очищающее зелье будет израсходовано. ${methodLabel(method,true)} появится в сумке.`,okLabel:'Подготовить',onOk:async()=>{
-  setBusy(true);setMessage('');try{const result=await run({type:'hidden17.prepare',method,itemId:selected});if(result.ok){setItem('');setMessage(`${methodLabel(method,true)} готов. Он находится в вашей сумке.`);}}finally{setBusy(false);}
+  setBusy(true);setMessage('');try{const result=await run({type:'hidden17.prepare',method,itemId:selected});if(result.ok){setItem('');setMessage(method==='sign'?`Бутылёк крови готов. Отметка: ${v.me.role.name}. Он находится в вашей сумке.`:`${methodLabel(method,true)} готов. Он находится в вашей сумке.`);}}finally{setBusy(false);}
  }});
  return <section class="m-card ritual-preparation"><h3>Личная подготовка</h3><p class="m-note">Здесь доступны только способы, которые вы узнали в игре.</p>
   {h.knownMethods.length>1&&<Select label="Способ подготовки" value={method} onChange={s=>{setChosen(s as HiddenMethod);setItem('');setMessage('');}} options={h.knownMethods.map(m=>({value:m,label:methodLabel(m,true)}))}/>}

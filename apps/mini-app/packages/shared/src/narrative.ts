@@ -13,7 +13,7 @@ export interface NarrativeTrade {
   id: string; from: string; to: string; give: Bundle; reply?: Bundle; wish: string;
   status: 'offered' | 'replied' | 'completed' | 'declined' | 'cancelled' | 'expired';
   createdAt: number; expiresAt: number; closedAt?: number;
-  items: Record<string, { kind: ItemKind; ref: string }>;
+  items: Record<string, { kind: ItemKind; ref: string; bloodDonor?: string }>;
 }
 export interface NarrativeState {
   /** Точные ID стартовых вещей; старой активной партии происхождение не приписываем. */

@@ -41,7 +41,7 @@ export function itemImageUrl(item: Pick<Item, 'kind' | 'ref'>): string | undefin
   if (item.kind === 'relic') file = RELIC_SLUGS[item.ref] && `${RELIC_SLUGS[item.ref]}.jpg`;
   else if (item.kind === 'shard') file = 'shard.jpg';
   else if (item.kind === 'clue') file = `clue-${item.ref}.jpg`;
-  else if (item.kind === 'special' && item.ref === 'blood-vial') file = 'copper-vial.webp';
+  else if (item.kind === 'special' && item.ref === 'blood-vial') file = 'blood-vial.webp';
   else if (item.kind === 'special' && ['shape-fixative','inspection-lens','herbal-incense','sealed-powder','inscribed-focus','copper-vial'].includes(item.ref)) file = `${item.ref}.webp`;
   else if (RECIPE_KINDS.has(item.kind)) file = `${item.ref}.jpg`;
   return file && `${BASE}assets/items/${file}`;

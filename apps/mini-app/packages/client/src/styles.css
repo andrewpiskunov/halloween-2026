@@ -695,3 +695,8 @@ button.m-tag.gm-mark { background: transparent; font-family: inherit; cursor: po
 .gm-story-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .gm-admin-card h3 { margin:0 0 12px; color:var(--fg-hi); }
 @media (min-width:440px) { .gm-story-tabs { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+/* Имя подготовленного предмета и видимая отметка его донора. */
+.special-item-name { display:inline-flex; flex-direction:column; gap:4px; vertical-align:middle; }
+.blood-donor-mark { display:block; font:normal 13px/1.3 var(--font-body, Georgia, serif); color:inherit; }
+.narrative-object h2 .blood-donor-mark { font-size:17px; font-weight:400; }
