@@ -74,6 +74,32 @@ test('сюжетная редакция: 17 закрытых историй, с�
     await expect.poll(async () => (await state(gm))?.kind).toBe('gm');
     for (const roleKey of Object.keys(source.roles)) await cmd(gm, { type: 'player.setPresent', roleKey, present: true });
     await cmd(gm, { type: 'session.open' });
+    const gmMenu = gm.getByRole('navigation', { name: 'Разделы ведущего' });
+    for (const width of [320, 390, 480]) {
+      await gm.setViewportSize({ width, height: 844 });
+      await expect(gmMenu.locator('img')).toHaveCount(5);
+      expect(await gmMenu.locator('img').evaluateAll(async images => {
+        await Promise.all(images.map(image => (image as HTMLImageElement).decode().catch(() => undefined)));
+        return images.every(image => (image as HTMLImageElement).naturalWidth > 0);
+      })).toBe(true);
+      const geometry = () => gmMenu.getByRole('button').evaluateAll(buttons => buttons.map(button => {
+        const r = button.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width, height: r.height, inside: r.left >= 0 && r.right <= innerWidth };
+      }));
+      const initial = await geometry();
+      for (const bounds of initial) {
+        expect(bounds.inside).toBe(true);
+        expect(bounds.width).toBeGreaterThanOrEqual(44);
+        expect(bounds.height).toBeGreaterThanOrEqual(44);
+      }
+      for (const name of ['Пульт', 'Сюжет', 'Ритуал', 'Итоги', 'Состав']) {
+        await nav(gm, name);
+        await expect(gmMenu.getByRole('button', { name, exact: true })).toHaveAttribute('aria-current', 'page');
+        expect(await geometry()).toEqual(initial);
+      }
+      await gmMenu.screenshot({ path: info.outputPath(`gm-navigation-${width}.png`) });
+    }
+    await gm.setViewportSize({ width: 390, height: 844 });
     for (const key of Object.keys(source.roles)) {
       const p = await browser.newPage({ viewport: { width: 320, height: 780 } }); players[key] = p;
       p.on('pageerror', error => errors.push(`${key}: ${error.message}`));
