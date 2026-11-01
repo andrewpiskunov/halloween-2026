@@ -121,7 +121,7 @@ test('сюжетная редакция: 17 закрытых историй, с�
       await art.click();
       const artwork = p.getByRole('dialog', {name:`Способность: ${v.me.ability.name}`,exact:true});
       await expect(artwork).toBeVisible();
-      await expect(artwork.locator('img')).toHaveAttribute('src',new RegExp(`/assets/abilities/${key}\\.webp$`));
+      await expect(artwork.locator('img')).toHaveAttribute('src',new RegExp(`/assets/abilities/${key}\\.webp\\?v=[a-f0-9]{12}$`));
       await expect(artwork.locator('img')).toHaveJSProperty('complete',true);
       await artwork.getByRole('button',{name:'Увеличить',exact:true}).click();
       await expect(artwork.getByRole('button',{name:'Целиком',exact:true})).toHaveAttribute('aria-pressed','true');

@@ -7,10 +7,12 @@ import { portraitPreview } from './PortraitViewer';
 import { BASE } from '../base';
 import './ability-identity.css';
 
+declare const __ABILITY_REVISIONS__: Record<string, string>;
+
 /** Основной состав имеет собственные иллюстрации даров; дополнение использует портрет роли. */
 export function abilityImageUrl(roleKey: string): string {
   return /^o(?:[1-9]|1[0-7])$/.test(roleKey)
-    ? `${BASE}assets/abilities/${roleKey}.webp`
+    ? `${BASE}assets/abilities/${roleKey}.webp?v=${__ABILITY_REVISIONS__[roleKey]}`
     : portraitUrl(roleKey);
 }
 

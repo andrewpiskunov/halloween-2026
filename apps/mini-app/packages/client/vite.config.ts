@@ -10,9 +10,11 @@ const basePath = process.env.BASE_PATH ?? '/';
 
 const portraitDir = new URL('./public/assets/portraits/', import.meta.url);
 const portraits = Object.fromEntries(readdirSync(portraitDir).filter(f => f.endsWith('.jpg')).map(f => [f.slice(0, -4), createHash('sha256').update(readFileSync(new URL(f, portraitDir))).digest('hex').slice(0, 12)]));
+const abilityDir = new URL('./public/assets/abilities/', import.meta.url);
+const abilities = Object.fromEntries(readdirSync(abilityDir).filter(f => f.endsWith('.webp')).map(f => [f.slice(0, -5), createHash('sha256').update(readFileSync(new URL(f, abilityDir))).digest('hex').slice(0, 12)]));
 
 export default defineConfig({
-  define: { __PORTRAIT_REVISIONS__: JSON.stringify(portraits) },
+  define: { __PORTRAIT_REVISIONS__: JSON.stringify(portraits), __ABILITY_REVISIONS__: JSON.stringify(abilities) },
   base: basePath,
   plugins: [preact()],
   server: {

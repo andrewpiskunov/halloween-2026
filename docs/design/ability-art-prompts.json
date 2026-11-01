@@ -1,5 +1,6 @@
 {
   "date": "2026-10-31",
+  "status": "Архив: изображения способностей заменены простой RPG-редакцией 1 ноября. Актуальные промпты — ability-art-rpg-prompts.json. Сцена сделок ниже сохранена.",
   "tool": "image_gen",
   "directory": "apps/mini-app/packages/client/public/assets/abilities",
   "style": "Square fantasy RPG ability illustration; elegant hand-painted flat graphic fantasy with clean outlines, painterly highlights, amber gold, burgundy and midnight indigo; single central symbolic composition, no character portrait, dark navy background, readable at 64px, no border/text/UI/watermark.",
