@@ -29,6 +29,20 @@ export const RELIC_SLUGS: Record<string, string> = {
 
 const RECIPE_KINDS = new Set<Item['kind']>(['potion', 'ward', 'focus', 'shape']);
 
+/** Подготовленные компоненты используют игровые ref, прежние названия файлов сохраняются. */
+const SPECIAL_ITEM_FILES: Record<string, string> = {
+  salt: 'sealed-powder.webp',
+  sign: 'inscribed-focus.webp',
+  vessel: 'copper-vial.webp',
+  'blood-vial': 'blood-vial.webp',
+  'sealed-powder': 'sealed-powder.webp',
+  'inscribed-focus': 'inscribed-focus.webp',
+  'copper-vial': 'copper-vial.webp',
+  'shape-fixative': 'shape-fixative.webp',
+  'inspection-lens': 'inspection-lens.webp',
+  'herbal-incense': 'herbal-incense.webp',
+};
+
 /** Портрет роли: /assets/portraits/<key>.jpg. */
 export function portraitUrl(roleKey: string): string {
   const version = __PORTRAIT_REVISIONS__[roleKey];
@@ -41,8 +55,7 @@ export function itemImageUrl(item: Pick<Item, 'kind' | 'ref'>): string | undefin
   if (item.kind === 'relic') file = RELIC_SLUGS[item.ref] && `${RELIC_SLUGS[item.ref]}.jpg`;
   else if (item.kind === 'shard') file = 'shard.jpg';
   else if (item.kind === 'clue') file = `clue-${item.ref}.jpg`;
-  else if (item.kind === 'special' && item.ref === 'blood-vial') file = 'blood-vial.webp';
-  else if (item.kind === 'special' && ['shape-fixative','inspection-lens','herbal-incense','sealed-powder','inscribed-focus','copper-vial'].includes(item.ref)) file = `${item.ref}.webp`;
+  else if (item.kind === 'special') file = SPECIAL_ITEM_FILES[item.ref];
   else if (RECIPE_KINDS.has(item.kind)) file = `${item.ref}.jpg`;
   return file && `${BASE}assets/items/${file}`;
 }
